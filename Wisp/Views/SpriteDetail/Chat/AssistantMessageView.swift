@@ -16,6 +16,13 @@ struct AssistantMessageView: View {
                             .padding(.horizontal, 14)
                             .padding(.vertical, 10)
                             .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 16))
+                            .contextMenu {
+                                Button {
+                                    UIPasteboard.general.string = text
+                                } label: {
+                                    Label("Copy", systemImage: "doc.on.doc")
+                                }
+                            }
                     case .toolUse(let card):
                         ToolUseCardView(card: card)
                     case .toolResult(let card):

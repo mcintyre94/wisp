@@ -22,6 +22,13 @@ final class ChatMessage: Identifiable {
         self.content = content
         self.isStreaming = isStreaming
     }
+
+    var textContent: String {
+        content.compactMap {
+            if case .text(let text) = $0 { return text }
+            return nil
+        }.joined(separator: "\n\n")
+    }
 }
 
 enum ChatContent: Identifiable {

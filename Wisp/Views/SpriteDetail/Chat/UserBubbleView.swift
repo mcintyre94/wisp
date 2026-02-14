@@ -17,6 +17,13 @@ struct UserBubbleView: View {
                     }
                 }
             }
+            .contextMenu {
+                Button {
+                    UIPasteboard.general.string = message.textContent
+                } label: {
+                    Label("Copy", systemImage: "doc.on.doc")
+                }
+            }
         }
     }
 }
