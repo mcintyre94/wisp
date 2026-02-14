@@ -35,7 +35,7 @@ struct CheckpointsView: View {
                         .ignoresSafeArea()
                     VStack(spacing: 12) {
                         ProgressView()
-                        Text("Restoring...")
+                        Text("Restoring \(viewModel.restoringCheckpointId ?? "")...")
                             .font(.subheadline)
                             .foregroundStyle(.secondary)
                     }
@@ -93,10 +93,15 @@ struct CheckpointsView: View {
                 Text(error)
             }
         }
-        .alert("Checkpoint Restored", isPresented: $viewModel.showRestoreSuccess) {
+        .alert("Checkpoint Restored", isPresented: .init(
+            get: { viewModel.restoredCheckpointId != nil },
+            set: { if !$0 { viewModel.restoredCheckpointId = nil } }
+        )) {
             Button("OK") {}
         } message: {
-            Text("The Sprite has been restored to the selected checkpoint.")
+            if let id = viewModel.restoredCheckpointId {
+                Text("Restored to checkpoint \(id)")
+            }
         }
     }
 
