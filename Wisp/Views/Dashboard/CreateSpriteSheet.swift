@@ -1,7 +1,9 @@
 import SwiftUI
+import SwiftData
 
 struct CreateSpriteSheet: View {
     @Environment(SpritesAPIClient.self) private var apiClient
+    @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""
     @State private var isCreating = false
@@ -50,6 +52,15 @@ struct CreateSpriteSheet: View {
 
         do {
             _ = try await apiClient.createSprite(name: name)
+            // Clear any stale session from a previous sprite with the same name
+            let spriteName = name
+            let descriptor = FetchDescriptor<SpriteSession>(
+                predicate: #Predicate { $0.spriteName == spriteName }
+            )
+            if let staleSession = try? modelContext.fetch(descriptor).first {
+                modelContext.delete(staleSession)
+                try? modelContext.save()
+            }
             dismiss()
         } catch {
             errorMessage = error.localizedDescription
