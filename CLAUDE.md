@@ -94,6 +94,7 @@ Phase 1 scope — build only these features:
 
 ## Conventions
 
+- Always use idiomatic iOS UI/UX patterns — follow Apple's Human Interface Guidelines and standard platform conventions (e.g. tap-to-copy instead of copy buttons, swipe actions, pull-to-refresh, confirmation sheets for destructive actions)
 - Use SF Symbols for icons throughout
 - System colors and standard iOS chrome — no custom design system
 - Sprite status colors: running = green, warm = amber/orange, cold = blue
