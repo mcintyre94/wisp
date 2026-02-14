@@ -58,6 +58,14 @@ struct SpriteOverviewView: View {
                     }
                 }
 
+                Toggle("Public URL", isOn: Binding(
+                    get: { viewModel.sprite.urlSettings?.auth == "public" },
+                    set: { _ in
+                        Task { await viewModel.togglePublicAccess(apiClient: apiClient) }
+                    }
+                ))
+                .disabled(viewModel.isUpdatingAuth || !viewModel.hasLoaded)
+
                 if let createdAt = viewModel.sprite.createdAt {
                     HStack {
                         Text("Created")

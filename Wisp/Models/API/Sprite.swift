@@ -6,10 +6,16 @@ struct Sprite: Codable, Identifiable, Sendable, Hashable {
     let status: SpriteStatus
     let url: String?
     let createdAt: Date?
+    let urlSettings: UrlSettings?
+
+    struct UrlSettings: Codable, Sendable, Hashable {
+        let auth: String
+    }
 
     enum CodingKeys: String, CodingKey {
         case id, name, status, url
         case createdAt = "created_at"
+        case urlSettings = "url_settings"
     }
 
     init(from decoder: Decoder) throws {
@@ -19,6 +25,7 @@ struct Sprite: Codable, Identifiable, Sendable, Hashable {
         status = try container.decode(SpriteStatus.self, forKey: .status)
         url = try container.decodeIfPresent(String.self, forKey: .url)
         createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt)
+        urlSettings = try container.decodeIfPresent(UrlSettings.self, forKey: .urlSettings)
     }
 
     func encode(to encoder: Encoder) throws {
@@ -28,6 +35,7 @@ struct Sprite: Codable, Identifiable, Sendable, Hashable {
         try container.encode(status, forKey: .status)
         try container.encodeIfPresent(url, forKey: .url)
         try container.encodeIfPresent(createdAt, forKey: .createdAt)
+        try container.encodeIfPresent(urlSettings, forKey: .urlSettings)
     }
 }
 
@@ -50,6 +58,14 @@ enum SpriteStatus: String, Codable, Sendable {
 
 struct CreateSpriteRequest: Codable, Sendable {
     let name: String
+}
+
+struct UpdateSpriteRequest: Codable, Sendable {
+    let urlSettings: Sprite.UrlSettings
+
+    enum CodingKeys: String, CodingKey {
+        case urlSettings = "url_settings"
+    }
 }
 
 struct SpritesListResponse: Codable, Sendable {

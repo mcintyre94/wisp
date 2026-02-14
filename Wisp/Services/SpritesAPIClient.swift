@@ -55,6 +55,11 @@ final class SpritesAPIClient {
         let _: EmptyResponse = try await request(method: "DELETE", path: "/sprites/\(name)")
     }
 
+    func updateSprite(name: String, urlSettings: Sprite.UrlSettings) async throws -> Sprite {
+        let body = UpdateSpriteRequest(urlSettings: urlSettings)
+        return try await request(method: "PUT", path: "/sprites/\(name)", body: body)
+    }
+
     // MARK: - Checkpoints
 
     func listCheckpoints(spriteName: String) async throws -> [Checkpoint] {

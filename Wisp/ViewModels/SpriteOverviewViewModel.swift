@@ -6,6 +6,7 @@ final class SpriteOverviewViewModel {
     var sprite: Sprite
     var isRefreshing = false
     var hasLoaded = false
+    var isUpdatingAuth = false
     var errorMessage: String?
 
     init(sprite: Sprite) {
@@ -24,5 +25,21 @@ final class SpriteOverviewViewModel {
 
         hasLoaded = true
         isRefreshing = false
+    }
+
+    func togglePublicAccess(apiClient: SpritesAPIClient) async {
+        let currentAuth = sprite.urlSettings?.auth ?? "sprite"
+        let newAuth = currentAuth == "public" ? "sprite" : "public"
+
+        isUpdatingAuth = true
+        do {
+            sprite = try await apiClient.updateSprite(
+                name: sprite.name,
+                urlSettings: Sprite.UrlSettings(auth: newAuth)
+            )
+        } catch {
+            errorMessage = error.localizedDescription
+        }
+        isUpdatingAuth = false
     }
 }
