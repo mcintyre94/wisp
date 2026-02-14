@@ -30,6 +30,7 @@ final class ChatViewModel {
     private var receivedSystemEvent = false
     private var usedResume = false
     private var queuedPrompt: String?
+    private var retriedAfterTimeout = false
 
     init(spriteName: String) {
         self.spriteName = spriteName
@@ -97,6 +98,7 @@ final class ChatViewModel {
         guard !text.isEmpty else { return }
 
         inputText = ""
+        retriedAfterTimeout = false
         let userMessage = ChatMessage(role: .user, content: [.text(text)])
         messages.append(userMessage)
 
@@ -216,6 +218,21 @@ final class ChatViewModel {
         currentAssistantMessage = nil
         execSession = nil
 
+        // If timed out with no data, clear Claude lock files and retry once
+        if !receivedData && !retriedAfterTimeout && !Task.isCancelled {
+            logger.info("Timeout — clearing Claude lock files and retrying")
+            retriedAfterTimeout = true
+            status = .connecting
+            if let idx = messages.firstIndex(where: { $0.id == assistantMessage.id }) {
+                messages.remove(at: idx)
+            }
+            let notice = ChatMessage(role: .system, content: [.text("Slow to respond — retrying...")])
+            messages.append(notice)
+            await runExecWithTimeout(apiClient: apiClient, command: "rm -rf /home/sprite/.local/state/claude/locks", timeout: 15)
+            await executeClaudeCommand(prompt: prompt, apiClient: apiClient, modelContext: modelContext)
+            return
+        }
+
         // If --resume failed (no system event received), retry without it
         if usedResume && !receivedSystemEvent && !Task.isCancelled {
             logger.info("Stale session detected, retrying without --resume")
@@ -329,27 +346,24 @@ final class ChatViewModel {
     private func wakeSprite(apiClient: SpritesAPIClient) async {
         // Kill any stale Claude process from a previous interrupted session
         logger.info("Killing stale Claude processes")
-        let killSession = apiClient.createExecSession(
-            spriteName: spriteName,
-            command: "pkill claude"
-        )
-        killSession.connect()
-        do {
-            for try await _ in killSession.stdout() {}
-        } catch {
-            // Expected to fail if no claude process exists
-        }
+        await runExecWithTimeout(apiClient: apiClient, command: "pkill claude", timeout: 15)
         logger.info("Waking sprite")
-        let wakeSession = apiClient.createExecSession(
-            spriteName: spriteName,
-            command: "echo ready"
-        )
-        wakeSession.connect()
-        do {
-            for try await _ in wakeSession.stdout() {}
-        } catch {
-            logger.error("Wake sprite error: \(error)")
-        }
+        await runExecWithTimeout(apiClient: apiClient, command: "echo ready", timeout: 15)
         logger.info("Sprite awake")
+    }
+
+    private func runExecWithTimeout(apiClient: SpritesAPIClient, command: String, timeout: Int) async {
+        let session = apiClient.createExecSession(spriteName: spriteName, command: command)
+        session.connect()
+        let timeoutTask = Task {
+            try await Task.sleep(for: .seconds(timeout))
+            session.disconnect()
+        }
+        do {
+            for try await _ in session.stdout() {}
+        } catch {
+            // Expected — either command failed or timeout disconnected
+        }
+        timeoutTask.cancel()
     }
 }
