@@ -27,6 +27,7 @@ struct ToolResultCardView: View {
                         .foregroundStyle(.tertiary)
                         .rotationEffect(.degrees(card.isExpanded ? 90 : 0))
                 }
+                .contentShape(Rectangle())
                 .padding(.horizontal, 12)
                 .padding(.vertical, 6)
             }
@@ -34,10 +35,11 @@ struct ToolResultCardView: View {
 
             if card.isExpanded {
                 Divider()
-                ScrollView(.horizontal, showsIndicators: false) {
+                ScrollView([.horizontal, .vertical], showsIndicators: false) {
                     Text(card.displayContent)
                         .font(.system(.caption2, design: .monospaced))
                         .textSelection(.enabled)
+                        .fixedSize(horizontal: true, vertical: true)
                         .padding(12)
                 }
                 .frame(maxHeight: 200)

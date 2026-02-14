@@ -34,6 +34,7 @@ struct ToolUseCardView: View {
                         .foregroundStyle(.tertiary)
                         .rotationEffect(.degrees(card.isExpanded ? 90 : 0))
                 }
+                .contentShape(Rectangle())
                 .padding(.horizontal, 12)
                 .padding(.vertical, 8)
             }
