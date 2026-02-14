@@ -3,11 +3,7 @@ import SwiftUI
 struct ChatView: View {
     @Environment(SpritesAPIClient.self) private var apiClient
     @Environment(\.modelContext) private var modelContext
-    @State private var viewModel: ChatViewModel
-
-    init(spriteName: String) {
-        _viewModel = State(initialValue: ChatViewModel(spriteName: spriteName))
-    }
+    @Bindable var viewModel: ChatViewModel
 
     var body: some View {
         VStack(spacing: 0) {
@@ -39,12 +35,9 @@ struct ChatView: View {
                     viewModel.sendMessage(apiClient: apiClient, modelContext: modelContext)
                 },
                 onInterrupt: {
-                    viewModel.interrupt()
+                    viewModel.interrupt(modelContext: modelContext)
                 }
             )
-        }
-        .task {
-            viewModel.loadSession(modelContext: modelContext)
         }
     }
 }

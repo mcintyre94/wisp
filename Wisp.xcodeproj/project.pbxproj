@@ -18,6 +18,7 @@
 		5ABE241326BF34FF2E3C3E51 /* CreateSpriteSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA1634863D8543868BA11B02 /* CreateSpriteSheet.swift */; };
 		61CBE460AC96CBE6BF8AF0B0 /* SpriteSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6BE6E0D68BBB35DE56600E1 /* SpriteSession.swift */; };
 		6445AB5A4723D213CFDF0460 /* JSONValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3893EEF3ADDA05DF7A9C0909 /* JSONValue.swift */; };
+		A1B2C3D4E5F60718293A4B5C /* PersistedChatMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E2D3C4B5A60798192A3B4C /* PersistedChatMessage.swift */; };
 		6D0E6C856F514B6E4F81313C /* AppError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 616F53154EEA09CE101C7703 /* AppError.swift */; };
 		6F12D7D1F6C0AAFE6C28AB4C /* ClaudeEventTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B299898C61EA80D1A91AF37 /* ClaudeEventTypes.swift */; };
 		735DA590AAB4728F7A8B5037 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8C4C3A1F2B2D57313431E50 /* Extensions.swift */; };
@@ -92,6 +93,7 @@
 		E5956E839208B00B1EE0C88A /* StreamingIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamingIndicator.swift; sourceTree = "<group>"; };
 		EA1634863D8543868BA11B02 /* CreateSpriteSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateSpriteSheet.swift; sourceTree = "<group>"; };
 		EF49F7E0F4AC02FDF496D379 /* DashboardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardViewModel.swift; sourceTree = "<group>"; };
+		F1E2D3C4B5A60798192A3B4C /* PersistedChatMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistedChatMessage.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -139,6 +141,7 @@
 		2C8C6880DD6F72287E9A9520 /* Local */ = {
 			isa = PBXGroup;
 			children = (
+				F1E2D3C4B5A60798192A3B4C /* PersistedChatMessage.swift */,
 				D6BE6E0D68BBB35DE56600E1 /* SpriteSession.swift */,
 			);
 			path = Local;
@@ -384,6 +387,7 @@
 				735DA590AAB4728F7A8B5037 /* Extensions.swift in Sources */,
 				6445AB5A4723D213CFDF0460 /* JSONValue.swift in Sources */,
 				FE589FC5A8086E6958A363E1 /* KeychainService.swift in Sources */,
+				A1B2C3D4E5F60718293A4B5C /* PersistedChatMessage.swift in Sources */,
 				FC78F202B420DB2A1052C561 /* RootView.swift in Sources */,
 				F3F898AC4565D9C9C6C7BE10 /* Sprite.swift in Sources */,
 				FFB48F025123550446943E29 /* SpriteDetailView.swift in Sources */,

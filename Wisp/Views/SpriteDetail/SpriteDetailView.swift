@@ -1,4 +1,5 @@
 import SwiftUI
+import SwiftData
 
 enum SpriteTab: String, CaseIterable {
     case overview = "Overview"
@@ -9,6 +10,13 @@ enum SpriteTab: String, CaseIterable {
 struct SpriteDetailView: View {
     let sprite: Sprite
     @State private var selectedTab: SpriteTab = .chat
+    @State private var chatViewModel: ChatViewModel
+    @Environment(\.modelContext) private var modelContext
+
+    init(sprite: Sprite) {
+        self.sprite = sprite
+        _chatViewModel = State(initialValue: ChatViewModel(spriteName: sprite.name))
+    }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -24,12 +32,27 @@ struct SpriteDetailView: View {
             case .overview:
                 SpriteOverviewView(sprite: sprite)
             case .chat:
-                ChatView(spriteName: sprite.name)
+                ChatView(viewModel: chatViewModel)
             case .checkpoints:
                 CheckpointsView(spriteName: sprite.name)
             }
         }
         .navigationTitle(sprite.name)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar {
+            if selectedTab == .chat {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        chatViewModel.startNewChat(modelContext: modelContext)
+                    } label: {
+                        Image(systemName: "square.and.pencil")
+                    }
+                    .disabled(chatViewModel.isStreaming)
+                }
+            }
+        }
+        .task {
+            chatViewModel.loadSession(modelContext: modelContext)
+        }
     }
 }

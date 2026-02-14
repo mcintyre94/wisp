@@ -47,6 +47,45 @@ final class ChatViewModel {
         if let session = try? modelContext.fetch(descriptor).first {
             sessionId = session.claudeSessionId
             workingDirectory = session.workingDirectory
+
+            if messages.isEmpty {
+                let persisted = session.loadMessages()
+                messages = persisted.map { ChatMessage(from: $0) }
+                rebuildToolUseIndex()
+            }
+        }
+    }
+
+    func persistMessages(modelContext: ModelContext) {
+        let persisted = messages.map { $0.toPersisted() }
+        let session = fetchOrCreateSession(modelContext: modelContext)
+        session.saveMessages(persisted)
+        try? modelContext.save()
+    }
+
+    func startNewChat(modelContext: ModelContext) {
+        interrupt()
+        messages = []
+        sessionId = nil
+        toolUseIndex = [:]
+        persistMessages(modelContext: modelContext)
+
+        let session = fetchOrCreateSession(modelContext: modelContext)
+        session.claudeSessionId = nil
+        try? modelContext.save()
+    }
+
+    private func rebuildToolUseIndex() {
+        toolUseIndex = [:]
+        for (messageIndex, message) in messages.enumerated() {
+            for item in message.content {
+                if case .toolUse(let card) = item {
+                    toolUseIndex[card.toolUseId] = (
+                        messageIndex: messageIndex,
+                        toolName: card.toolName
+                    )
+                }
+            }
         }
     }
 
@@ -63,7 +102,7 @@ final class ChatViewModel {
         }
     }
 
-    func interrupt() {
+    func interrupt(modelContext: ModelContext? = nil) {
         streamTask?.cancel()
         streamTask = nil
         execSession?.disconnect()
@@ -74,6 +113,10 @@ final class ChatViewModel {
         }
         currentAssistantMessage = nil
         status = .idle
+
+        if let modelContext {
+            persistMessages(modelContext: modelContext)
+        }
     }
 
     // MARK: - Private
@@ -150,6 +193,8 @@ final class ChatViewModel {
         if case .streaming = status {
             status = .idle
         }
+
+        persistMessages(modelContext: modelContext)
     }
 
     private func handleEvent(_ event: ClaudeStreamEvent, modelContext: ModelContext) {
@@ -209,20 +254,23 @@ final class ChatViewModel {
         }
     }
 
-    private func saveSession(modelContext: ModelContext) {
+    private func fetchOrCreateSession(modelContext: ModelContext) -> SpriteSession {
         let name = spriteName
         let descriptor = FetchDescriptor<SpriteSession>(
             predicate: #Predicate { $0.spriteName == name }
         )
 
-        let session: SpriteSession
         if let existing = try? modelContext.fetch(descriptor).first {
-            session = existing
-        } else {
-            session = SpriteSession(spriteName: spriteName, workingDirectory: workingDirectory)
-            modelContext.insert(session)
+            return existing
         }
 
+        let session = SpriteSession(spriteName: spriteName, workingDirectory: workingDirectory)
+        modelContext.insert(session)
+        return session
+    }
+
+    private func saveSession(modelContext: ModelContext) {
+        let session = fetchOrCreateSession(modelContext: modelContext)
         session.claudeSessionId = sessionId
         session.lastUsed = Date()
         try? modelContext.save()
