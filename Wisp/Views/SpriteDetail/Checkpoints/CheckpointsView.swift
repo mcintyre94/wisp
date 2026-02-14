@@ -28,7 +28,22 @@ struct CheckpointsView: View {
             if viewModel.isLoading {
                 ProgressView()
             }
+            if viewModel.isRestoring {
+                ZStack {
+                    Color.black.opacity(0.3)
+                        .ignoresSafeArea()
+                    VStack(spacing: 12) {
+                        ProgressView()
+                        Text("Restoring...")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                    .padding(24)
+                    .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 12))
+                }
+            }
         }
+        .allowsHitTesting(!viewModel.isRestoring)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button {
@@ -59,7 +74,9 @@ struct CheckpointsView: View {
             set: { if !$0 { viewModel.checkpointToRestore = nil } }
         )) {
             Button("Restore", role: .destructive) {
-                Task { await viewModel.restoreCheckpoint(apiClient: apiClient) }
+                if let checkpoint = viewModel.checkpointToRestore {
+                    Task { await viewModel.restoreCheckpoint(checkpoint: checkpoint, apiClient: apiClient) }
+                }
             }
             Button("Cancel", role: .cancel) {}
         } message: {
@@ -74,6 +91,11 @@ struct CheckpointsView: View {
             if let error = viewModel.errorMessage {
                 Text(error)
             }
+        }
+        .alert("Checkpoint Restored", isPresented: $viewModel.showRestoreSuccess) {
+            Button("OK") {}
+        } message: {
+            Text("The Sprite has been restored to the selected checkpoint.")
         }
     }
 
@@ -111,7 +133,8 @@ struct CheckpointsView: View {
             Button {
                 viewModel.checkpointToRestore = checkpoint
             } label: {
-                Image(systemName: "arrow.counterclockwise")
+                Text("Restore")
+                    .font(.caption)
             }
             .buttonStyle(.bordered)
             .controlSize(.small)

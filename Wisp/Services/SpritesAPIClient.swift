@@ -201,7 +201,7 @@ final class SpritesAPIClient {
             guard !line.isEmpty, let data = line.data(using: .utf8) else { continue }
             if let event = try? decoder.decode(CheckpointStreamEvent.self, from: data) {
                 if event.type == "error" {
-                    throw AppError.serverError(statusCode: 500, message: event.data)
+                    throw AppError.serverError(statusCode: 500, message: event.error ?? event.data)
                 }
                 logger.info("Checkpoint stream: \(event.type) — \(event.data ?? "")")
             }

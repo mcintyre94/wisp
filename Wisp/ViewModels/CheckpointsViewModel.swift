@@ -10,6 +10,8 @@ final class CheckpointsViewModel {
     var errorMessage: String?
     var showCreateSheet = false
     var checkpointToRestore: Checkpoint?
+    var isRestoring = false
+    var showRestoreSuccess = false
 
     init(spriteName: String) {
         self.spriteName = spriteName
@@ -45,15 +47,18 @@ final class CheckpointsViewModel {
         isCreating = false
     }
 
-    func restoreCheckpoint(apiClient: SpritesAPIClient) async {
-        guard let checkpoint = checkpointToRestore else { return }
+    func restoreCheckpoint(checkpoint: Checkpoint, apiClient: SpritesAPIClient) async {
         checkpointToRestore = nil
         errorMessage = nil
+        isRestoring = true
 
         do {
             try await apiClient.restoreCheckpoint(spriteName: spriteName, checkpointId: checkpoint.id)
+            showRestoreSuccess = true
         } catch {
             errorMessage = error.localizedDescription
         }
+
+        isRestoring = false
     }
 }

@@ -42,5 +42,6 @@ struct CreateCheckpointRequest: Codable, Sendable {
 struct CheckpointStreamEvent: Codable, Sendable {
     let type: String
     let data: String?
+    let error: String?
     let time: String?
 }
