@@ -2,11 +2,7 @@ import SwiftUI
 
 struct CheckpointsView: View {
     @Environment(SpritesAPIClient.self) private var apiClient
-    @State private var viewModel: CheckpointsViewModel
-
-    init(spriteName: String) {
-        _viewModel = State(initialValue: CheckpointsViewModel(spriteName: spriteName))
-    }
+    @Bindable var viewModel: CheckpointsViewModel
 
     var body: some View {
         Group {
@@ -24,9 +20,14 @@ struct CheckpointsView: View {
                 }
             }
         }
-        .overlay {
-            if viewModel.isLoading {
+        .overlay(alignment: .top) {
+            if viewModel.isLoading && viewModel.checkpoints.isEmpty {
                 ProgressView()
+            }
+            if viewModel.isLoading && !viewModel.checkpoints.isEmpty {
+                ProgressView()
+                    .scaleEffect(0.7)
+                    .padding(.top, 4)
             }
             if viewModel.isRestoring {
                 ZStack {

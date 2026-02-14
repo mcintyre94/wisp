@@ -11,11 +11,13 @@ struct SpriteDetailView: View {
     let sprite: Sprite
     @State private var selectedTab: SpriteTab = .chat
     @State private var chatViewModel: ChatViewModel
+    @State private var checkpointsViewModel: CheckpointsViewModel
     @Environment(\.modelContext) private var modelContext
 
     init(sprite: Sprite) {
         self.sprite = sprite
         _chatViewModel = State(initialValue: ChatViewModel(spriteName: sprite.name))
+        _checkpointsViewModel = State(initialValue: CheckpointsViewModel(spriteName: sprite.name))
     }
 
     var body: some View {
@@ -34,7 +36,7 @@ struct SpriteDetailView: View {
             case .chat:
                 ChatView(viewModel: chatViewModel)
             case .checkpoints:
-                CheckpointsView(spriteName: sprite.name)
+                CheckpointsView(viewModel: checkpointsViewModel)
             }
         }
         .navigationTitle(sprite.name)
