@@ -49,15 +49,18 @@ final class ExecSession: Sendable {
                             guard !data.isEmpty else { continue }
                             let streamId = data[0]
                             let payload = data.dropFirst()
-                            logger.info("Binary frame: streamId=\(streamId) size=\(payload.count)")
+                            let preview = String(data: Data(payload), encoding: .utf8)?.prefix(500) ?? "<binary>"
+                            logger.info("Binary frame: streamId=\(streamId) size=\(payload.count) preview=\(preview)")
 
                             switch streamId {
                             case 1: // stdout
                                 continuation.yield(Data(payload))
                             case 2: // stderr — also yield for visibility
+                                logger.warning("stderr: \(preview)")
                                 continuation.yield(Data(payload))
                             case 3: // exit
-                                logger.info("Exit frame received")
+                                let exitCode = payload.first.map { Int($0) } ?? -1
+                                logger.info("Exit frame received, code=\(exitCode)")
                                 continuation.finish()
                                 return
                             default:

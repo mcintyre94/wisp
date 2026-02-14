@@ -136,6 +136,9 @@ final class ChatViewModel {
     ) async {
         status = .connecting
 
+        // Wake sprite with a lightweight exec before running Claude
+        await wakeSprite(apiClient: apiClient)
+
         let escapedPrompt = prompt
             .replacingOccurrences(of: "'", with: "'\\''")
 
@@ -308,5 +311,20 @@ final class ChatViewModel {
         session.claudeSessionId = sessionId
         session.lastUsed = Date()
         try? modelContext.save()
+    }
+
+    private func wakeSprite(apiClient: SpritesAPIClient) async {
+        logger.info("Waking sprite")
+        let session = apiClient.createExecSession(
+            spriteName: spriteName,
+            command: "echo ready"
+        )
+        session.connect()
+        do {
+            for try await _ in session.stdout() {}
+        } catch {
+            logger.error("Wake sprite error: \(error)")
+        }
+        logger.info("Sprite awake")
     }
 }
