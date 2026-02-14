@@ -14,11 +14,15 @@ struct SpriteOverviewView: View {
                 HStack {
                     Text("Status")
                     Spacer()
-                    HStack(spacing: 6) {
-                        Image(systemName: "circle.fill")
-                            .font(.system(size: 8))
-                            .foregroundStyle(statusColor)
-                        Text(viewModel.sprite.status.displayName)
+                    if viewModel.hasLoaded {
+                        HStack(spacing: 6) {
+                            Image(systemName: "circle.fill")
+                                .font(.system(size: 8))
+                                .foregroundStyle(statusColor)
+                            Text(viewModel.sprite.status.displayName)
+                        }
+                    } else {
+                        ProgressView()
                     }
                 }
             }

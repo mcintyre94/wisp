@@ -5,6 +5,7 @@ import Foundation
 final class SpriteOverviewViewModel {
     var sprite: Sprite
     var isRefreshing = false
+    var hasLoaded = false
     var errorMessage: String?
     var copiedURL = false
 
@@ -22,6 +23,7 @@ final class SpriteOverviewViewModel {
             errorMessage = error.localizedDescription
         }
 
+        hasLoaded = true
         isRefreshing = false
     }
 }
