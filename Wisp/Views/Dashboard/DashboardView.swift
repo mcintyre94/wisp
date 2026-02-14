@@ -1,9 +1,24 @@
 import SwiftUI
 
+enum SpriteSortOrder: String, CaseIterable {
+    case name = "Name"
+    case newest = "Newest"
+}
+
 struct DashboardView: View {
     @Environment(SpritesAPIClient.self) private var apiClient
     @State private var viewModel = DashboardViewModel()
     @State private var navigationPath = NavigationPath()
+    @State private var sortOrder: SpriteSortOrder = .newest
+
+    private var sortedSprites: [Sprite] {
+        switch sortOrder {
+        case .name:
+            viewModel.sprites.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
+        case .newest:
+            viewModel.sprites.sorted { ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast) }
+        }
+    }
 
     var body: some View {
         NavigationStack(path: $navigationPath) {
@@ -16,7 +31,7 @@ struct DashboardView: View {
                     )
                 } else {
                     List {
-                        ForEach(viewModel.sprites) { sprite in
+                        ForEach(sortedSprites) { sprite in
                             NavigationLink(value: sprite) {
                                 SpriteRowView(sprite: sprite)
                             }
@@ -34,6 +49,17 @@ struct DashboardView: View {
             }
             .navigationTitle("Sprites")
             .toolbar {
+                ToolbarItem(placement: .topBarLeading) {
+                    Menu {
+                        Picker("Sort", selection: $sortOrder) {
+                            ForEach(SpriteSortOrder.allCases, id: \.self) { order in
+                                Text(order.rawValue)
+                            }
+                        }
+                    } label: {
+                        Image(systemName: "arrow.up.arrow.down")
+                    }
+                }
                 ToolbarItem(placement: .primaryAction) {
                     Button {
                         viewModel.showCreateSheet = true

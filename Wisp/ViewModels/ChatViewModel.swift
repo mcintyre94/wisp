@@ -173,9 +173,21 @@ final class ChatViewModel {
         messages.append(assistantMessage)
         currentAssistantMessage = assistantMessage
 
+        // Timeout if no data arrives within 30 seconds
+        var receivedData = false
+        let timeoutTask = Task {
+            try await Task.sleep(for: .seconds(30))
+            if !receivedData {
+                logger.warning("Timeout: no data received in 30s")
+                session.disconnect()
+            }
+        }
+
         do {
             for try await data in session.stdout() {
                 guard !Task.isCancelled else { break }
+                receivedData = true
+                timeoutTask.cancel()
 
                 let raw = String(data: data, encoding: .utf8) ?? "<binary \(data.count)b>"
                 logger.info("Received \(data.count) bytes: \(raw.prefix(500))")
@@ -195,9 +207,10 @@ final class ChatViewModel {
         } catch {
             logger.error("Stream error: \(error)")
             if !Task.isCancelled {
-                status = .error(error.localizedDescription)
+                status = .error(receivedData ? error.localizedDescription : "No response from Claude — try again")
             }
         }
+        timeoutTask.cancel()
 
         assistantMessage.isStreaming = false
         currentAssistantMessage = nil
@@ -314,14 +327,26 @@ final class ChatViewModel {
     }
 
     private func wakeSprite(apiClient: SpritesAPIClient) async {
+        // Kill any stale Claude process from a previous interrupted session
+        logger.info("Killing stale Claude processes")
+        let killSession = apiClient.createExecSession(
+            spriteName: spriteName,
+            command: "pkill claude"
+        )
+        killSession.connect()
+        do {
+            for try await _ in killSession.stdout() {}
+        } catch {
+            // Expected to fail if no claude process exists
+        }
         logger.info("Waking sprite")
-        let session = apiClient.createExecSession(
+        let wakeSession = apiClient.createExecSession(
             spriteName: spriteName,
             command: "echo ready"
         )
-        session.connect()
+        wakeSession.connect()
         do {
-            for try await _ in session.stdout() {}
+            for try await _ in wakeSession.stdout() {}
         } catch {
             logger.error("Wake sprite error: \(error)")
         }
