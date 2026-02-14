@@ -22,6 +22,9 @@ Package.pins
 Package.resolved
 *.xcodeproj/project.xcworkspace/xcshareddata/swiftpm/
 
+# Dev scripts
+.dev/
+
 # OS
 .DS_Store
 *.swp
