@@ -29,6 +29,7 @@ final class ChatViewModel {
     private var toolUseIndex: [String: (messageIndex: Int, toolName: String)] = [:]
     private var receivedSystemEvent = false
     private var usedResume = false
+    private var queuedPrompt: String?
 
     init(spriteName: String) {
         self.spriteName = spriteName
@@ -98,6 +99,11 @@ final class ChatViewModel {
         inputText = ""
         let userMessage = ChatMessage(role: .user, content: [.text(text)])
         messages.append(userMessage)
+
+        if isStreaming {
+            queuedPrompt = text
+            return
+        }
 
         streamTask = Task {
             await executeClaudeCommand(prompt: text, apiClient: apiClient, modelContext: modelContext)
@@ -214,6 +220,11 @@ final class ChatViewModel {
         }
 
         persistMessages(modelContext: modelContext)
+
+        if let queued = queuedPrompt, !Task.isCancelled {
+            queuedPrompt = nil
+            await executeClaudeCommand(prompt: queued, apiClient: apiClient, modelContext: modelContext)
+        }
     }
 
     private func handleEvent(_ event: ClaudeStreamEvent, modelContext: ModelContext) {
