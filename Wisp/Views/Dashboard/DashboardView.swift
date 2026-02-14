@@ -59,7 +59,9 @@ struct DashboardView: View {
                 set: { if !$0 { viewModel.spriteToDelete = nil } }
             )) {
                 Button("Delete", role: .destructive) {
-                    Task { await viewModel.deleteSprite(apiClient: apiClient) }
+                    if let sprite = viewModel.spriteToDelete {
+                        Task { await viewModel.deleteSprite(sprite, apiClient: apiClient) }
+                    }
                 }
                 Button("Cancel", role: .cancel) {}
             } message: {

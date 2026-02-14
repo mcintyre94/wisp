@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 @Observable
 @MainActor
@@ -22,15 +23,22 @@ final class DashboardViewModel {
         isLoading = false
     }
 
-    func deleteSprite(apiClient: SpritesAPIClient) async {
-        guard let sprite = spriteToDelete else { return }
-        spriteToDelete = nil
+    func deleteSprite(_ sprite: Sprite, apiClient: SpritesAPIClient) async {
+        // Optimistic removal
+        let previousSprites = sprites
+        withAnimation {
+            sprites.removeAll { $0.id == sprite.id }
+        }
 
         do {
             try await apiClient.deleteSprite(name: sprite.name)
-            sprites.removeAll { $0.id == sprite.id }
         } catch {
+            // Revert and refresh on failure
+            withAnimation {
+                sprites = previousSprites
+            }
             errorMessage = error.localizedDescription
+            await loadSprites(apiClient: apiClient)
         }
     }
 }
