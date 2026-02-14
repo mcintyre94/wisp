@@ -5,12 +5,14 @@ struct ChatInputBar: View {
     let isStreaming: Bool
     let onSend: () -> Void
     let onInterrupt: () -> Void
+    @FocusState private var isFocused: Bool
 
     var body: some View {
         VStack(spacing: 0) {
             Divider()
             HStack(spacing: 12) {
                 TextField("Message...", text: $text, axis: .vertical)
+                    .focused($isFocused)
                     .lineLimit(1...5)
                     .textFieldStyle(.plain)
                     .padding(.horizontal, 12)
@@ -25,7 +27,10 @@ struct ChatInputBar: View {
                     }
                 }
 
-                Button(action: onSend) {
+                Button {
+                    isFocused = false
+                    onSend()
+                } label: {
                     Image(systemName: "arrow.up.circle.fill")
                         .font(.title2)
                         .foregroundStyle(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .gray : .blue)
