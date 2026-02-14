@@ -54,7 +54,7 @@ struct DashboardView: View {
                         Task { await viewModel.loadSprites(apiClient: apiClient) }
                     }
             }
-            .alert("Delete Sprite?", isPresented: .init(
+            .confirmationDialog("Delete Sprite?", isPresented: .init(
                 get: { viewModel.spriteToDelete != nil },
                 set: { if !$0 { viewModel.spriteToDelete = nil } }
             )) {
@@ -63,7 +63,6 @@ struct DashboardView: View {
                         Task { await viewModel.deleteSprite(sprite, apiClient: apiClient) }
                     }
                 }
-                Button("Cancel", role: .cancel) {}
             } message: {
                 if let sprite = viewModel.spriteToDelete {
                     Text("This will permanently delete \"\(sprite.name)\". This action cannot be undone.")
