@@ -108,13 +108,17 @@ struct ClaudeToolResult: Codable, Sendable {
 
 struct ClaudeResultEvent: Codable, Sendable {
     let type: String
+    let subtype: String?
     let sessionId: String
+    let isError: Bool?
     let durationMs: Double?
     let numTurns: Int?
+    let result: String?
 
     enum CodingKeys: String, CodingKey {
-        case type
+        case type, subtype, result
         case sessionId = "session_id"
+        case isError = "is_error"
         case durationMs = "duration_ms"
         case numTurns = "num_turns"
     }

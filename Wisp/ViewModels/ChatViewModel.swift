@@ -27,6 +27,8 @@ final class ChatViewModel {
     private let parser = ClaudeStreamParser()
     private var currentAssistantMessage: ChatMessage?
     private var toolUseIndex: [String: (messageIndex: Int, toolName: String)] = [:]
+    private var receivedSystemEvent = false
+    private var usedResume = false
 
     init(spriteName: String) {
         self.spriteName = spriteName
@@ -132,10 +134,12 @@ final class ChatViewModel {
             .replacingOccurrences(of: "'", with: "'\\''")
 
         var command = "mkdir -p \(workingDirectory) && cd \(workingDirectory) && claude -p --verbose --output-format stream-json --dangerously-skip-permissions"
+        usedResume = sessionId != nil
         if let sessionId {
             command += " --resume \(sessionId)"
         }
         command += " '\(escapedPrompt)'"
+        receivedSystemEvent = false
 
         guard let claudeToken = apiClient.claudeToken else {
             status = .error("No Claude token configured")
@@ -190,6 +194,21 @@ final class ChatViewModel {
         currentAssistantMessage = nil
         execSession = nil
 
+        // If --resume failed (no system event received), retry without it
+        if usedResume && !receivedSystemEvent && !Task.isCancelled {
+            logger.info("Stale session detected, retrying without --resume")
+            // Replace the failed assistant message with a notice
+            if let idx = messages.firstIndex(where: { $0.id == assistantMessage.id }) {
+                messages.remove(at: idx)
+            }
+            let notice = ChatMessage(role: .system, content: [.text("Session expired — starting fresh")])
+            messages.append(notice)
+            sessionId = nil
+            saveSession(modelContext: modelContext)
+            await executeClaudeCommand(prompt: prompt, apiClient: apiClient, modelContext: modelContext)
+            return
+        }
+
         if case .streaming = status {
             status = .idle
         }
@@ -200,6 +219,7 @@ final class ChatViewModel {
     private func handleEvent(_ event: ClaudeStreamEvent, modelContext: ModelContext) {
         switch event {
         case .system(let systemEvent):
+            receivedSystemEvent = true
             sessionId = systemEvent.sessionId
             modelName = systemEvent.model
             saveSession(modelContext: modelContext)
@@ -246,6 +266,9 @@ final class ChatViewModel {
             }
 
         case .result(let resultEvent):
+            if resultEvent.isError == true {
+                logger.error("Claude result error: \(resultEvent.result ?? "unknown")")
+            }
             sessionId = resultEvent.sessionId
             saveSession(modelContext: modelContext)
 
