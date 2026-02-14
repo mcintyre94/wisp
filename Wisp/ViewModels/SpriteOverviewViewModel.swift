@@ -7,7 +7,6 @@ final class SpriteOverviewViewModel {
     var isRefreshing = false
     var hasLoaded = false
     var errorMessage: String?
-    var copiedURL = false
 
     init(sprite: Sprite) {
         self.sprite = sprite

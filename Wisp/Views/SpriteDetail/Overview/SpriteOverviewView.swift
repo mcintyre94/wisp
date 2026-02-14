@@ -28,22 +28,32 @@ struct SpriteOverviewView: View {
             }
 
             Section("Details") {
-                if let url = viewModel.sprite.url {
-                    HStack {
-                        Text("URL")
-                        Spacer()
-                        Text(viewModel.copiedURL ? "Copied!" : url)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(1)
+                if let url = viewModel.sprite.url, let linkURL = URL(string: url) {
+                    Link(destination: linkURL) {
+                        HStack {
+                            Text("URL")
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            Text(url)
+                                .font(.caption)
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                            Image(systemName: "arrow.up.right")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                        }
                     }
-                    .contentShape(Rectangle())
-                    .onTapGesture {
-                        UIPasteboard.general.string = url
-                        viewModel.copiedURL = true
-                        Task {
-                            try? await Task.sleep(for: .seconds(2))
-                            viewModel.copiedURL = false
+                    .tint(.primary)
+                    .contextMenu {
+                        Button {
+                            UIApplication.shared.open(linkURL)
+                        } label: {
+                            Label("Open in Safari", systemImage: "safari")
+                        }
+                        Button {
+                            UIPasteboard.general.string = url
+                        } label: {
+                            Label("Copy URL", systemImage: "doc.on.doc")
                         }
                     }
                 }
