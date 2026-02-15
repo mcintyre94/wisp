@@ -12,6 +12,7 @@ struct SpriteDetailView: View {
     @State private var selectedTab: SpriteTab = .chat
     @State private var chatViewModel: ChatViewModel
     @State private var checkpointsViewModel: CheckpointsViewModel
+    @Environment(SpritesAPIClient.self) private var apiClient
     @Environment(\.modelContext) private var modelContext
 
     init(sprite: Sprite) {
@@ -54,7 +55,7 @@ struct SpriteDetailView: View {
             }
         }
         .task {
-            chatViewModel.loadSession(modelContext: modelContext)
+            chatViewModel.loadSession(apiClient: apiClient, modelContext: modelContext)
         }
     }
 }

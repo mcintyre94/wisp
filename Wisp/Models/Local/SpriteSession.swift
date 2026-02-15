@@ -5,6 +5,7 @@ import SwiftData
 final class SpriteSession {
     @Attribute(.unique) var spriteName: String
     var claudeSessionId: String?
+    var execSessionId: String?
     var workingDirectory: String
     var lastUsed: Date
     var messagesData: Data?

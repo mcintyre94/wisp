@@ -7,7 +7,7 @@ struct ChatStatusBar: View {
     private var isVisible: Bool {
         switch status {
         case .idle: return modelName != nil
-        case .connecting, .streaming, .error: return true
+        case .connecting, .streaming, .reconnecting, .error: return true
         }
     }
 
@@ -36,6 +36,12 @@ struct ChatStatusBar: View {
                     Text("Streaming...")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
+                case .reconnecting:
+                    ProgressView()
+                        .controlSize(.mini)
+                    Text("Reconnecting...")
+                        .font(.caption2)
+                        .foregroundStyle(.orange)
                 case .error(let message):
                     Image(systemName: "exclamationmark.triangle.fill")
                         .foregroundStyle(.red)

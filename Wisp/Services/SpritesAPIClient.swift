@@ -114,6 +114,15 @@ final class SpritesAPIClient {
         return ExecSession(url: components.url!, token: spritesToken ?? "")
     }
 
+    func attachExecSession(spriteName: String, execSessionId: String) -> ExecSession {
+        var components = URLComponents()
+        components.scheme = "wss"
+        components.host = "api.sprites.dev"
+        components.path = "/v1/sprites/\(spriteName)/exec/\(execSessionId)"
+
+        return ExecSession(url: components.url!, token: spritesToken ?? "")
+    }
+
     // MARK: - Private
 
     private func request<T: Decodable>(

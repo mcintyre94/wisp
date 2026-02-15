@@ -25,6 +25,10 @@ actor ClaudeStreamParser {
         return events
     }
 
+    func reset() {
+        buffer = Data()
+    }
+
     func flush() -> [ClaudeStreamEvent] {
         guard !buffer.isEmpty else { return [] }
 
