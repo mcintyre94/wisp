@@ -1,12 +1,6 @@
 import SwiftUI
 import SwiftData
 
-enum SpriteTab: String, CaseIterable {
-    case overview = "Overview"
-    case chat = "Chat"
-    case checkpoints = "Checkpoints"
-}
-
 struct SpriteDetailView: View {
     let sprite: Sprite
     @State private var selectedTab: SpriteTab = .chat
@@ -22,14 +16,7 @@ struct SpriteDetailView: View {
     }
 
     private var pickerView: some View {
-        Picker("Tab", selection: $selectedTab) {
-            ForEach(SpriteTab.allCases, id: \.self) { tab in
-                Text(tab.rawValue).tag(tab)
-            }
-        }
-        .pickerStyle(.segmented)
-        .background(.bar, in: Capsule())
-        .padding()
+        SpriteTabPicker(selectedTab: $selectedTab)
     }
 
     @ViewBuilder

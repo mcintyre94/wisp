@@ -73,29 +73,45 @@ struct ChatStatusBar: View {
             }
             .padding(.horizontal, 10)
             .padding(.vertical, 4)
-            .background(.ultraThinMaterial, in: Capsule())
+            .glassEffect()
             .animation(.easeInOut(duration: 0.2), value: statusKey)
     }
 }
 
+private let previewBackground = LinearGradient(
+    colors: [.blue.opacity(0.9), .purple.opacity(0.9)],
+    startPoint: .topLeading,
+    endPoint: .bottomTrailing
+)
+
 #Preview("Idle") {
     ChatStatusBar(status: .idle, modelName: "claude-sonnet-4-5-20250929")
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(previewBackground)
 }
 
 #Preview("Streaming") {
     ChatStatusBar(status: .streaming, modelName: nil)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(previewBackground)
 }
 
 #Preview("Connecting") {
     ChatStatusBar(status: .connecting, modelName: nil)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(previewBackground)
 }
 
 #Preview("Reconnecting") {
     ChatStatusBar(status: .reconnecting, modelName: nil)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(previewBackground)
 }
 
 #Preview("Error") {
     ChatStatusBar(status: .error("Connection lost"), modelName: nil)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(previewBackground)
 }
 
 #Preview("All States") {
@@ -117,6 +133,8 @@ struct ChatStatusBar: View {
 
         Button("Next State") {
             stateIndex = (stateIndex + 1) % states.count
-        }
+        }.buttonStyle(.bordered).background(.regularMaterial, in: .capsule)
     }
+    .frame(maxWidth: .infinity, maxHeight: .infinity)
+    .background(previewBackground)
 }

@@ -55,6 +55,7 @@
 		AABB0011223344556677F008 /* APIModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABB0011223344556677F007 /* APIModelTests.swift */; };
 		AABB0011223344556677F00A /* AppErrorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABB0011223344556677F009 /* AppErrorTests.swift */; };
 		AABB0011223344556677F00C /* ExtensionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABB0011223344556677F00B /* ExtensionsTests.swift */; };
+		7B3C91E5A8D2F06473E1CA59 /* SpriteTabPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4A7E1B29C3F508A1E6B7D43 /* SpriteTabPicker.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -110,6 +111,7 @@
 		EA1634863D8543868BA11B02 /* CreateSpriteSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateSpriteSheet.swift; sourceTree = "<group>"; };
 		EF49F7E0F4AC02FDF496D379 /* DashboardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardViewModel.swift; sourceTree = "<group>"; };
 		F1E2D3C4B5A60798192A3B4C /* PersistedChatMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistedChatMessage.swift; sourceTree = "<group>"; };
+		D4A7E1B29C3F508A1E6B7D43 /* SpriteTabPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpriteTabPicker.swift; sourceTree = "<group>"; };
 		AABB001122334455667788AA /* WispTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WispTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		AABB0011223344556677F001 /* ClaudeStreamParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeStreamParserTests.swift; sourceTree = "<group>"; };
 		AABB0011223344556677F003 /* JSONValueTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONValueTests.swift; sourceTree = "<group>"; };
@@ -237,6 +239,7 @@
 			isa = PBXGroup;
 			children = (
 				54C849AF5732774C39968056 /* SpriteDetailView.swift */,
+				D4A7E1B29C3F508A1E6B7D43 /* SpriteTabPicker.swift */,
 				B22C752D93810C377FF981DD /* Chat */,
 				13541EF56061CE5B4A38DDFA /* Checkpoints */,
 				C7EC091CA8E532B96108719F /* Overview */,
@@ -453,6 +456,7 @@
 				FC78F202B420DB2A1052C561 /* RootView.swift in Sources */,
 				F3F898AC4565D9C9C6C7BE10 /* Sprite.swift in Sources */,
 				FFB48F025123550446943E29 /* SpriteDetailView.swift in Sources */,
+				7B3C91E5A8D2F06473E1CA59 /* SpriteTabPicker.swift in Sources */,
 				C77F2C1E11DECAE31E0F5ECC /* SpriteOverviewView.swift in Sources */,
 				974996B0FB4D30828E89DD21 /* SpriteOverviewViewModel.swift in Sources */,
 				0418F9D619251B7E6DB0276F /* SpriteRowView.swift in Sources */,
