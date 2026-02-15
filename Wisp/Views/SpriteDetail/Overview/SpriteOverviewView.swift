@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SpriteOverviewView: View {
     @Environment(SpritesAPIClient.self) private var apiClient
+    @Environment(\.openURL) private var openURL
     @State private var viewModel: SpriteOverviewViewModel
 
     init(sprite: Sprite) {
@@ -29,7 +30,9 @@ struct SpriteOverviewView: View {
 
             Section("Details") {
                 if let url = viewModel.sprite.url, let linkURL = URL(string: url) {
-                    Link(destination: linkURL) {
+                    Button {
+                        openURL(linkURL)
+                    } label: {
                         HStack {
                             Text("URL")
                                 .foregroundStyle(.primary)

@@ -4,6 +4,7 @@ import SwiftUI
 @main
 struct WispApp: App {
     @State private var apiClient = SpritesAPIClient()
+    @State private var browserCoordinator = InAppBrowserCoordinator()
     @AppStorage("theme") private var theme: String = "system"
 
     private var preferredColorScheme: ColorScheme? {
@@ -18,7 +19,11 @@ struct WispApp: App {
         WindowGroup {
             RootView()
                 .environment(apiClient)
+                .environment(browserCoordinator)
                 .preferredColorScheme(preferredColorScheme)
+                .onChange(of: apiClient.isAuthenticated, initial: true) {
+                    browserCoordinator.authToken = apiClient.spritesToken
+                }
         }
         .modelContainer(for: SpriteSession.self)
     }

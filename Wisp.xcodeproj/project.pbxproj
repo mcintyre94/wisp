@@ -59,6 +59,9 @@
 		7B3C91E5A8D2F06473E1CA59 /* SpriteTabPicker.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4A7E1B29C3F508A1E6B7D43 /* SpriteTabPicker.swift */; };
 		D2B1EF5C6A7F8B9304C5E6F7 /* ClaudeModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C1A0DE4B5F6E7A8293B4D5E6 /* ClaudeModel.swift */; };
 		F4D30A7E8C9BADB526E70819 /* SettingsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E3C2F06D7B8A9CA415D6F708 /* SettingsView.swift */; };
+		D4E5F6A7B8C9D0E1F2A3B4C5 /* InAppBrowserCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B8C9D0E1F2 /* InAppBrowserCoordinator.swift */; };
+		E5F6A7B8C9D0E1F2A3B4C5D6 /* WebViewPage.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F6A7B8C9D0E1F2A3 /* WebViewPage.swift */; };
+		F6A7B8C9D0E1F2A3B4C5D6E7 /* InAppBrowserSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3D4E5F6A7B8C9D0E1F2A3B4 /* InAppBrowserSheet.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -117,6 +120,9 @@
 		D4A7E1B29C3F508A1E6B7D43 /* SpriteTabPicker.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpriteTabPicker.swift; sourceTree = "<group>"; };
 		C1A0DE4B5F6E7A8293B4D5E6 /* ClaudeModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeModel.swift; sourceTree = "<group>"; };
 		E3C2F06D7B8A9CA415D6F708 /* SettingsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsView.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F6A7B8C9D0E1F2 /* InAppBrowserCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppBrowserCoordinator.swift; sourceTree = "<group>"; };
+		B2C3D4E5F6A7B8C9D0E1F2A3 /* WebViewPage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WebViewPage.swift; sourceTree = "<group>"; };
+		C3D4E5F6A7B8C9D0E1F2A3B4 /* InAppBrowserSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppBrowserSheet.swift; sourceTree = "<group>"; };
 		AABB001122334455667788AA /* WispTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WispTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		AABB0011223344556677F001 /* ClaudeStreamParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeStreamParserTests.swift; sourceTree = "<group>"; };
 		AABB0011223344556677F003 /* JSONValueTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONValueTests.swift; sourceTree = "<group>"; };
@@ -198,6 +204,7 @@
 			children = (
 				616F53154EEA09CE101C7703 /* AppError.swift */,
 				C8C4C3A1F2B2D57313431E50 /* Extensions.swift */,
+				A1B2C3D4E5F6A7B8C9D0E1F2 /* InAppBrowserCoordinator.swift */,
 				3893EEF3ADDA05DF7A9C0909 /* JSONValue.swift */,
 			);
 			path = Utilities;
@@ -282,8 +289,18 @@
 				902EF50E1CB6723AF748F886 /* Dashboard */,
 				A5E41B8F9DACBEC637F8192A /* Settings */,
 				90D05FE8D8DC0D59A74BAD85 /* SpriteDetail */,
+				A7B8C9D0E1F2A3B4C5D6E7F8 /* WebView */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		A7B8C9D0E1F2A3B4C5D6E7F8 /* WebView */ = {
+			isa = PBXGroup;
+			children = (
+				C3D4E5F6A7B8C9D0E1F2A3B4 /* InAppBrowserSheet.swift */,
+				B2C3D4E5F6A7B8C9D0E1F2A3 /* WebViewPage.swift */,
+			);
+			path = WebView;
 			sourceTree = "<group>";
 		};
 		B22C752D93810C377FF981DD /* Chat */ = {
@@ -468,6 +485,8 @@
 				B1447250DC51EA126B6387DB /* ExecMessage.swift in Sources */,
 				A21BF0D8D910819DD5591E88 /* ExecSession.swift in Sources */,
 				735DA590AAB4728F7A8B5037 /* Extensions.swift in Sources */,
+				D4E5F6A7B8C9D0E1F2A3B4C5 /* InAppBrowserCoordinator.swift in Sources */,
+				F6A7B8C9D0E1F2A3B4C5D6E7 /* InAppBrowserSheet.swift in Sources */,
 				6445AB5A4723D213CFDF0460 /* JSONValue.swift in Sources */,
 				FE589FC5A8086E6958A363E1 /* KeychainService.swift in Sources */,
 				A1B2C3D4E5F60718293A4B5C /* PersistedChatMessage.swift in Sources */,
@@ -486,6 +505,7 @@
 				CAE817B1222FA7E85383EE25 /* ToolResultCardView.swift in Sources */,
 				A610B5413A578D4AA424595D /* ToolUseCardView.swift in Sources */,
 				F32DE1DDC53913E28250E70D /* UserBubbleView.swift in Sources */,
+				E5F6A7B8C9D0E1F2A3B4C5D6 /* WebViewPage.swift in Sources */,
 				C575C7232C5FCA1A3F18A9D8 /* WispApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
