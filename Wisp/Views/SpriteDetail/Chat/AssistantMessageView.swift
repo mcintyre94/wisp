@@ -7,8 +7,8 @@ struct AssistantMessageView: View {
     var body: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 8) {
-                ForEach(message.content) { content in
-                    switch content {
+                ForEach(message.content.indices, id: \.self) { index in
+                    switch message.content[index] {
                     case .text(let text):
                         Markdown(text)
                             .markdownTheme(.basic)

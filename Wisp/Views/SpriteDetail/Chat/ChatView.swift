@@ -15,16 +15,18 @@ struct ChatView: View {
                         ChatMessageView(message: message)
                             .id(message.id)
                     }
+                    Color.clear.frame(height: 1).id("bottom")
                 }
                 .padding()
             }
             .defaultScrollAnchor(.bottom)
             .scrollDismissesKeyboard(.interactively)
             .onChange(of: viewModel.messages.count) {
-                if let last = viewModel.messages.last {
-                    withAnimation {
-                        proxy.scrollTo(last.id, anchor: .bottom)
-                    }
+                proxy.scrollTo("bottom")
+            }
+            .onChange(of: viewModel.messages.last?.content.count) {
+                if viewModel.messages.last?.isStreaming == true {
+                    proxy.scrollTo("bottom")
                 }
             }
         }
