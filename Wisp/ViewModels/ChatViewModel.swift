@@ -207,9 +207,9 @@ final class ChatViewModel {
             }
             logger.info("Stream ended normally")
         } catch {
-            logger.error("Stream error: \(error)")
+            logger.error("Stream error: \(Self.sanitize(error.localizedDescription))")
             if !Task.isCancelled {
-                status = .error(receivedData ? error.localizedDescription : "No response from Claude — try again")
+                status = .error(receivedData ? "Connection lost" : "No response from Claude — try again")
             }
         }
         timeoutTask.cancel()
@@ -350,6 +350,14 @@ final class ChatViewModel {
         logger.info("Waking sprite")
         await runExecWithTimeout(apiClient: apiClient, command: "echo ready", timeout: 15)
         logger.info("Sprite awake")
+    }
+
+    private static func sanitize(_ string: String) -> String {
+        string.replacingOccurrences(
+            of: "CLAUDE_CODE_OAUTH_TOKEN[=%][^&\\s,}]*",
+            with: "CLAUDE_CODE_OAUTH_TOKEN=<redacted>",
+            options: .regularExpression
+        )
     }
 
     private func runExecWithTimeout(apiClient: SpritesAPIClient, command: String, timeout: Int) async {
