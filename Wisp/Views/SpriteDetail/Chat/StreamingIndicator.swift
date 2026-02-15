@@ -9,8 +9,9 @@ struct StreamingIndicator: View {
                 Circle()
                     .fill(Color.secondary)
                     .frame(width: 6, height: 6)
-                    .scaleEffect(animating ? 1 : 0.5)
+                    .scaleEffect(animating ? 1 : 0.5, anchor: .center)
                     .opacity(animating ? 1 : 0.3)
+                    .frame(width: 6, height: 6)
                     .animation(
                         .easeInOut(duration: 0.6)
                             .repeatForever(autoreverses: true)
