@@ -89,7 +89,7 @@ final class SpritesAPIClient {
 
     // MARK: - Exec WebSocket
 
-    func createExecSession(spriteName: String, command: String, env: [String: String] = [:]) -> ExecSession {
+    func createExecSession(spriteName: String, command: String, env: [String: String] = [:], maxRunAfterDisconnect: Int? = nil) -> ExecSession {
         var components = URLComponents()
         components.scheme = "wss"
         components.host = "api.sprites.dev"
@@ -100,6 +100,10 @@ final class SpritesAPIClient {
             URLQueryItem(name: "cmd", value: "-c"),
             URLQueryItem(name: "cmd", value: command),
         ]
+
+        if let maxRunAfterDisconnect {
+            queryItems.append(URLQueryItem(name: "max_run_after_disconnect", value: String(maxRunAfterDisconnect)))
+        }
 
         for (key, value) in env {
             queryItems.append(URLQueryItem(name: "env", value: "\(key)=\(value)"))

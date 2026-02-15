@@ -163,7 +163,8 @@ final class ChatViewModel {
         let session = apiClient.createExecSession(
             spriteName: spriteName,
             command: command,
-            env: env
+            env: env,
+            maxRunAfterDisconnect: 600
         )
 
         execSession = session
