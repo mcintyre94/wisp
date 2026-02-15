@@ -165,6 +165,21 @@ final class ChatViewModel {
             .replacingOccurrences(of: "'", with: "'\\''")
 
         var command = "mkdir -p \(workingDirectory) && cd \(workingDirectory) && claude -p --verbose --output-format stream-json --dangerously-skip-permissions"
+
+        let modelId = UserDefaults.standard.string(forKey: "claudeModel") ?? ClaudeModel.sonnet.rawValue
+        command += " --model \(modelId)"
+
+        let maxTurns = UserDefaults.standard.integer(forKey: "maxTurns")
+        if maxTurns > 0 {
+            command += " --max-turns \(maxTurns)"
+        }
+
+        let customInstructions = UserDefaults.standard.string(forKey: "customInstructions") ?? ""
+        if !customInstructions.isEmpty {
+            let escapedInstructions = customInstructions.replacingOccurrences(of: "'", with: "'\\''")
+            command += " --append-system-prompt '\(escapedInstructions)'"
+        }
+
         usedResume = sessionId != nil
         if let sessionId {
             command += " --resume \(sessionId)"

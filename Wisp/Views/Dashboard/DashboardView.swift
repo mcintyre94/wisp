@@ -51,14 +51,21 @@ struct DashboardView: View {
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
-                    Menu {
-                        Picker("Sort", selection: $sortOrder) {
-                            ForEach(SpriteSortOrder.allCases, id: \.self) { order in
-                                Text(order.rawValue)
-                            }
+                    HStack(spacing: 12) {
+                        NavigationLink {
+                            SettingsView()
+                        } label: {
+                            Image(systemName: "gearshape")
                         }
-                    } label: {
-                        Image(systemName: "arrow.up.arrow.down")
+                        Menu {
+                            Picker("Sort", selection: $sortOrder) {
+                                ForEach(SpriteSortOrder.allCases, id: \.self) { order in
+                                    Text(order.rawValue)
+                                }
+                            }
+                        } label: {
+                            Image(systemName: "arrow.up.arrow.down")
+                        }
                     }
                 }
                 ToolbarItem(placement: .primaryAction) {
