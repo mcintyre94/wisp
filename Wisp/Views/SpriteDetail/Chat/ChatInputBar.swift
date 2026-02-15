@@ -19,7 +19,7 @@ struct ChatInputBar: View {
                 .textFieldStyle(.plain)
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
-                .glassEffect(in: .capsule)
+                .glassEffect(in: .rect(cornerRadius: 20))
 
             if isStreaming {
                 Button(action: onInterrupt) {
