@@ -55,7 +55,6 @@ struct ChatStatusBar: View {
             }
             .padding(.horizontal)
             .padding(.vertical, 4)
-            .background(.bar)
         }
     }
 }

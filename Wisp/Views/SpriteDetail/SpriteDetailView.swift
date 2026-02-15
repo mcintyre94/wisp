@@ -21,25 +21,33 @@ struct SpriteDetailView: View {
         _checkpointsViewModel = State(initialValue: CheckpointsViewModel(spriteName: sprite.name))
     }
 
-    var body: some View {
-        VStack(spacing: 0) {
-            Picker("Tab", selection: $selectedTab) {
-                ForEach(SpriteTab.allCases, id: \.self) { tab in
-                    Text(tab.rawValue).tag(tab)
-                }
-            }
-            .pickerStyle(.segmented)
-            .padding()
-
-            switch selectedTab {
-            case .overview:
-                SpriteOverviewView(sprite: sprite)
-            case .chat:
-                ChatView(viewModel: chatViewModel)
-            case .checkpoints:
-                CheckpointsView(viewModel: checkpointsViewModel)
+    private var pickerView: some View {
+        Picker("Tab", selection: $selectedTab) {
+            ForEach(SpriteTab.allCases, id: \.self) { tab in
+                Text(tab.rawValue).tag(tab)
             }
         }
+        .pickerStyle(.segmented)
+        .background(.bar, in: Capsule())
+        .padding()
+    }
+
+    @ViewBuilder
+    private var tabContent: some View {
+        switch selectedTab {
+        case .overview:
+            SpriteOverviewView(sprite: sprite)
+                .safeAreaInset(edge: .top, spacing: 0) { pickerView }
+        case .chat:
+            ChatView(viewModel: chatViewModel, topAccessory: AnyView(pickerView))
+        case .checkpoints:
+            CheckpointsView(viewModel: checkpointsViewModel)
+                .safeAreaInset(edge: .top, spacing: 0) { pickerView }
+        }
+    }
+
+    var body: some View {
+        tabContent
         .navigationTitle(sprite.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
