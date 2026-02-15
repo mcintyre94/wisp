@@ -7,39 +7,41 @@ struct ChatInputBar: View {
     let onInterrupt: () -> Void
     @FocusState private var isFocused: Bool
 
+    private var isEmpty: Bool {
+        text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+
     var body: some View {
-        VStack(spacing: 0) {
-            Divider()
-            HStack(spacing: 12) {
-                TextField("Message...", text: $text, axis: .vertical)
-                    .focused($isFocused)
-                    .lineLimit(1...5)
-                    .textFieldStyle(.plain)
-                    .padding(.horizontal, 12)
-                    .padding(.vertical, 8)
-                    .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 20))
+        HStack(spacing: 12) {
+            TextField("Message...", text: $text, axis: .vertical)
+                .focused($isFocused)
+                .lineLimit(1...5)
+                .textFieldStyle(.plain)
+                .padding(.horizontal, 12)
+                .padding(.vertical, 8)
+                .glassEffect(in: .capsule)
 
-                if isStreaming {
-                    Button(action: onInterrupt) {
-                        Image(systemName: "stop.circle.fill")
-                            .font(.title2)
-                            .foregroundStyle(.red)
-                    }
-                }
-
-                Button {
-                    isFocused = false
-                    onSend()
-                } label: {
-                    Image(systemName: "arrow.up.circle.fill")
+            if isStreaming {
+                Button(action: onInterrupt) {
+                    Image(systemName: "stop.circle.fill")
                         .font(.title2)
-                        .foregroundStyle(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .gray : .blue)
                 }
-                .disabled(text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                .tint(.red)
+                .buttonStyle(.glass)
             }
-            .padding(.horizontal)
-            .padding(.vertical, 8)
+
+            Button {
+                isFocused = false
+                onSend()
+            } label: {
+                Image(systemName: "arrow.up.circle.fill")
+                    .font(.title2)
+            }
+            .tint(isEmpty ? .gray : .blue)
+            .disabled(isEmpty)
+            .buttonStyle(.glass)
         }
-        .background(.bar)
+        .padding(.horizontal)
+        .padding(.vertical, 6)
     }
 }
