@@ -42,6 +42,6 @@ struct ChatInputBar: View {
             .buttonStyle(.glass)
         }
         .padding(.horizontal)
-        .padding(.vertical, 6)
+        .padding(.vertical, 4)
     }
 }

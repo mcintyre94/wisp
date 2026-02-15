@@ -48,6 +48,7 @@ struct DashboardView: View {
                 }
             }
             .navigationTitle("Sprites")
+            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     Menu {
