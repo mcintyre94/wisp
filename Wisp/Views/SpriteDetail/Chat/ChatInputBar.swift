@@ -5,7 +5,7 @@ struct ChatInputBar: View {
     let isStreaming: Bool
     let onSend: () -> Void
     let onInterrupt: () -> Void
-    @FocusState private var isFocused: Bool
+    var isFocused: FocusState<Bool>.Binding
 
     private var isEmpty: Bool {
         text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
@@ -14,7 +14,7 @@ struct ChatInputBar: View {
     var body: some View {
         HStack(spacing: 12) {
             TextField("Message...", text: $text, axis: .vertical)
-                .focused($isFocused)
+                .focused(isFocused)
                 .lineLimit(1...5)
                 .textFieldStyle(.plain)
                 .padding(.horizontal, 12)
@@ -31,7 +31,7 @@ struct ChatInputBar: View {
             }
 
             Button {
-                isFocused = false
+                isFocused.wrappedValue = false
                 onSend()
             } label: {
                 Image(systemName: "arrow.up.circle.fill")

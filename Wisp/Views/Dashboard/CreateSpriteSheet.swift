@@ -9,12 +9,14 @@ struct CreateSpriteSheet: View {
     @State private var isCreating = false
     @State private var hasMetMinLength = false
     @State private var errorMessage: String?
+    @FocusState private var isNameFocused: Bool
 
     var body: some View {
         NavigationStack {
             Form {
                 Section {
                     TextField("Sprite name", text: $name)
+                        .focused($isNameFocused)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
                         .onChange(of: name) { _, newValue in
@@ -63,6 +65,7 @@ struct CreateSpriteSheet: View {
                 }
             }
             .disabled(isCreating)
+            .onAppear { isNameFocused = true }
         }
     }
 

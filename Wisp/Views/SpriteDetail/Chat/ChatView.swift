@@ -5,6 +5,7 @@ struct ChatView: View {
     @Environment(\.modelContext) private var modelContext
     @Bindable var viewModel: ChatViewModel
     var topAccessory: AnyView? = nil
+    @FocusState private var isInputFocused: Bool
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -32,6 +33,13 @@ struct ChatView: View {
                 ChatStatusBar(status: viewModel.status, modelName: viewModel.modelName)
             }
         }
+        .task {
+            // Small delay to let loadSession populate messages first
+            try? await Task.sleep(for: .milliseconds(100))
+            if viewModel.messages.isEmpty {
+                isInputFocused = true
+            }
+        }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             ChatInputBar(
                 text: $viewModel.inputText,
@@ -41,7 +49,8 @@ struct ChatView: View {
                 },
                 onInterrupt: {
                     viewModel.interrupt(modelContext: modelContext)
-                }
+                },
+                isFocused: $isInputFocused
             )
         }
     }
