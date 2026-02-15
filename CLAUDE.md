@@ -106,6 +106,13 @@ Phase 1 scope — build only these features:
 - Working directory convention: `/home/sprite/project` for new Sprites, `/home/sprite/{repo}` for cloned repos
 - Run `mkdir -p /home/sprite/project` on first chat message if no project dir exists
 
+## Testing
+
+- Run unit tests after making changes to verify nothing is broken
+- Add new unit tests when adding or modifying logic (models, parsers, utilities, view models)
+- Tests live in `WispTests/` and use Swift Testing (`import Testing`, `@Suite`, `@Test`, `#expect`)
+- Test target uses `@testable import Wisp`
+
 ## Common Commands
 
 ```bash

@@ -49,7 +49,23 @@
 		FC78F202B420DB2A1052C561 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A64C131D52B17EA7B36B1BE6 /* RootView.swift */; };
 		FE589FC5A8086E6958A363E1 /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15F643DCF84E0352A9F8D649 /* KeychainService.swift */; };
 		FFB48F025123550446943E29 /* SpriteDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54C849AF5732774C39968056 /* SpriteDetailView.swift */; };
+		AABB0011223344556677F002 /* ClaudeStreamParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABB0011223344556677F001 /* ClaudeStreamParserTests.swift */; };
+		AABB0011223344556677F004 /* JSONValueTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABB0011223344556677F003 /* JSONValueTests.swift */; };
+		AABB0011223344556677F006 /* ClaudeStreamEventTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABB0011223344556677F005 /* ClaudeStreamEventTests.swift */; };
+		AABB0011223344556677F008 /* APIModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABB0011223344556677F007 /* APIModelTests.swift */; };
+		AABB0011223344556677F00A /* AppErrorTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABB0011223344556677F009 /* AppErrorTests.swift */; };
+		AABB0011223344556677F00C /* ExtensionsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABB0011223344556677F00B /* ExtensionsTests.swift */; };
 /* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		AABB0011223344556677880D /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 2B79780F0B29692CEE165AFF /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 9FED08DA26E69D96AED0CA8F;
+			remoteInfo = Wisp;
+		};
+/* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
 		099181E9B8BFE6F3475C5D36 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
@@ -94,6 +110,13 @@
 		EA1634863D8543868BA11B02 /* CreateSpriteSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateSpriteSheet.swift; sourceTree = "<group>"; };
 		EF49F7E0F4AC02FDF496D379 /* DashboardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardViewModel.swift; sourceTree = "<group>"; };
 		F1E2D3C4B5A60798192A3B4C /* PersistedChatMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistedChatMessage.swift; sourceTree = "<group>"; };
+		AABB001122334455667788AA /* WispTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = WispTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		AABB0011223344556677F001 /* ClaudeStreamParserTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeStreamParserTests.swift; sourceTree = "<group>"; };
+		AABB0011223344556677F003 /* JSONValueTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONValueTests.swift; sourceTree = "<group>"; };
+		AABB0011223344556677F005 /* ClaudeStreamEventTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeStreamEventTests.swift; sourceTree = "<group>"; };
+		AABB0011223344556677F007 /* APIModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIModelTests.swift; sourceTree = "<group>"; };
+		AABB0011223344556677F009 /* AppErrorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppErrorTests.swift; sourceTree = "<group>"; };
+		AABB0011223344556677F00B /* ExtensionsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionsTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -102,6 +125,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				9CAC809156C87B9CBD77F706 /* MarkdownUI in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		AABB001122334455667788DD /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -258,6 +288,7 @@
 			isa = PBXGroup;
 			children = (
 				9419236D77396D53BBCDB867 /* Wisp.app */,
+				AABB001122334455667788AA /* WispTests.xctest */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -266,6 +297,7 @@
 			isa = PBXGroup;
 			children = (
 				DB40982ED6D212CF23B3970B /* Wisp */,
+				AABB001122334455667788EE /* WispTests */,
 				B7756A2DAF10E6E2D9C5CA77 /* Products */,
 			);
 			sourceTree = "<group>";
@@ -292,6 +324,19 @@
 			path = Wisp;
 			sourceTree = "<group>";
 		};
+		AABB001122334455667788EE /* WispTests */ = {
+			isa = PBXGroup;
+			children = (
+				AABB0011223344556677F007 /* APIModelTests.swift */,
+				AABB0011223344556677F009 /* AppErrorTests.swift */,
+				AABB0011223344556677F005 /* ClaudeStreamEventTests.swift */,
+				AABB0011223344556677F001 /* ClaudeStreamParserTests.swift */,
+				AABB0011223344556677F00B /* ExtensionsTests.swift */,
+				AABB0011223344556677F003 /* JSONValueTests.swift */,
+			);
+			path = WispTests;
+			sourceTree = "<group>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -314,6 +359,23 @@
 			productName = Wisp;
 			productReference = 9419236D77396D53BBCDB867 /* Wisp.app */;
 			productType = "com.apple.product-type.application";
+		};
+		AABB001122334455667788BB /* WispTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = AABB0011223344556677880B /* Build configuration list for PBXNativeTarget "WispTests" */;
+			buildPhases = (
+				AABB001122334455667788CC /* Sources */,
+				AABB001122334455667788DD /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				AABB0011223344556677880C /* PBXTargetDependency */,
+			);
+			name = WispTests;
+			productName = WispTests;
+			productReference = AABB001122334455667788AA /* WispTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
 		};
 /* End PBXNativeTarget section */
 
@@ -341,6 +403,7 @@
 			projectRoot = "";
 			targets = (
 				9FED08DA26E69D96AED0CA8F /* Wisp */,
+				AABB001122334455667788BB /* WispTests */,
 			);
 		};
 /* End PBXProject section */
@@ -404,7 +467,28 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
+		AABB001122334455667788CC /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AABB0011223344556677F008 /* APIModelTests.swift in Sources */,
+				AABB0011223344556677F00A /* AppErrorTests.swift in Sources */,
+				AABB0011223344556677F006 /* ClaudeStreamEventTests.swift in Sources */,
+				AABB0011223344556677F002 /* ClaudeStreamParserTests.swift in Sources */,
+				AABB0011223344556677F00C /* ExtensionsTests.swift in Sources */,
+				AABB0011223344556677F004 /* JSONValueTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
 /* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		AABB0011223344556677880C /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 9FED08DA26E69D96AED0CA8F /* Wisp */;
+			targetProxy = AABB0011223344556677880D /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
 		3498F71907768D50CCE6902E /* Release */ = {
@@ -572,6 +656,40 @@
 			};
 			name = Debug;
 		};
+		AABB001122334455667788FF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.wisp.app.tests;
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Wisp.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Wisp";
+			};
+			name = Debug;
+		};
+		AABB0011223344556677880A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_IDENTITY = "iPhone Developer";
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.wisp.app.tests;
+				SDKROOT = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Wisp.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/Wisp";
+			};
+			name = Release;
+		};
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
@@ -589,6 +707,15 @@
 			buildConfigurations = (
 				9F24D6DE2894481E15863DE2 /* Debug */,
 				90AEBF1A52E3D22BDAD454A2 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		AABB0011223344556677880B /* Build configuration list for PBXNativeTarget "WispTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				AABB001122334455667788FF /* Debug */,
+				AABB0011223344556677880A /* Release */,
 			);
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
