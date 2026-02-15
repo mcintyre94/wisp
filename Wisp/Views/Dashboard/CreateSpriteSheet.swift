@@ -7,6 +7,7 @@ struct CreateSpriteSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""
     @State private var isCreating = false
+    @State private var hasMetMinLength = false
     @State private var errorMessage: String?
 
     var body: some View {
@@ -16,8 +17,27 @@ struct CreateSpriteSheet: View {
                     TextField("Sprite name", text: $name)
                         .autocorrectionDisabled()
                         .textInputAutocapitalization(.never)
+                        .onChange(of: name) { _, newValue in
+                            let filtered = String(newValue.lowercased().filter { ($0 >= "a" && $0 <= "z") || ($0 >= "0" && $0 <= "9") || $0 == "-" })
+                            let truncated = String(filtered.prefix(63))
+                            if truncated != newValue {
+                                name = truncated
+                            }
+                            if name.count >= 3 {
+                                hasMetMinLength = true
+                            }
+                        }
                 } footer: {
-                    Text("Lowercase letters, numbers, and hyphens only")
+                    if !name.isEmpty, name.hasPrefix("-") || name.hasSuffix("-") {
+                        Text("Name must start and end with a letter or number")
+                            .foregroundStyle(.red)
+                    } else if hasMetMinLength, name.count < 3 {
+                        Text("Name must be at least 3 characters")
+                            .foregroundStyle(.red)
+                    } else {
+                        Text("Lowercase letters, numbers, and hyphens only")
+                            .foregroundStyle(.secondary)
+                    }
                 }
 
                 if let errorMessage {
@@ -39,11 +59,21 @@ struct CreateSpriteSheet: View {
                     Button("Create") {
                         Task { await createSprite() }
                     }
-                    .disabled(name.isEmpty || isCreating)
+                    .disabled(name.isEmpty || nameValidationError != nil || isCreating)
                 }
             }
             .disabled(isCreating)
         }
+    }
+
+    private var nameValidationError: String? {
+        if name.count < 3 {
+            return "Name must be at least 3 characters"
+        }
+        if name.hasPrefix("-") || name.hasSuffix("-") {
+            return "Name must start and end with a letter or number"
+        }
+        return nil
     }
 
     private func createSprite() async {
