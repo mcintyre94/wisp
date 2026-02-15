@@ -17,7 +17,7 @@ struct ChatInputBar: View {
                 .focused(isFocused)
                 .lineLimit(1...5)
                 .textFieldStyle(.plain)
-                .padding(.horizontal, 12)
+                .padding(.horizontal, 16)
                 .padding(.vertical, 8)
                 .glassEffect(in: .capsule)
 
