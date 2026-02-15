@@ -19,6 +19,7 @@ struct ChatView: View {
                 .padding()
             }
             .defaultScrollAnchor(.bottom)
+            .scrollDismissesKeyboard(.interactively)
             .onChange(of: viewModel.messages.count) {
                 if let last = viewModel.messages.last {
                     withAnimation {
@@ -45,6 +46,7 @@ struct ChatView: View {
                 text: $viewModel.inputText,
                 isStreaming: viewModel.isStreaming,
                 onSend: {
+                    isInputFocused = false
                     viewModel.sendMessage(apiClient: apiClient, modelContext: modelContext)
                 },
                 onInterrupt: {
