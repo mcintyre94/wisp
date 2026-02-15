@@ -159,7 +159,11 @@ final class ChatViewModel {
         execSessionId = nil
 
         // Wake sprite with a lightweight exec before running Claude
-        await wakeSprite(apiClient: apiClient)
+        let spriteReady = await wakeSprite(apiClient: apiClient)
+        guard spriteReady else {
+            status = .error("Sprite not responding — try again")
+            return
+        }
 
         let escapedPrompt = prompt
             .replacingOccurrences(of: "'", with: "'\\''")
@@ -534,13 +538,20 @@ final class ChatViewModel {
         try? modelContext.save()
     }
 
-    private func wakeSprite(apiClient: SpritesAPIClient) async {
+    /// Wake the sprite and kill any stale Claude processes.
+    /// Returns false if the sprite is unresponsive (wake command timed out).
+    private func wakeSprite(apiClient: SpritesAPIClient) async -> Bool {
         // Kill any stale Claude process from a previous interrupted session
         logger.info("Killing stale Claude processes")
-        await runExecWithTimeout(apiClient: apiClient, command: "pkill claude", timeout: 15)
+        await runExecWithTimeout(apiClient: apiClient, command: "pkill claude", timeout: 5)
         logger.info("Waking sprite")
-        await runExecWithTimeout(apiClient: apiClient, command: "echo ready", timeout: 15)
-        logger.info("Sprite awake")
+        let woke = await runExecWithTimeout(apiClient: apiClient, command: "echo ready", timeout: 15)
+        if woke {
+            logger.info("Sprite awake")
+        } else {
+            logger.warning("Sprite failed to wake within timeout")
+        }
+        return woke
     }
 
     private static func sanitize(_ string: String) -> String {
@@ -551,11 +562,15 @@ final class ChatViewModel {
         )
     }
 
-    private func runExecWithTimeout(apiClient: SpritesAPIClient, command: String, timeout: Int) async {
+    /// Returns true if the command completed, false if it timed out.
+    @discardableResult
+    private func runExecWithTimeout(apiClient: SpritesAPIClient, command: String, timeout: Int) async -> Bool {
         let session = apiClient.createExecSession(spriteName: spriteName, command: command)
         session.connect()
+        var timedOut = false
         let timeoutTask = Task {
             try await Task.sleep(for: .seconds(timeout))
+            timedOut = true
             session.disconnect()
         }
         do {
@@ -564,5 +579,6 @@ final class ChatViewModel {
             // Expected — either command failed or timeout disconnected
         }
         timeoutTask.cancel()
+        return !timedOut
     }
 }
