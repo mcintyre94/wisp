@@ -67,6 +67,8 @@
 		AA11BB22CC33DD44EE55FF06 /* GitHubConnectSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF05 /* GitHubConnectSheet.swift */; };
 		AA11BB22CC33DD44EE55FF08 /* GitHubDeviceFlowClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF07 /* GitHubDeviceFlowClientTests.swift */; };
 		AA11BB22CC33DD44EE55FF0A /* AppConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF09 /* AppConfig.swift */; };
+		BB11CC22DD33EE44FF660A02 /* GitHubAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB11CC22DD33EE44FF660A01 /* GitHubAPIClient.swift */; };
+		BB11CC22DD33EE44FF660B02 /* RepoPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB11CC22DD33EE44FF660B01 /* RepoPickerView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -141,6 +143,8 @@
 		AA11BB22CC33DD44EE55FF05 /* GitHubConnectSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubConnectSheet.swift; sourceTree = "<group>"; };
 		AA11BB22CC33DD44EE55FF07 /* GitHubDeviceFlowClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubDeviceFlowClientTests.swift; sourceTree = "<group>"; };
 		AA11BB22CC33DD44EE55FF09 /* AppConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfig.swift; sourceTree = "<group>"; };
+		BB11CC22DD33EE44FF660A01 /* GitHubAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubAPIClient.swift; sourceTree = "<group>"; };
+		BB11CC22DD33EE44FF660B01 /* RepoPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepoPickerView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -176,6 +180,7 @@
 			children = (
 				C8F1378232DC7FA71A8B5444 /* ClaudeStreamParser.swift */,
 				2554BB4DE8EC315CA48767BF /* ExecSession.swift */,
+				BB11CC22DD33EE44FF660A01 /* GitHubAPIClient.swift */,
 				AA11BB22CC33DD44EE55FF01 /* GitHubDeviceFlowClient.swift */,
 				15F643DCF84E0352A9F8D649 /* KeychainService.swift */,
 				E01E14B5D87751457C549C17 /* SpritesAPIClient.swift */,
@@ -257,6 +262,7 @@
 			children = (
 				EA1634863D8543868BA11B02 /* CreateSpriteSheet.swift */,
 				0B99AA33329D50DEDB7343B7 /* DashboardView.swift */,
+				BB11CC22DD33EE44FF660B01 /* RepoPickerView.swift */,
 				8EA2E2130ACB1E1A289B9565 /* SpriteRowView.swift */,
 			);
 			path = Dashboard;
@@ -501,6 +507,7 @@
 				B1447250DC51EA126B6387DB /* ExecMessage.swift in Sources */,
 				A21BF0D8D910819DD5591E88 /* ExecSession.swift in Sources */,
 				735DA590AAB4728F7A8B5037 /* Extensions.swift in Sources */,
+				BB11CC22DD33EE44FF660A02 /* GitHubAPIClient.swift in Sources */,
 				AA11BB22CC33DD44EE55FF06 /* GitHubConnectSheet.swift in Sources */,
 				AA11BB22CC33DD44EE55FF02 /* GitHubDeviceFlowClient.swift in Sources */,
 				AA11BB22CC33DD44EE55FF04 /* GitHubDeviceFlowView.swift in Sources */,
@@ -509,6 +516,7 @@
 				6445AB5A4723D213CFDF0460 /* JSONValue.swift in Sources */,
 				FE589FC5A8086E6958A363E1 /* KeychainService.swift in Sources */,
 				A1B2C3D4E5F60718293A4B5C /* PersistedChatMessage.swift in Sources */,
+				BB11CC22DD33EE44FF660B02 /* RepoPickerView.swift in Sources */,
 				FC78F202B420DB2A1052C561 /* RootView.swift in Sources */,
 				F4D30A7E8C9BADB526E70819 /* SettingsView.swift in Sources */,
 				F3F898AC4565D9C9C6C7BE10 /* Sprite.swift in Sources */,

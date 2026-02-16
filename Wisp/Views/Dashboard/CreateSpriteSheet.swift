@@ -10,6 +10,7 @@ struct CreateSpriteSheet: View {
     @State private var creationStatus: String?
     @State private var hasMetMinLength = false
     @State private var errorMessage: String?
+    @State private var selectedRepo: GitHubRepo?
     @FocusState private var isNameFocused: Bool
 
     var body: some View {
@@ -40,6 +41,27 @@ struct CreateSpriteSheet: View {
                     } else {
                         Text("Lowercase letters, numbers, and hyphens only")
                             .foregroundStyle(.secondary)
+                    }
+                }
+
+                Section("Repository") {
+                    NavigationLink {
+                        RepoPickerView(selection: $selectedRepo, token: apiClient.githubToken)
+                    } label: {
+                        HStack {
+                            Text("Repository")
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            Text(selectedRepo?.fullName ?? "None")
+                                .foregroundStyle(.secondary)
+                                .lineLimit(1)
+                        }
+                    }
+                    if selectedRepo != nil {
+                        Button("Clear Selection", role: .destructive) {
+                            selectedRepo = nil
+                        }
+                        .font(.subheadline)
                     }
                 }
 
@@ -90,6 +112,11 @@ struct CreateSpriteSheet: View {
         return nil
     }
 
+    private var repoInfo: (cloneURL: String, repoName: String)? {
+        guard let repo = selectedRepo else { return nil }
+        return (repo.cloneURL, repo.repoName)
+    }
+
     private func createSprite() async {
         isCreating = true
         errorMessage = nil
@@ -115,6 +142,26 @@ struct CreateSpriteSheet: View {
                     command: "printf '%s' '\(ghToken)' | gh auth login --with-token && gh auth setup-git"
                 )
             }
+
+            // Clone repo if specified
+            var workingDirectory = "/home/sprite/project"
+            if let info = repoInfo {
+                creationStatus = "Cloning repository..."
+                let clonePath = "/home/sprite/\(info.repoName)"
+                let result = await apiClient.runExec(
+                    spriteName: spriteName,
+                    command: "git clone '\(info.cloneURL)' '\(clonePath)'",
+                    timeout: 60
+                )
+                if result.success {
+                    workingDirectory = clonePath
+                }
+            }
+
+            // Create session with correct working directory
+            let session = SpriteSession(spriteName: spriteName, workingDirectory: workingDirectory)
+            modelContext.insert(session)
+            try? modelContext.save()
 
             dismiss()
         } catch {
