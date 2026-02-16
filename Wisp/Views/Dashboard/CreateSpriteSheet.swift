@@ -112,7 +112,7 @@ struct CreateSpriteSheet: View {
                 creationStatus = "Setting up GitHub..."
                 _ = await apiClient.runExec(
                     spriteName: spriteName,
-                    command: "printf '%s' '\(ghToken)' | gh auth login --with-token"
+                    command: "printf '%s' '\(ghToken)' | gh auth login --with-token && gh auth setup-git"
                 )
             }
 

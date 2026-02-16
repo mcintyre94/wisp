@@ -67,7 +67,7 @@ final class SpriteOverviewViewModel {
         isAuthenticatingGitHub = true
         _ = await apiClient.runExec(
             spriteName: sprite.name,
-            command: "printf '%s' '\(ghToken)' | gh auth login --with-token"
+            command: "printf '%s' '\(ghToken)' | gh auth login --with-token && gh auth setup-git"
         )
         isAuthenticatingGitHub = false
         await checkGitHubAuth(apiClient: apiClient)
