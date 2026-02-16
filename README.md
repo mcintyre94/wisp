@@ -42,6 +42,7 @@ means we have all the flexibility of Sprites, through a mobile chat UX.
 - Chat with Claude on any Sprite
 - Make the URL public and open it in Safari
 - View checkpoints, create a new one and restore to any checkpoint
+- Optional Github auth - if connected then every Sprite is authenticated automatically when created
 
 ## How does Chat work?
 
