@@ -14,17 +14,20 @@ final class SpritesAPIClient {
     // Stored properties so @Observable tracks them for SwiftUI
     private(set) var isAuthenticated: Bool
     private(set) var hasClaudeToken: Bool
+    private(set) var hasGitHubToken: Bool
 
     init() {
         let keychain = KeychainService.shared
         self.isAuthenticated = keychain.load(key: .spritesToken) != nil
         self.hasClaudeToken = keychain.load(key: .claudeToken) != nil
+        self.hasGitHubToken = keychain.load(key: .githubToken) != nil
     }
 
     /// Call after saving/deleting tokens to update tracked auth state
     func refreshAuthState() {
         isAuthenticated = keychain.load(key: .spritesToken) != nil
         hasClaudeToken = keychain.load(key: .claudeToken) != nil
+        hasGitHubToken = keychain.load(key: .githubToken) != nil
     }
 
     var spritesToken: String? {
@@ -33,6 +36,10 @@ final class SpritesAPIClient {
 
     var claudeToken: String? {
         keychain.load(key: .claudeToken)
+    }
+
+    var githubToken: String? {
+        keychain.load(key: .githubToken)
     }
 
     // MARK: - Sprites

@@ -1,4 +1,5 @@
 import Foundation
+import UIKit
 
 @Observable
 @MainActor
@@ -10,11 +11,20 @@ final class AuthViewModel {
     var step: AuthStep = .spritesToken
     var isComplete = false
 
+    // GitHub device flow state
+    var githubUserCode = ""
+    var githubVerificationURL = ""
+    var isPollingGitHub = false
+    var githubError: String?
+    var githubPollingTask: Task<Void, Never>?
+
     private let keychain = KeychainService.shared
+    private let githubClient = GitHubDeviceFlowClient()
 
     enum AuthStep {
         case spritesToken
         case claudeToken
+        case githubToken
     }
 
     func validateSpritesToken(apiClient: SpritesAPIClient) async {
@@ -50,9 +60,55 @@ final class AuthViewModel {
 
         do {
             try keychain.save(trimmed, for: .claudeToken)
-            apiClient.refreshAuthState()
+            // Don't call refreshAuthState() here — defer until GitHub step resolves
+            // so RootView doesn't flip to Dashboard before user sees step 3
+            step = .githubToken
         } catch {
             errorMessage = "Failed to save Claude token."
         }
+    }
+
+    func startGitHubDeviceFlow(apiClient: SpritesAPIClient) {
+        githubPollingTask?.cancel()
+        githubError = nil
+        githubUserCode = ""
+
+        githubPollingTask = Task {
+            do {
+                let response = try await githubClient.requestDeviceCode()
+                githubUserCode = response.userCode
+                githubVerificationURL = response.verificationUri
+                isPollingGitHub = true
+
+                let token = try await githubClient.pollForToken(
+                    deviceCode: response.deviceCode,
+                    expiresIn: response.expiresIn,
+                    interval: response.interval
+                )
+
+                try keychain.save(token, for: .githubToken)
+                isPollingGitHub = false
+                apiClient.refreshAuthState()
+            } catch is CancellationError {
+                isPollingGitHub = false
+            } catch {
+                githubError = error.localizedDescription
+                isPollingGitHub = false
+            }
+        }
+    }
+
+    func copyCodeAndOpenGitHub() {
+        UIPasteboard.general.string = githubUserCode
+        if let url = URL(string: githubVerificationURL) {
+            UIApplication.shared.open(url)
+        }
+    }
+
+    func skipGitHub(apiClient: SpritesAPIClient) {
+        githubPollingTask?.cancel()
+        githubPollingTask = nil
+        isPollingGitHub = false
+        apiClient.refreshAuthState()
     }
 }

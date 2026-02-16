@@ -4,6 +4,7 @@ import Security
 enum KeychainKey: String {
     case spritesToken = "com.wisp.sprites-token"
     case claudeToken = "com.wisp.claude-token"
+    case githubToken = "com.wisp.github-token"
 }
 
 struct KeychainService: Sendable {

@@ -12,6 +12,8 @@ struct AuthView: View {
                     spritesTokenSection
                 case .claudeToken:
                     claudeTokenSection
+                case .githubToken:
+                    githubTokenSection
                 }
 
                 if let errorMessage = viewModel.errorMessage {
@@ -48,7 +50,7 @@ struct AuthView: View {
             }
             .disabled(viewModel.spritesToken.isEmpty || viewModel.isValidating)
         } header: {
-            Text("Step 1 of 2")
+            Text("Step 1 of 3")
         } footer: {
             Text("Enter your Sprites API token from sprites.dev")
         }
@@ -61,14 +63,46 @@ struct AuthView: View {
                 .autocorrectionDisabled()
                 .textInputAutocapitalization(.never)
 
-            Button("Save & Start") {
+            Button("Save & Continue") {
                 viewModel.saveClaudeToken(apiClient: apiClient)
             }
             .disabled(viewModel.claudeToken.isEmpty)
         } header: {
-            Text("Step 2 of 2")
+            Text("Step 2 of 3")
         } footer: {
             Text("Enter your Claude Code OAuth token (sk-ant-oat01-...)")
+        }
+    }
+
+    private var githubTokenSection: some View {
+        Section {
+            if !viewModel.githubUserCode.isEmpty {
+                GitHubDeviceFlowView(
+                    userCode: viewModel.githubUserCode,
+                    verificationURL: viewModel.githubVerificationURL,
+                    isPolling: viewModel.isPollingGitHub,
+                    error: viewModel.githubError,
+                    onCopyAndOpen: { viewModel.copyCodeAndOpenGitHub() },
+                    onCancel: { viewModel.skipGitHub(apiClient: apiClient) }
+                )
+            } else if viewModel.githubError != nil {
+                // Error state — show retry
+            } else {
+                Button {
+                    viewModel.startGitHubDeviceFlow(apiClient: apiClient)
+                } label: {
+                    Label("Connect GitHub Account", systemImage: "lock.shield")
+                }
+            }
+
+            Button("Skip for Now") {
+                viewModel.skipGitHub(apiClient: apiClient)
+            }
+            .foregroundStyle(.secondary)
+        } header: {
+            Text("Step 3 of 3 — Optional")
+        } footer: {
+            Text("Connect GitHub to clone repos directly onto your Sprites. You can always connect later from Settings.")
         }
     }
 }

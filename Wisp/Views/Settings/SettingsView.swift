@@ -7,6 +7,9 @@ struct SettingsView: View {
     @AppStorage("customInstructions") private var customInstructions: String = ""
     @AppStorage("theme") private var theme: String = "system"
     @State private var showSignOutConfirmation = false
+    @State private var showGitHubConnect = false
+    @State private var showGitHubDisconnectConfirmation = false
+    @State private var copiedTokenFlash = false
 
     private var selectedModel: ClaudeModel {
         ClaudeModel(rawValue: claudeModel) ?? .sonnet
@@ -29,6 +32,9 @@ struct SettingsView: View {
         }
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
+        .sheet(isPresented: $showGitHubConnect) {
+            GitHubConnectSheet()
+        }
     }
 
     // MARK: - Sections
@@ -47,6 +53,56 @@ struct SettingsView: View {
                 Spacer()
                 Text(apiClient.hasClaudeToken ? "Connected" : "Disconnected")
                     .foregroundStyle(apiClient.hasClaudeToken ? .green : .secondary)
+            }
+
+            HStack {
+                Label("GitHub", systemImage: "lock.shield")
+                Spacer()
+                if apiClient.hasGitHubToken {
+                    Text("Connected")
+                        .foregroundStyle(.green)
+                } else {
+                    Text("Not Connected")
+                        .foregroundStyle(.secondary)
+                }
+            }
+            #if DEBUG
+            .onTapGesture {
+                if let token = apiClient.githubToken {
+                    UIPasteboard.general.string = token
+                    copiedTokenFlash = true
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        copiedTokenFlash = false
+                    }
+                }
+            }
+            .overlay(alignment: .trailing) {
+                if copiedTokenFlash {
+                    Text("Copied!")
+                        .font(.caption)
+                        .foregroundStyle(.green)
+                        .transition(.opacity)
+                }
+            }
+            .animation(.default, value: copiedTokenFlash)
+            #endif
+
+            if apiClient.hasGitHubToken {
+                Button("Disconnect GitHub", role: .destructive) {
+                    showGitHubDisconnectConfirmation = true
+                }
+                .confirmationDialog("Disconnect GitHub?", isPresented: $showGitHubDisconnectConfirmation) {
+                    Button("Disconnect", role: .destructive) {
+                        KeychainService.shared.delete(key: .githubToken)
+                        apiClient.refreshAuthState()
+                    }
+                } message: {
+                    Text("This will remove your GitHub token. You can reconnect later.")
+                }
+            } else {
+                Button("Connect GitHub") {
+                    showGitHubConnect = true
+                }
             }
 
             Button("Sign Out", role: .destructive) {
@@ -106,6 +162,7 @@ struct SettingsView: View {
     private func signOut() {
         KeychainService.shared.delete(key: .spritesToken)
         KeychainService.shared.delete(key: .claudeToken)
+        KeychainService.shared.delete(key: .githubToken)
         apiClient.refreshAuthState()
     }
 }
