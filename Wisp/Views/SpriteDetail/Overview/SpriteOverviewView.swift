@@ -78,12 +78,61 @@ struct SpriteOverviewView: View {
                     }
                 }
             }
+
+            Section("GitHub") {
+                switch viewModel.gitHubAuthStatus {
+                case .unknown, .checking:
+                    HStack(spacing: 8) {
+                        Text("GitHub CLI")
+                        Spacer()
+                        ProgressView()
+                        Text("Checking...")
+                            .foregroundStyle(.secondary)
+                    }
+                case .authenticated:
+                    HStack {
+                        Text("GitHub CLI")
+                        Spacer()
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                        Text("Authenticated")
+                            .foregroundStyle(.secondary)
+                    }
+                case .notAuthenticated:
+                    if apiClient.hasGitHubToken {
+                        Button {
+                            Task { await viewModel.authenticateGitHub(apiClient: apiClient) }
+                        } label: {
+                            HStack {
+                                Text("GitHub CLI")
+                                    .foregroundStyle(.primary)
+                                Spacer()
+                                if viewModel.isAuthenticatingGitHub {
+                                    ProgressView()
+                                } else {
+                                    Text("Authenticate")
+                                        .foregroundStyle(Color.accentColor)
+                                }
+                            }
+                        }
+                        .disabled(viewModel.isAuthenticatingGitHub)
+                    } else {
+                        HStack {
+                            Text("GitHub CLI")
+                            Spacer()
+                            Text("Not authenticated")
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
+            }
         }
         .refreshable {
             await viewModel.refresh(apiClient: apiClient)
         }
         .task {
             await viewModel.refresh(apiClient: apiClient)
+            await viewModel.checkGitHubAuth(apiClient: apiClient)
         }
         .alert("Error", isPresented: .init(
             get: { viewModel.errorMessage != nil },

@@ -1,5 +1,9 @@
 import Foundation
 
+enum GitHubSpriteAuth {
+    case unknown, checking, authenticated, notAuthenticated
+}
+
 @Observable
 @MainActor
 final class SpriteOverviewViewModel {
@@ -7,6 +11,8 @@ final class SpriteOverviewViewModel {
     var isRefreshing = false
     var hasLoaded = false
     var isUpdatingAuth = false
+    var gitHubAuthStatus: GitHubSpriteAuth = .unknown
+    var isAuthenticatingGitHub = false
     var errorMessage: String?
 
     init(sprite: Sprite) {
@@ -41,5 +47,29 @@ final class SpriteOverviewViewModel {
             errorMessage = error.localizedDescription
         }
         isUpdatingAuth = false
+    }
+
+    func checkGitHubAuth(apiClient: SpritesAPIClient) async {
+        gitHubAuthStatus = .checking
+        let (output, _) = await apiClient.runExec(
+            spriteName: sprite.name,
+            command: "gh auth status >/dev/null 2>&1 && echo GHAUTH_OK || echo GHAUTH_FAIL"
+        )
+        if output.contains("GHAUTH_OK") {
+            gitHubAuthStatus = .authenticated
+        } else {
+            gitHubAuthStatus = .notAuthenticated
+        }
+    }
+
+    func authenticateGitHub(apiClient: SpritesAPIClient) async {
+        guard let ghToken = apiClient.githubToken else { return }
+        isAuthenticatingGitHub = true
+        _ = await apiClient.runExec(
+            spriteName: sprite.name,
+            command: "printf '%s' '\(ghToken)' | gh auth login --with-token"
+        )
+        isAuthenticatingGitHub = false
+        await checkGitHubAuth(apiClient: apiClient)
     }
 }

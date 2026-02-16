@@ -7,6 +7,7 @@ struct CreateSpriteSheet: View {
     @Environment(\.dismiss) private var dismiss
     @State private var name = ""
     @State private var isCreating = false
+    @State private var creationStatus: String?
     @State private var hasMetMinLength = false
     @State private var errorMessage: String?
     @FocusState private var isNameFocused: Bool
@@ -48,6 +49,16 @@ struct CreateSpriteSheet: View {
                             .foregroundStyle(.red)
                     }
                 }
+
+                if let creationStatus {
+                    Section {
+                        HStack(spacing: 8) {
+                            ProgressView()
+                            Text(creationStatus)
+                                .foregroundStyle(.secondary)
+                        }
+                    }
+                }
             }
             .navigationTitle("New Sprite")
             .navigationBarTitleDisplayMode(.inline)
@@ -82,6 +93,7 @@ struct CreateSpriteSheet: View {
     private func createSprite() async {
         isCreating = true
         errorMessage = nil
+        creationStatus = "Creating sprite..."
 
         do {
             _ = try await apiClient.createSprite(name: name)
@@ -94,9 +106,20 @@ struct CreateSpriteSheet: View {
                 modelContext.delete(staleSession)
                 try? modelContext.save()
             }
+
+            // Push GitHub token onto sprite if available
+            if let ghToken = apiClient.githubToken {
+                creationStatus = "Setting up GitHub..."
+                _ = await apiClient.runExec(
+                    spriteName: spriteName,
+                    command: "printf '%s' '\(ghToken)' | gh auth login --with-token"
+                )
+            }
+
             dismiss()
         } catch {
             errorMessage = error.localizedDescription
+            creationStatus = nil
         }
 
         isCreating = false

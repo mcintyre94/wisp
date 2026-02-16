@@ -130,6 +130,37 @@ final class SpritesAPIClient {
         return ExecSession(url: components.url!, token: spritesToken ?? "")
     }
 
+    // MARK: - Exec Helpers
+
+    /// Run a command on a sprite via exec WebSocket, collecting output.
+    /// Returns the accumulated stdout/stderr text and whether the command completed before timeout.
+    func runExec(spriteName: String, command: String, env: [String: String] = [:], timeout: Int = 15) async -> (output: String, success: Bool) {
+        let session = createExecSession(spriteName: spriteName, command: command, env: env)
+        session.connect()
+        var output = Data()
+        var timedOut = false
+
+        let timeoutTask = Task {
+            try await Task.sleep(for: .seconds(timeout))
+            timedOut = true
+            session.disconnect()
+        }
+
+        do {
+            for try await event in session.events() {
+                if case .data(let chunk) = event {
+                    output.append(chunk)
+                }
+            }
+        } catch {
+            // Expected on timeout disconnect or command failure
+        }
+
+        timeoutTask.cancel()
+        let text = String(data: output, encoding: .utf8) ?? ""
+        return (text, !timedOut)
+    }
+
     // MARK: - Private
 
     private func request<T: Decodable>(
