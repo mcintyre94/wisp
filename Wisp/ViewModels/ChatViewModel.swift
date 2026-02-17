@@ -90,6 +90,7 @@ final class ChatViewModel {
         let session = fetchOrCreateSession(modelContext: modelContext)
         session.claudeSessionId = nil
         session.execSessionId = nil
+        workingDirectory = session.workingDirectory
         try? modelContext.save()
     }
 

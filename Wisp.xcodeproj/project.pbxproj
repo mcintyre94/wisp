@@ -69,6 +69,7 @@
 		AA11BB22CC33DD44EE55FF0A /* AppConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF09 /* AppConfig.swift */; };
 		BB11CC22DD33EE44FF660A02 /* GitHubAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB11CC22DD33EE44FF660A01 /* GitHubAPIClient.swift */; };
 		BB11CC22DD33EE44FF660B02 /* RepoPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB11CC22DD33EE44FF660B01 /* RepoPickerView.swift */; };
+		CC22DD33EE44FF5500110A02 /* DirectoryPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC22DD33EE44FF5500110A01 /* DirectoryPickerView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -145,6 +146,7 @@
 		AA11BB22CC33DD44EE55FF09 /* AppConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfig.swift; sourceTree = "<group>"; };
 		BB11CC22DD33EE44FF660A01 /* GitHubAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubAPIClient.swift; sourceTree = "<group>"; };
 		BB11CC22DD33EE44FF660B01 /* RepoPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepoPickerView.swift; sourceTree = "<group>"; };
+		CC22DD33EE44FF5500110A01 /* DirectoryPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectoryPickerView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -361,6 +363,7 @@
 		C7EC091CA8E532B96108719F /* Overview */ = {
 			isa = PBXGroup;
 			children = (
+				CC22DD33EE44FF5500110A01 /* DirectoryPickerView.swift */,
 				22353867496BED816814F410 /* SpriteOverviewView.swift */,
 			);
 			path = Overview;
@@ -503,6 +506,7 @@
 				99BA5812AF56D1C7501D1F0C /* CreateCheckpointSheet.swift in Sources */,
 				5ABE241326BF34FF2E3C3E51 /* CreateSpriteSheet.swift in Sources */,
 				5A1F582DDCBB994013E4BA2E /* DashboardView.swift in Sources */,
+				CC22DD33EE44FF5500110A02 /* DirectoryPickerView.swift in Sources */,
 				B7EF7CBB1F7311DBDC3681EA /* DashboardViewModel.swift in Sources */,
 				B1447250DC51EA126B6387DB /* ExecMessage.swift in Sources */,
 				A21BF0D8D910819DD5591E88 /* ExecSession.swift in Sources */,

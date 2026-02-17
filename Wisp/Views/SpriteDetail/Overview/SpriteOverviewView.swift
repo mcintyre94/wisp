@@ -1,9 +1,12 @@
 import SwiftUI
+import SwiftData
 
 struct SpriteOverviewView: View {
     @Environment(SpritesAPIClient.self) private var apiClient
     @Environment(\.openURL) private var openURL
+    @Environment(\.modelContext) private var modelContext
     @State private var viewModel: SpriteOverviewViewModel
+    @State private var workingDirectory = "/home/sprite/project"
 
     init(sprite: Sprite) {
         _viewModel = State(initialValue: SpriteOverviewViewModel(sprite: sprite))
@@ -77,6 +80,22 @@ struct SpriteOverviewView: View {
                             .foregroundStyle(.secondary)
                     }
                 }
+
+                NavigationLink {
+                    DirectoryPickerView(
+                        workingDirectory: $workingDirectory,
+                        spriteName: viewModel.sprite.name
+                    )
+                } label: {
+                    HStack {
+                        Text("Working Directory")
+                        Spacer()
+                        Text(displayWorkingDirectory)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                }
             }
 
             Section("GitHub") {
@@ -131,8 +150,12 @@ struct SpriteOverviewView: View {
             await viewModel.refresh(apiClient: apiClient)
         }
         .task {
+            loadWorkingDirectory()
             await viewModel.refresh(apiClient: apiClient)
             await viewModel.checkGitHubAuth(apiClient: apiClient)
+        }
+        .onChange(of: workingDirectory) {
+            saveWorkingDirectory()
         }
         .alert("Error", isPresented: .init(
             get: { viewModel.errorMessage != nil },
@@ -143,6 +166,41 @@ struct SpriteOverviewView: View {
             if let error = viewModel.errorMessage {
                 Text(error)
             }
+        }
+    }
+
+    private var displayWorkingDirectory: String {
+        if workingDirectory == "/home/sprite" {
+            return "~"
+        }
+        if workingDirectory.hasPrefix("/home/sprite/") {
+            return "~/" + workingDirectory.dropFirst("/home/sprite/".count)
+        }
+        return workingDirectory
+    }
+
+    private func loadWorkingDirectory() {
+        let name = viewModel.sprite.name
+        let descriptor = FetchDescriptor<SpriteSession>(
+            predicate: #Predicate { $0.spriteName == name }
+        )
+        if let session = try? modelContext.fetch(descriptor).first {
+            workingDirectory = session.workingDirectory
+        }
+    }
+
+    private func saveWorkingDirectory() {
+        let name = viewModel.sprite.name
+        let descriptor = FetchDescriptor<SpriteSession>(
+            predicate: #Predicate { $0.spriteName == name }
+        )
+        if let session = try? modelContext.fetch(descriptor).first {
+            session.workingDirectory = workingDirectory
+            try? modelContext.save()
+        } else {
+            let session = SpriteSession(spriteName: name, workingDirectory: workingDirectory)
+            modelContext.insert(session)
+            try? modelContext.save()
         }
     }
 
