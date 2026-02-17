@@ -143,6 +143,15 @@ struct CreateSpriteSheet: View {
                 )
             }
 
+            // Authenticate Sprites CLI on the new sprite
+            if let spritesToken = apiClient.spritesToken {
+                creationStatus = "Setting up Sprites CLI..."
+                _ = await apiClient.runExec(
+                    spriteName: spriteName,
+                    command: "sprite auth setup --token '\(spritesToken)'"
+                )
+            }
+
             // Clone repo if specified
             var workingDirectory = "/home/sprite/project"
             if let info = repoInfo {

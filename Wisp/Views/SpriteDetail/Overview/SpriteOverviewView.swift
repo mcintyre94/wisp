@@ -98,6 +98,45 @@ struct SpriteOverviewView: View {
                 }
             }
 
+            Section("Sprites CLI") {
+                switch viewModel.spritesCLIAuthStatus {
+                case .unknown, .checking:
+                    HStack(spacing: 8) {
+                        Text("Sprites CLI")
+                        Spacer()
+                        ProgressView()
+                        Text("Checking...")
+                            .foregroundStyle(.secondary)
+                    }
+                case .authenticated:
+                    HStack {
+                        Text("Sprites CLI")
+                        Spacer()
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                        Text("Authenticated")
+                            .foregroundStyle(.secondary)
+                    }
+                case .notAuthenticated:
+                    Button {
+                        Task { await viewModel.authenticateSprites(apiClient: apiClient) }
+                    } label: {
+                        HStack {
+                            Text("Sprites CLI")
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            if viewModel.isAuthenticatingSprites {
+                                ProgressView()
+                            } else {
+                                Text("Authenticate")
+                                    .foregroundStyle(Color.accentColor)
+                            }
+                        }
+                    }
+                    .disabled(viewModel.isAuthenticatingSprites)
+                }
+            }
+
             Section("GitHub") {
                 switch viewModel.gitHubAuthStatus {
                 case .unknown, .checking:
@@ -152,6 +191,7 @@ struct SpriteOverviewView: View {
         .task {
             loadWorkingDirectory()
             await viewModel.refresh(apiClient: apiClient)
+            await viewModel.checkSpritesAuth(apiClient: apiClient)
             await viewModel.checkGitHubAuth(apiClient: apiClient)
         }
         .onChange(of: workingDirectory) {

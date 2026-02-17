@@ -4,6 +4,10 @@ enum GitHubSpriteAuth {
     case unknown, checking, authenticated, notAuthenticated
 }
 
+enum SpritesCLIAuth {
+    case unknown, checking, authenticated, notAuthenticated
+}
+
 @Observable
 @MainActor
 final class SpriteOverviewViewModel {
@@ -13,6 +17,8 @@ final class SpriteOverviewViewModel {
     var isUpdatingAuth = false
     var gitHubAuthStatus: GitHubSpriteAuth = .unknown
     var isAuthenticatingGitHub = false
+    var spritesCLIAuthStatus: SpritesCLIAuth = .unknown
+    var isAuthenticatingSprites = false
     var errorMessage: String?
 
     init(sprite: Sprite) {
@@ -71,5 +77,29 @@ final class SpriteOverviewViewModel {
         )
         isAuthenticatingGitHub = false
         await checkGitHubAuth(apiClient: apiClient)
+    }
+
+    func checkSpritesAuth(apiClient: SpritesAPIClient) async {
+        spritesCLIAuthStatus = .checking
+        let (output, _) = await apiClient.runExec(
+            spriteName: sprite.name,
+            command: "sprite org list 2>&1 | grep -q 'Currently selected org' && echo SPRITEAUTH_OK || echo SPRITEAUTH_FAIL"
+        )
+        if output.contains("SPRITEAUTH_OK") {
+            spritesCLIAuthStatus = .authenticated
+        } else {
+            spritesCLIAuthStatus = .notAuthenticated
+        }
+    }
+
+    func authenticateSprites(apiClient: SpritesAPIClient) async {
+        guard let token = apiClient.spritesToken else { return }
+        isAuthenticatingSprites = true
+        _ = await apiClient.runExec(
+            spriteName: sprite.name,
+            command: "sprite auth setup --token '\(token)'"
+        )
+        isAuthenticatingSprites = false
+        await checkSpritesAuth(apiClient: apiClient)
     }
 }
