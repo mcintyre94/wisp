@@ -7,6 +7,7 @@ struct RepoPickerView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var repos: [GitHubRepo] = []
     @State private var searchText = ""
+    @State private var cloneURL = ""
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var searchTask: Task<Void, Never>?
@@ -16,6 +17,20 @@ struct RepoPickerView: View {
 
     var body: some View {
         List {
+            Section {
+                HStack {
+                    TextField("Paste a clone URL", text: $cloneURL)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                    Button("Clone") {
+                        selectFromURL()
+                    }
+                    .disabled(parsedCloneURL == nil)
+                }
+            } header: {
+                Text("Clone URL")
+            }
+
             if isLoading && repos.isEmpty {
                 HStack {
                     Spacer()
@@ -115,5 +130,27 @@ struct RepoPickerView: View {
             }
         }
         isLoading = false
+    }
+
+    private var parsedCloneURL: URL? {
+        let trimmed = cloneURL.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty, let url = URL(string: trimmed), url.host != nil else { return nil }
+        return url
+    }
+
+    private func selectFromURL() {
+        guard let url = parsedCloneURL else { return }
+        let path = url.path.trimmingCharacters(in: CharacterSet(charactersIn: "/"))
+        let stripped = path.hasSuffix(".git") ? String(path.dropLast(4)) : path
+        let components = stripped.components(separatedBy: "/")
+        let fullName = components.suffix(2).joined(separator: "/")
+        selection = GitHubRepo(
+            id: url.absoluteString.hashValue,
+            fullName: fullName.isEmpty ? url.absoluteString : fullName,
+            description: nil,
+            cloneURL: url.absoluteString,
+            isPrivate: false
+        )
+        dismiss()
     }
 }
