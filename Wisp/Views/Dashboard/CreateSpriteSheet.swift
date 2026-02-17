@@ -159,7 +159,7 @@ struct CreateSpriteSheet: View {
                 let clonePath = "/home/sprite/\(info.repoName)"
                 let result = await apiClient.runExec(
                     spriteName: spriteName,
-                    command: "git clone '\(info.cloneURL)' '\(clonePath)'",
+                    command: "git clone --depth 1 '\(info.cloneURL)' '\(clonePath)'",
                     timeout: 60
                 )
                 if result.success {
