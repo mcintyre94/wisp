@@ -118,6 +118,13 @@ final class SpritesAPIClient {
 
         components.queryItems = queryItems
 
+        // URLQueryItem doesn't percent-encode semicolons (they're allowed in RFC 3986),
+        // but Go's net/url (1.17+) silently drops query parameters containing literal
+        // semicolons. Manually encode them so the server receives the full command.
+        if let encoded = components.percentEncodedQuery {
+            components.percentEncodedQuery = encoded.replacingOccurrences(of: ";", with: "%3B")
+        }
+
         return ExecSession(url: components.url!, token: spritesToken ?? "")
     }
 

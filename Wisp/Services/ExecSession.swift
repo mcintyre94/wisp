@@ -12,7 +12,7 @@ enum ExecEvent: Sendable {
 }
 
 final class ExecSession: Sendable {
-    private let url: URL
+    let url: URL
     private let token: String
     private let task: URLSessionWebSocketTask
 
