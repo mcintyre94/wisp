@@ -95,6 +95,32 @@ struct ClaudeStreamParserTests {
         #expect(events.isEmpty)
     }
 
+    @Test func twoLevelNDJSONFromServiceLogData() async {
+        // Simulates feeding ServiceLogEvent.data strings to the parser
+        // (the two-level NDJSON pattern used with services)
+        let parser = ClaudeStreamParser()
+
+        // Simulate a stdout event's data field containing a Claude NDJSON line
+        let line1 = #"{"type":"system","session_id":"svc1","model":"claude-sonnet-4-20250514"}"# + "\n"
+        let events1 = await parser.parse(data: makeData(line1))
+        #expect(events1.count == 1)
+        if case .system(let e) = events1.first {
+            #expect(e.sessionId == "svc1")
+        } else {
+            Issue.record("Expected system event")
+        }
+
+        // Simulate a stdout event's data WITHOUT trailing newline — parser buffers
+        let line2 = #"{"type":"result","session_id":"svc1","subtype":"success"}"#
+        let events2 = await parser.parse(data: makeData(line2))
+        #expect(events2.isEmpty)
+
+        // Appending newline in next chunk flushes the buffered line
+        let events3 = await parser.parse(data: makeData("\n"))
+        #expect(events3.count == 1)
+        if case .result = events3.first {} else { Issue.record("Expected result event") }
+    }
+
     @Test func resetClearsBuffer() async {
         let parser = ClaudeStreamParser()
         // Send partial data

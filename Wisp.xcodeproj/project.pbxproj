@@ -70,6 +70,8 @@
 		BB11CC22DD33EE44FF660A02 /* GitHubAPIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB11CC22DD33EE44FF660A01 /* GitHubAPIClient.swift */; };
 		BB11CC22DD33EE44FF660B02 /* RepoPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB11CC22DD33EE44FF660B01 /* RepoPickerView.swift */; };
 		CC22DD33EE44FF5500110A02 /* DirectoryPickerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC22DD33EE44FF5500110A01 /* DirectoryPickerView.swift */; };
+		DD11EE22FF334455AA66BB02 /* ServiceTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD11EE22FF334455AA66BB01 /* ServiceTypes.swift */; };
+		DD11EE22FF334455AA66BB04 /* ServiceTypesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD11EE22FF334455AA66BB03 /* ServiceTypesTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -147,6 +149,8 @@
 		BB11CC22DD33EE44FF660A01 /* GitHubAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubAPIClient.swift; sourceTree = "<group>"; };
 		BB11CC22DD33EE44FF660B01 /* RepoPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RepoPickerView.swift; sourceTree = "<group>"; };
 		CC22DD33EE44FF5500110A01 /* DirectoryPickerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DirectoryPickerView.swift; sourceTree = "<group>"; };
+		DD11EE22FF334455AA66BB01 /* ServiceTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceTypes.swift; sourceTree = "<group>"; };
+		DD11EE22FF334455AA66BB03 /* ServiceTypesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceTypesTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -195,6 +199,7 @@
 			children = (
 				BF811FA7AB6EDA25869DEF75 /* Checkpoint.swift */,
 				7EE32C593901CBCD7DE899D3 /* ExecMessage.swift */,
+				DD11EE22FF334455AA66BB01 /* ServiceTypes.swift */,
 				E55993FF41BDC8D0BD81C177 /* Sprite.swift */,
 			);
 			path = API;
@@ -394,6 +399,7 @@
 				AABB0011223344556677F00B /* ExtensionsTests.swift */,
 				AA11BB22CC33DD44EE55FF07 /* GitHubDeviceFlowClientTests.swift */,
 				AABB0011223344556677F003 /* JSONValueTests.swift */,
+				DD11EE22FF334455AA66BB03 /* ServiceTypesTests.swift */,
 			);
 			path = WispTests;
 			sourceTree = "<group>";
@@ -537,6 +543,7 @@
 				A610B5413A578D4AA424595D /* ToolUseCardView.swift in Sources */,
 				F32DE1DDC53913E28250E70D /* UserBubbleView.swift in Sources */,
 				E5F6A7B8C9D0E1F2A3B4C5D6 /* WebViewPage.swift in Sources */,
+				DD11EE22FF334455AA66BB02 /* ServiceTypes.swift in Sources */,
 				C575C7232C5FCA1A3F18A9D8 /* WispApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -553,6 +560,7 @@
 				AABB0011223344556677F00C /* ExtensionsTests.swift in Sources */,
 				AA11BB22CC33DD44EE55FF08 /* GitHubDeviceFlowClientTests.swift in Sources */,
 				AABB0011223344556677F004 /* JSONValueTests.swift in Sources */,
+				DD11EE22FF334455AA66BB04 /* ServiceTypesTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

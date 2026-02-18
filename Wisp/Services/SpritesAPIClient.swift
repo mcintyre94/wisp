@@ -130,6 +130,141 @@ final class SpritesAPIClient {
         return ExecSession(url: components.url!, token: spritesToken ?? "")
     }
 
+    // MARK: - Services
+
+    /// Create or update a service and stream log events via NDJSON.
+    func streamService(
+        spriteName: String,
+        serviceName: String,
+        config: ServiceRequest,
+        duration: String = "3600s"
+    ) -> AsyncThrowingStream<ServiceLogEvent, Error> {
+        AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    guard let token = spritesToken else {
+                        continuation.finish(throwing: AppError.noToken)
+                        return
+                    }
+
+                    let path = "\(baseURL)/sprites/\(spriteName)/services/\(serviceName)?duration=\(duration)"
+                    guard let url = URL(string: path) else {
+                        continuation.finish(throwing: AppError.invalidURL)
+                        return
+                    }
+
+                    var urlRequest = URLRequest(url: url)
+                    urlRequest.httpMethod = "PUT"
+                    urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+                    urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                    urlRequest.httpBody = try encoder.encode(config)
+
+                    let (bytes, response) = try await URLSession.shared.bytes(for: urlRequest)
+
+                    guard let httpResponse = response as? HTTPURLResponse else {
+                        continuation.finish(throwing: AppError.networkError(URLError(.badServerResponse)))
+                        return
+                    }
+
+                    guard (200...299).contains(httpResponse.statusCode) else {
+                        switch httpResponse.statusCode {
+                        case 401: continuation.finish(throwing: AppError.unauthorized)
+                        case 404: continuation.finish(throwing: AppError.notFound)
+                        case 409: continuation.finish(throwing: AppError.serverError(statusCode: 409, message: "Service conflict"))
+                        default: continuation.finish(throwing: AppError.serverError(statusCode: httpResponse.statusCode, message: nil))
+                        }
+                        return
+                    }
+
+                    let decoder = JSONDecoder()
+                    for try await line in bytes.lines {
+                        guard !line.isEmpty, let data = line.data(using: .utf8) else { continue }
+                        if let event = try? decoder.decode(ServiceLogEvent.self, from: data) {
+                            continuation.yield(event)
+                        }
+                    }
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+
+            continuation.onTermination = { _ in
+                task.cancel()
+            }
+        }
+    }
+
+    /// Reconnect to service logs (full history + continued streaming).
+    func streamServiceLogs(
+        spriteName: String,
+        serviceName: String,
+        duration: String = "3600s"
+    ) -> AsyncThrowingStream<ServiceLogEvent, Error> {
+        AsyncThrowingStream { continuation in
+            let task = Task {
+                do {
+                    guard let token = spritesToken else {
+                        continuation.finish(throwing: AppError.noToken)
+                        return
+                    }
+
+                    let path = "\(baseURL)/sprites/\(spriteName)/services/\(serviceName)/logs?duration=\(duration)"
+                    guard let url = URL(string: path) else {
+                        continuation.finish(throwing: AppError.invalidURL)
+                        return
+                    }
+
+                    var urlRequest = URLRequest(url: url)
+                    urlRequest.httpMethod = "GET"
+                    urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+                    let (bytes, response) = try await URLSession.shared.bytes(for: urlRequest)
+
+                    guard let httpResponse = response as? HTTPURLResponse else {
+                        continuation.finish(throwing: AppError.networkError(URLError(.badServerResponse)))
+                        return
+                    }
+
+                    guard (200...299).contains(httpResponse.statusCode) else {
+                        switch httpResponse.statusCode {
+                        case 401: continuation.finish(throwing: AppError.unauthorized)
+                        case 404: continuation.finish(throwing: AppError.notFound)
+                        default: continuation.finish(throwing: AppError.serverError(statusCode: httpResponse.statusCode, message: nil))
+                        }
+                        return
+                    }
+
+                    let decoder = JSONDecoder()
+                    for try await line in bytes.lines {
+                        guard !line.isEmpty, let data = line.data(using: .utf8) else { continue }
+                        if let event = try? decoder.decode(ServiceLogEvent.self, from: data) {
+                            continuation.yield(event)
+                        }
+                    }
+                    continuation.finish()
+                } catch {
+                    continuation.finish(throwing: error)
+                }
+            }
+
+            continuation.onTermination = { _ in
+                task.cancel()
+            }
+        }
+    }
+
+    /// Send a signal to a named service.
+    func signalService(spriteName: String, serviceName: String, signal: String) async throws {
+        let body = ServiceSignalRequest(name: serviceName, signal: signal)
+        let _: EmptyResponse = try await request(method: "POST", path: "/sprites/\(spriteName)/services/signal", body: body)
+    }
+
+    /// Delete a service.
+    func deleteService(spriteName: String, serviceName: String) async throws {
+        let _: EmptyResponse = try await request(method: "DELETE", path: "/sprites/\(spriteName)/services/\(serviceName)")
+    }
+
     // MARK: - Exec Helpers
 
     /// Run a command on a sprite via exec WebSocket, collecting output.

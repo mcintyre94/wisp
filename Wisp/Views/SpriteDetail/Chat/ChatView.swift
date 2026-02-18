@@ -52,7 +52,7 @@ struct ChatView: View {
                     viewModel.sendMessage(apiClient: apiClient, modelContext: modelContext)
                 },
                 onInterrupt: {
-                    viewModel.interrupt(modelContext: modelContext)
+                    viewModel.interrupt(apiClient: apiClient, modelContext: modelContext)
                 },
                 isFocused: $isInputFocused
             )

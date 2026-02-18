@@ -41,7 +41,7 @@ struct SpriteDetailView: View {
             if selectedTab == .chat {
                 ToolbarItem(placement: .primaryAction) {
                     Button {
-                        chatViewModel.startNewChat(modelContext: modelContext)
+                        chatViewModel.startNewChat(apiClient: apiClient, modelContext: modelContext)
                     } label: {
                         Image(systemName: "square.and.pencil")
                     }
