@@ -47,9 +47,3 @@ enum ServiceLogEventType: String, Codable, Sendable {
         self = ServiceLogEventType(rawValue: value) ?? .unknown
     }
 }
-
-/// Request body for POST /v1/sprites/{name}/services/signal
-struct ServiceSignalRequest: Codable, Sendable {
-    let name: String
-    let signal: String
-}

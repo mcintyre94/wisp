@@ -261,15 +261,9 @@ final class SpritesAPIClient {
         }
     }
 
-    /// Send a signal to a named service.
-    func signalService(spriteName: String, serviceName: String, signal: String) async throws {
-        let body = ServiceSignalRequest(name: serviceName, signal: signal)
-        let _: EmptyResponse = try await request(method: "POST", path: "/sprites/\(spriteName)/services/signal", body: body)
-    }
-
-    /// Delete a service.
+    /// Delete a service (5s timeout to avoid blocking callers if sprite is unresponsive).
     func deleteService(spriteName: String, serviceName: String) async throws {
-        let _: EmptyResponse = try await request(method: "DELETE", path: "/sprites/\(spriteName)/services/\(serviceName)")
+        let _: EmptyResponse = try await request(method: "DELETE", path: "/sprites/\(spriteName)/services/\(serviceName)", timeout: 5)
     }
 
     // MARK: - Exec Helpers
@@ -299,6 +293,7 @@ final class SpritesAPIClient {
         }
 
         timeoutTask.cancel()
+        session.disconnect()
         let text = String(data: output, encoding: .utf8) ?? ""
         return (text, !timedOut)
     }
@@ -308,7 +303,8 @@ final class SpritesAPIClient {
     private func request<T: Decodable>(
         method: String,
         path: String,
-        body: (some Encodable)? = nil as String?
+        body: (some Encodable)? = nil as String?,
+        timeout: TimeInterval? = nil
     ) async throws -> T {
         guard let token = spritesToken else {
             throw AppError.noToken
@@ -322,6 +318,9 @@ final class SpritesAPIClient {
         urlRequest.httpMethod = method
         urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
         urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+        if let timeout {
+            urlRequest.timeoutInterval = timeout
+        }
 
         if let body {
             urlRequest.httpBody = try encoder.encode(body)

@@ -114,14 +114,4 @@ struct ServiceTypesTests {
         #expect(json["needs"] as? [String] == ["database"])
         #expect(json["http_port"] as? Int == 3000)
     }
-
-    // MARK: - ServiceSignalRequest Encoding
-
-    @Test func encodeServiceSignalRequest() throws {
-        let req = ServiceSignalRequest(name: "claude", signal: "TERM")
-        let data = try JSONEncoder().encode(req)
-        let json = try JSONSerialization.jsonObject(with: data) as! [String: Any]
-        #expect(json["name"] as? String == "claude")
-        #expect(json["signal"] as? String == "TERM")
-    }
 }

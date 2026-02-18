@@ -76,13 +76,6 @@ final class ChatViewModel {
         toolUseIndex = [:]
         persistMessages(modelContext: modelContext)
 
-        // Clean up the service
-        let sName = spriteName
-        let svcName = serviceName
-        Task {
-            try? await apiClient.deleteService(spriteName: sName, serviceName: svcName)
-        }
-
         let session = fetchOrCreateSession(modelContext: modelContext)
         session.claudeSessionId = nil
         session.execSessionId = nil
@@ -134,12 +127,12 @@ final class ChatViewModel {
         currentAssistantMessage = nil
         status = .idle
 
-        // Signal the service to terminate
+        // Delete the service to stop it
         if let apiClient {
             let sName = spriteName
             let svcName = serviceName
             Task {
-                try? await apiClient.signalService(spriteName: sName, serviceName: svcName, signal: "TERM")
+                try? await apiClient.deleteService(spriteName: sName, serviceName: svcName)
             }
         }
 
@@ -157,12 +150,8 @@ final class ChatViewModel {
     ) async {
         status = .connecting
 
-        // Wake sprite with a lightweight exec before running Claude
-        let spriteReady = await wakeSprite(apiClient: apiClient)
-        guard spriteReady else {
-            status = .error("Sprite not responding — try again")
-            return
-        }
+        // Delete any existing service so the PUT creates a fresh one
+        try? await apiClient.deleteService(spriteName: spriteName, serviceName: serviceName)
 
         guard let claudeToken = apiClient.claudeToken else {
             status = .error("No Claude token configured")
@@ -221,7 +210,6 @@ final class ChatViewModel {
             config: config
         )
 
-        status = .streaming
         let assistantMessage = ChatMessage(role: .assistant, isStreaming: true)
         messages.append(assistantMessage)
         currentAssistantMessage = assistantMessage
@@ -322,6 +310,7 @@ final class ChatViewModel {
                     guard let text = event.data else { continue }
                     receivedData = true
                     timeoutTask.cancel()
+                    if case .connecting = status { status = .streaming }
 
                     // Two-level NDJSON: ServiceLogEvent.data contains Claude NDJSON.
                     // Ensure trailing newline so parser flushes each line.
@@ -345,6 +334,7 @@ final class ChatViewModel {
                 case .stderr:
                     receivedData = true
                     timeoutTask.cancel()
+                    if case .connecting = status { status = .streaming }
                     if let text = event.data {
                         logger.warning("Service stderr: \(text.prefix(500))")
                     }
@@ -372,6 +362,7 @@ final class ChatViewModel {
 
                 case .started:
                     logger.info("Service started")
+                    if case .connecting = status { status = .streaming }
 
                 case .stopping, .stopped:
                     logger.info("Service \(event.type.rawValue)")
@@ -570,22 +561,6 @@ final class ChatViewModel {
         try? modelContext.save()
     }
 
-    /// Wake the sprite and kill any stale Claude processes.
-    /// Returns false if the sprite is unresponsive (wake command timed out).
-    private func wakeSprite(apiClient: SpritesAPIClient) async -> Bool {
-        // Kill any stale Claude process from a previous interrupted session
-        logger.info("Killing stale Claude processes")
-        await runExecWithTimeout(apiClient: apiClient, command: "pkill claude", timeout: 5)
-        logger.info("Waking sprite")
-        let woke = await runExecWithTimeout(apiClient: apiClient, command: "echo ready", timeout: 15)
-        if woke {
-            logger.info("Sprite awake")
-        } else {
-            logger.warning("Sprite failed to wake within timeout")
-        }
-        return woke
-    }
-
     private static func sanitize(_ string: String) -> String {
         string.replacingOccurrences(
             of: "CLAUDE_CODE_OAUTH_TOKEN[=%][^&\\s,}]*",
@@ -611,6 +586,7 @@ final class ChatViewModel {
             // Expected — either command failed or timeout disconnected
         }
         timeoutTask.cancel()
+        session.disconnect()
         return !timedOut
     }
 }
