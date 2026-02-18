@@ -1,0 +1,343 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Sprites API CORS Tester</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 24px; background: #f5f5f7; color: #1d1d1f; }
+  h1 { font-size: 20px; margin-bottom: 16px; }
+  h2 { font-size: 15px; font-weight: 600; margin-bottom: 8px; color: #6e6e73; text-transform: uppercase; letter-spacing: 0.5px; }
+
+  .token-bar { display: flex; gap: 8px; margin-bottom: 24px; }
+  .token-bar input { flex: 1; padding: 10px 12px; border: 1px solid #d2d2d7; border-radius: 8px; font-size: 14px; font-family: ui-monospace, monospace; }
+  .token-bar input:focus { outline: none; border-color: #0071e3; box-shadow: 0 0 0 3px rgba(0,113,227,0.15); }
+
+  .tests { display: flex; flex-direction: column; gap: 12px; }
+  .test-card { background: #fff; border-radius: 12px; padding: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); }
+  .test-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px; }
+  .test-label { font-weight: 600; font-size: 14px; }
+  .method { font-size: 12px; font-family: ui-monospace, monospace; padding: 2px 6px; border-radius: 4px; background: #e8e8ed; }
+  .test-url { font-size: 13px; color: #6e6e73; font-family: ui-monospace, monospace; word-break: break-all; margin-bottom: 10px; }
+
+  button { padding: 8px 16px; border: none; border-radius: 8px; font-size: 14px; font-weight: 500; cursor: pointer; }
+  .btn-run { background: #0071e3; color: #fff; }
+  .btn-run:hover { background: #0077ed; }
+  .btn-run:disabled { background: #d2d2d7; cursor: not-allowed; }
+  .btn-all { background: #1d1d1f; color: #fff; margin-bottom: 24px; padding: 10px 20px; }
+  .btn-all:hover { background: #424245; }
+
+  .result { margin-top: 10px; display: none; }
+  .result.visible { display: block; }
+  .result-status { font-weight: 600; font-size: 14px; margin-bottom: 6px; }
+  .result-status.pass { color: #248a3d; }
+  .result-status.fail { color: #d70015; }
+  .result-status.pending { color: #af8200; }
+  .result-headers { font-size: 12px; font-family: ui-monospace, monospace; background: #f5f5f7; padding: 10px; border-radius: 6px; white-space: pre-wrap; max-height: 200px; overflow-y: auto; line-height: 1.6; }
+
+  .summary { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 16px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); display: none; }
+  .summary.visible { display: block; }
+  .summary-line { font-size: 14px; margin-bottom: 4px; }
+</style>
+</head>
+<body>
+
+<h1>Sprites API CORS Tester</h1>
+
+<h2>Auth Token</h2>
+<div class="token-bar">
+  <input type="password" id="token" placeholder="Sprites API token">
+</div>
+
+<button class="btn-all" onclick="runAll()">Run All Tests</button>
+
+<div id="summary" class="summary"></div>
+
+<h2>Tests</h2>
+<div class="tests" id="tests"></div>
+
+<script>
+const BASE = 'https://api.sprites.dev';
+
+const tests = [
+  {
+    id: 'preflight',
+    label: 'CORS Preflight (OPTIONS)',
+    method: 'OPTIONS',
+    path: '/v1/sprites',
+    auth: false,
+    note: 'Checks if the server responds to preflight with CORS headers',
+  },
+  {
+    id: 'list-sprites',
+    label: 'List Sprites (GET)',
+    method: 'GET',
+    path: '/v1/sprites',
+    auth: true,
+    note: 'Core endpoint — needs Access-Control-Allow-Origin in response',
+  },
+  {
+    id: 'create-sprite',
+    label: 'Create Sprite preflight (OPTIONS for POST)',
+    method: 'OPTIONS',
+    path: '/v1/sprites',
+    auth: false,
+    headers: { 'Access-Control-Request-Method': 'POST', 'Access-Control-Request-Headers': 'Authorization, Content-Type' },
+    note: 'POST requires preflight — checks if server allows it',
+  },
+  {
+    id: 'get-sprite',
+    label: 'Get Sprite (GET)',
+    method: 'GET',
+    path: '/v1/sprites/{name}',
+    auth: true,
+    promptParam: 'name',
+    promptLabel: 'Sprite name',
+    note: 'Fetches a single sprite by name',
+  },
+  {
+    id: 'list-checkpoints',
+    label: 'List Checkpoints (GET)',
+    method: 'GET',
+    path: '/v1/sprites/{name}/checkpoints',
+    auth: true,
+    promptParam: 'name',
+    promptLabel: 'Sprite name',
+    note: 'Checkpoint listing endpoint',
+  },
+  {
+    id: 'websocket',
+    label: 'WebSocket Exec',
+    method: 'WS',
+    path: '/v1/sprites/{name}/exec?cmd=echo&cmd=ok',
+    auth: true,
+    promptParam: 'name',
+    promptLabel: 'Sprite name',
+    note: 'WebSocket upgrade — browsers don\'t send CORS preflight for WS, but server may still reject Origin',
+  },
+];
+
+function renderTests() {
+  const container = document.getElementById('tests');
+  container.innerHTML = tests.map(t => `
+    <div class="test-card" id="card-${t.id}">
+      <div class="test-header">
+        <span class="test-label">${t.label}</span>
+        <span class="method">${t.method}</span>
+      </div>
+      <div class="test-url">${BASE}${t.path}</div>
+      ${t.promptParam ? `<div style="margin-bottom:8px"><input type="text" id="param-${t.id}" placeholder="${t.promptLabel}" style="padding:6px 10px;border:1px solid #d2d2d7;border-radius:6px;font-size:13px;font-family:ui-monospace,monospace;width:200px"></div>` : ''}
+      <button class="btn-run" onclick="runTest('${t.id}')">Run</button>
+      <div class="result" id="result-${t.id}">
+        <div class="result-status" id="status-${t.id}"></div>
+        <div class="result-headers" id="headers-${t.id}"></div>
+      </div>
+    </div>
+  `).join('');
+}
+
+function getToken() {
+  return document.getElementById('token').value.trim();
+}
+
+function resolvePath(test) {
+  let path = test.path;
+  if (test.promptParam) {
+    const el = document.getElementById(`param-${test.id}`);
+    const val = el ? el.value.trim() : '';
+    if (!val) return null;
+    path = path.replace(`{${test.promptParam}}`, encodeURIComponent(val));
+  }
+  return path;
+}
+
+function showResult(id, { pass, status, text, headers }) {
+  const resultEl = document.getElementById(`result-${id}`);
+  const statusEl = document.getElementById(`status-${id}`);
+  const headersEl = document.getElementById(`headers-${id}`);
+  resultEl.classList.add('visible');
+  statusEl.className = `result-status ${pass ? 'pass' : 'fail'}`;
+  statusEl.textContent = status;
+  headersEl.textContent = text;
+
+  if (headers) {
+    const corsHeaders = [
+      'access-control-allow-origin',
+      'access-control-allow-methods',
+      'access-control-allow-headers',
+      'access-control-allow-credentials',
+      'access-control-max-age',
+      'access-control-expose-headers',
+    ];
+    const found = [];
+    const missing = [];
+    corsHeaders.forEach(h => {
+      const val = headers.get(h);
+      if (val !== null) found.push(`${h}: ${val}`);
+      else missing.push(h);
+    });
+
+    let detail = '';
+    if (found.length) detail += `CORS headers present:\n  ${found.join('\n  ')}\n\n`;
+    if (missing.length) detail += `CORS headers missing:\n  ${missing.join('\n  ')}\n\n`;
+
+    // Show other useful headers
+    const otherHeaders = [];
+    headers.forEach((val, key) => {
+      if (!corsHeaders.includes(key)) otherHeaders.push(`${key}: ${val}`);
+    });
+    if (otherHeaders.length) detail += `Other response headers:\n  ${otherHeaders.join('\n  ')}`;
+
+    headersEl.textContent = detail;
+  }
+}
+
+async function runTest(id) {
+  const test = tests.find(t => t.id === id);
+  const token = getToken();
+  const path = resolvePath(test);
+
+  if (path === null) {
+    showResult(id, { pass: false, status: 'Missing parameter', text: `Enter a value for "${test.promptLabel}"` });
+    return;
+  }
+
+  if (test.auth && !token) {
+    showResult(id, { pass: false, status: 'No token', text: 'Enter your Sprites API token above' });
+    return;
+  }
+
+  const statusEl = document.getElementById(`status-${id}`);
+  const resultEl = document.getElementById(`result-${id}`);
+  resultEl.classList.add('visible');
+  statusEl.className = 'result-status pending';
+  statusEl.textContent = 'Running...';
+  document.getElementById(`headers-${id}`).textContent = '';
+
+  // WebSocket test
+  if (test.method === 'WS') {
+    try {
+      const wsUrl = `wss://api.sprites.dev${path}${path.includes('?') ? '&' : '?'}` +
+        `env=${encodeURIComponent('TERM=dumb')}`;
+
+      // Browser WebSocket API doesn't allow custom headers, so we can't send Authorization.
+      // The Sprites API may need to support token as a query param for browser WS.
+      const protocols = token ? [`bearer.${token}`] : [];
+      let detail = `URL: ${wsUrl}\n`;
+      if (protocols.length) detail += `Subprotocol auth attempted: bearer.{token}\n\n`;
+      else detail += `No auth (browser WS API doesn't support Authorization header)\n\n`;
+
+      const ws = new WebSocket(wsUrl, protocols.length ? protocols : undefined);
+      ws.binaryType = 'arraybuffer';
+
+      const timeout = setTimeout(() => {
+        ws.close();
+        showResult(id, { pass: false, status: 'Timeout (5s)', text: detail + 'WebSocket did not connect within 5 seconds.' });
+      }, 5000);
+
+      ws.onopen = () => {
+        clearTimeout(timeout);
+        detail += 'Connected successfully!\n';
+        detail += `Protocol: ${ws.protocol || '(none)'}\n`;
+        showResult(id, { pass: true, status: 'WebSocket connected', text: detail });
+        ws.close();
+      };
+
+      ws.onmessage = (e) => {
+        if (e.data instanceof ArrayBuffer) {
+          const bytes = new Uint8Array(e.data);
+          const streamId = bytes[0];
+          const payload = new TextDecoder().decode(bytes.slice(1));
+          detail += `Frame: stream=${streamId} data="${payload}"\n`;
+        } else {
+          detail += `Text frame: ${e.data}\n`;
+        }
+      };
+
+      ws.onerror = () => {
+        clearTimeout(timeout);
+        showResult(id, { pass: false, status: 'WebSocket error', text: detail + 'Connection failed. Check browser console for details.\nNote: browser WS API cannot send Authorization headers — if the API requires auth via header, this will always fail from browsers.' });
+      };
+
+      ws.onclose = (e) => {
+        clearTimeout(timeout);
+        if (!document.getElementById(`status-${id}`).textContent.includes('connected')) {
+          detail += `Closed: code=${e.code} reason="${e.reason}" clean=${e.wasClean}\n`;
+          showResult(id, { pass: false, status: `WebSocket closed (${e.code})`, text: detail });
+        }
+      };
+    } catch (err) {
+      showResult(id, { pass: false, status: 'Error', text: err.message });
+    }
+    return;
+  }
+
+  // HTTP tests
+  try {
+    const headers = { ...(test.headers || {}) };
+    if (test.auth && token) headers['Authorization'] = `Bearer ${token}`;
+    if (test.method !== 'OPTIONS') headers['Content-Type'] = 'application/json';
+
+    const resp = await fetch(`${BASE}${path}`, {
+      method: test.method === 'OPTIONS' ? 'OPTIONS' : test.method,
+      headers,
+      mode: 'cors',
+    });
+
+    const hasACAO = resp.headers.get('access-control-allow-origin');
+    const pass = resp.ok || (test.method === 'OPTIONS' && resp.status === 204);
+
+    let status;
+    if (pass && hasACAO) status = `${resp.status} — CORS OK`;
+    else if (pass) status = `${resp.status} — No CORS headers`;
+    else status = `${resp.status} ${resp.statusText}`;
+
+    showResult(id, { pass: !!(pass && hasACAO), status, headers: resp.headers });
+  } catch (err) {
+    // Network error usually means CORS blocked or unreachable
+    showResult(id, {
+      pass: false,
+      status: 'Network Error (likely CORS blocked)',
+      text: `${err.message}\n\nThis usually means:\n- The server didn't return Access-Control-Allow-Origin\n- The preflight OPTIONS request was rejected\n- Or the server is unreachable\n\nCheck the browser Network tab and Console for details.`,
+    });
+  }
+}
+
+async function runAll() {
+  const results = [];
+  for (const test of tests) {
+    if (test.promptParam) {
+      // Fill in sprite name from first param input that has a value
+      const firstVal = document.querySelector('[id^="param-"]')?.value?.trim();
+      const el = document.getElementById(`param-${test.id}`);
+      if (el && !el.value.trim() && firstVal) el.value = firstVal;
+    }
+    await runTest(test.id);
+    // Small delay between tests
+    await new Promise(r => setTimeout(r, 300));
+  }
+
+  // Summary
+  let passed = 0, failed = 0;
+  tests.forEach(t => {
+    const el = document.getElementById(`status-${t.id}`);
+    if (el.classList.contains('pass')) passed++;
+    else failed++;
+  });
+
+  const summary = document.getElementById('summary');
+  summary.className = 'summary visible';
+  summary.innerHTML = `
+    <div class="summary-line"><strong>Results:</strong> ${passed} passed, ${failed} failed out of ${tests.length} tests</div>
+    <div class="summary-line" style="color:#6e6e73;font-size:13px;margin-top:4px">
+      ${passed === tests.length ? 'All clear — client-side web app should work!' : 'Some tests failed — check individual results for details.'}
+    </div>
+  `;
+}
+
+renderTests();
+</script>
+
+</body>
+</html>
