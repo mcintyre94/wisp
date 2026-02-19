@@ -3,6 +3,7 @@ import SwiftUI
 struct ChatView: View {
     @Environment(SpritesAPIClient.self) private var apiClient
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
     @Bindable var viewModel: ChatViewModel
     var topAccessory: AnyView? = nil
     @FocusState private var isInputFocused: Bool
@@ -41,6 +42,11 @@ struct ChatView: View {
             try? await Task.sleep(for: .milliseconds(100))
             if viewModel.messages.isEmpty {
                 isInputFocused = true
+            }
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                viewModel.resumeAfterBackground(apiClient: apiClient, modelContext: modelContext)
             }
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {

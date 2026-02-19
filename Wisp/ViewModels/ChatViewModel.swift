@@ -117,6 +117,15 @@ final class ChatViewModel {
         }
     }
 
+    func resumeAfterBackground(apiClient: SpritesAPIClient, modelContext: ModelContext) {
+        guard isStreaming else { return }
+        // Cancel the stale stream and reconnect via service logs
+        streamTask?.cancel()
+        streamTask = Task {
+            await reconnectToServiceLogs(apiClient: apiClient, modelContext: modelContext)
+        }
+    }
+
     func interrupt(apiClient: SpritesAPIClient? = nil, modelContext: ModelContext? = nil) {
         streamTask?.cancel()
         streamTask = nil
@@ -313,8 +322,9 @@ final class ChatViewModel {
                     if case .connecting = status { status = .streaming }
 
                     // Two-level NDJSON: ServiceLogEvent.data contains Claude NDJSON.
-                    // Ensure trailing newline so parser flushes each line.
-                    var dataStr = text
+                    // The logs endpoint prefixes each line with a timestamp
+                    // (e.g. "2026-02-19T09:13:24.665Z [stdout] {...}"), so strip it.
+                    var dataStr = Self.stripLogTimestamps(text)
                     if !dataStr.hasSuffix("\n") {
                         dataStr += "\n"
                     }
@@ -559,6 +569,21 @@ final class ChatViewModel {
         session.claudeSessionId = sessionId
         session.lastUsed = Date()
         try? modelContext.save()
+    }
+
+    /// Strip timestamp prefixes from service log lines.
+    /// The logs endpoint returns lines like "2026-02-19T09:13:24.665Z [stdout] {...}"
+    /// but the PUT stream returns just "{...}". This normalizes both formats.
+    private static func stripLogTimestamps(_ text: String) -> String {
+        text.split(separator: "\n", omittingEmptySubsequences: false)
+            .map { line in
+                // Match "TIMESTAMP [stdout] " or "TIMESTAMP [stderr] " prefix
+                if let range = line.range(of: #"^\d{4}-\d{2}-\d{2}T[\d:.]+Z \[(stdout|stderr)\] "#, options: .regularExpression) {
+                    return String(line[range.upperBound...])
+                }
+                return String(line)
+            }
+            .joined(separator: "\n")
     }
 
     private static func sanitize(_ string: String) -> String {
