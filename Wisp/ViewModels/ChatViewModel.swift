@@ -237,7 +237,11 @@ final class ChatViewModel {
         let streamResult = await processServiceStream(stream: stream, modelContext: modelContext)
         logger.info("[Chat] Main stream ended: result=\(streamResult), cancelled=\(Task.isCancelled)")
         assistantMessage.isStreaming = false
-        currentAssistantMessage = nil
+        // Only clear currentAssistantMessage if it hasn't been replaced by a
+        // concurrent reconnect task (which would have set its own message).
+        if currentAssistantMessage?.id == assistantMessage.id {
+            currentAssistantMessage = nil
+        }
 
         // Attempt reconnection on disconnect
         if case .disconnected = streamResult, !Task.isCancelled {
@@ -427,6 +431,8 @@ final class ChatViewModel {
             currentAssistantMessage = nil
         }
 
+        receivedSystemEvent = false
+
         let oldAssistantIndex = messages.lastIndex(where: { $0.role == .assistant })
 
         // Reset parser for fresh replay from logs
@@ -449,7 +455,11 @@ final class ChatViewModel {
         let streamResult = await processServiceStream(stream: stream, modelContext: modelContext)
 
         assistantMessage.isStreaming = false
-        currentAssistantMessage = nil
+        // Only clear currentAssistantMessage if it hasn't been replaced by a
+        // subsequent reconnect task.
+        if currentAssistantMessage?.id == assistantMessage.id {
+            currentAssistantMessage = nil
+        }
 
         let reattachGotData = !assistantMessage.content.isEmpty
         logger.info("[Chat] Reconnect stream ended: result=\(streamResult), gotData=\(reattachGotData)")

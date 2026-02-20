@@ -8,6 +8,7 @@ struct SpriteDetailView: View {
     @State private var checkpointsViewModel: CheckpointsViewModel
     @Environment(SpritesAPIClient.self) private var apiClient
     @Environment(\.modelContext) private var modelContext
+    @Environment(\.scenePhase) private var scenePhase
 
     init(sprite: Sprite) {
         self.sprite = sprite
@@ -51,6 +52,11 @@ struct SpriteDetailView: View {
         }
         .task {
             chatViewModel.loadSession(apiClient: apiClient, modelContext: modelContext)
+        }
+        .onChange(of: scenePhase) { _, newPhase in
+            if newPhase == .active {
+                chatViewModel.resumeAfterBackground(apiClient: apiClient, modelContext: modelContext)
+            }
         }
     }
 }
