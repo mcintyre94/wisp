@@ -164,6 +164,7 @@ final class SpritesAPIClient {
                     urlRequest.httpMethod = "PUT"
                     urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
                     urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
+                    urlRequest.timeoutInterval = 3600
                     urlRequest.httpBody = try encoder.encode(config)
 
                     let (bytes, response) = try await URLSession.shared.bytes(for: urlRequest)
@@ -192,6 +193,7 @@ final class SpritesAPIClient {
                     }
                     continuation.finish()
                 } catch {
+                    logger.error("streamService error: \(error.localizedDescription, privacy: .public)")
                     continuation.finish(throwing: error)
                 }
             }
@@ -225,6 +227,7 @@ final class SpritesAPIClient {
                     var urlRequest = URLRequest(url: url)
                     urlRequest.httpMethod = "GET"
                     urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+                    urlRequest.timeoutInterval = 3600
 
                     let (bytes, response) = try await URLSession.shared.bytes(for: urlRequest)
 
@@ -251,6 +254,7 @@ final class SpritesAPIClient {
                     }
                     continuation.finish()
                 } catch {
+                    logger.error("streamServiceLogs error: \(error.localizedDescription, privacy: .public)")
                     continuation.finish(throwing: error)
                 }
             }

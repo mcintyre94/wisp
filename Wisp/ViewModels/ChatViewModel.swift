@@ -29,6 +29,7 @@ final class ChatViewModel {
     private var currentAssistantMessage: ChatMessage?
     private var toolUseIndex: [String: (messageIndex: Int, toolName: String)] = [:]
     private var receivedSystemEvent = false
+    private var receivedResultEvent = false
     private var usedResume = false
     private var queuedPrompt: String?
     private var retriedAfterTimeout = false
@@ -203,6 +204,7 @@ final class ChatViewModel {
         let fullCommand = commandParts.joined(separator: " && ")
 
         receivedSystemEvent = false
+        receivedResultEvent = false
 
         logger.info("Service command: \(Self.sanitize(fullCommand))")
 
@@ -302,17 +304,19 @@ final class ChatViewModel {
     ) async -> StreamResult {
         var receivedData = false
         var lastPersistTime = Date.distantPast
+        var eventCount = 0
 
         let timeoutTask = Task {
             try await Task.sleep(for: .seconds(30))
             if !receivedData {
-                logger.warning("Timeout: no service data received in 30s")
+                logger.warning("No service data received in 30s")
             }
         }
 
         do {
             for try await event in stream {
                 guard !Task.isCancelled else { break }
+                eventCount += 1
 
                 switch event.type {
                 case .stdout:
@@ -346,7 +350,7 @@ final class ChatViewModel {
                     timeoutTask.cancel()
                     if case .connecting = status { status = .streaming }
                     if let text = event.data {
-                        logger.warning("Service stderr: \(text.prefix(500))")
+                        logger.warning("Service stderr: \(text.prefix(500), privacy: .public)")
                     }
 
                 case .exit:
@@ -361,24 +365,22 @@ final class ChatViewModel {
 
                 case .error:
                     timeoutTask.cancel()
-                    logger.error("Service error: \(event.data ?? "unknown")")
+                    logger.error("Service error: \(event.data ?? "unknown", privacy: .public)")
                     if !receivedData {
                         status = .error(event.data ?? "Service error")
                     }
 
                 case .complete:
                     timeoutTask.cancel()
-                    logger.info("Service complete")
 
                 case .started:
-                    logger.info("Service started")
                     if case .connecting = status { status = .streaming }
 
                 case .stopping, .stopped:
-                    logger.info("Service \(event.type.rawValue)")
+                    break
 
                 case .unknown:
-                    logger.info("Unknown service event type")
+                    break
                 }
             }
 
@@ -389,10 +391,11 @@ final class ChatViewModel {
             }
             timeoutTask.cancel()
 
+            logger.info("Stream ended: events=\(eventCount) receivedData=\(receivedData)")
             return Task.isCancelled ? .cancelled : (receivedData ? .completed : .timedOut)
         } catch {
             timeoutTask.cancel()
-            logger.error("Service stream error: \(Self.sanitize(error.localizedDescription))")
+            logger.error("Stream error after \(eventCount) events: \(Self.sanitize(error.localizedDescription), privacy: .public)")
             if Task.isCancelled { return .cancelled }
             if receivedData { return .disconnected }
             status = .error("No response from Claude — try again")
@@ -458,6 +461,18 @@ final class ChatViewModel {
             // Remove empty reconnect message, keep old one
             if !reattachGotData, let idx = messages.firstIndex(where: { $0.id == assistantMessage.id }) {
                 messages.remove(at: idx)
+            }
+            // If we already got the result event, treat as completed — don't reconnect
+            if receivedResultEvent {
+                logger.info("[Chat] Disconnected after result event, treating as completed")
+                if let oldIdx = oldAssistantIndex, oldIdx < messages.count,
+                   messages[oldIdx].role == .assistant, messages[oldIdx].id != assistantMessage.id {
+                    messages.remove(at: oldIdx)
+                }
+                saveSession(modelContext: modelContext)
+                status = .idle
+                persistMessages(modelContext: modelContext)
+                break
             }
             // Retry reconnection
             if !Task.isCancelled {
@@ -539,8 +554,9 @@ final class ChatViewModel {
 
         case .result(let resultEvent):
             if resultEvent.isError == true {
-                logger.error("Claude result error: \(resultEvent.result ?? "unknown")")
+                logger.error("Claude result error: \(resultEvent.result ?? "unknown", privacy: .public)")
             }
+            receivedResultEvent = true
             sessionId = resultEvent.sessionId
             saveSession(modelContext: modelContext)
 
