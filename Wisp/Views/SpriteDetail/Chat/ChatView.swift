@@ -45,9 +45,7 @@ struct ChatView: View {
             }
         }
         .onChange(of: scenePhase) { _, newPhase in
-            if newPhase == .active {
-                viewModel.resumeAfterBackground(apiClient: apiClient, modelContext: modelContext)
-            } else {
+            if newPhase != .active {
                 viewModel.saveDraft(modelContext: modelContext)
             }
         }
