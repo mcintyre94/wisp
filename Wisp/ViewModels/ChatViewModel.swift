@@ -59,7 +59,17 @@ final class ChatViewModel {
                 messages = persisted.map { ChatMessage(from: $0) }
                 rebuildToolUseIndex()
             }
+
+            if inputText.isEmpty, let draft = session.draftInputText, !draft.isEmpty {
+                inputText = draft
+            }
         }
+    }
+
+    func saveDraft(modelContext: ModelContext) {
+        let session = fetchOrCreateSession(modelContext: modelContext)
+        session.draftInputText = inputText.isEmpty ? nil : inputText
+        try? modelContext.save()
     }
 
     func persistMessages(modelContext: ModelContext) {
@@ -102,6 +112,7 @@ final class ChatViewModel {
         guard !text.isEmpty else { return }
 
         inputText = ""
+        saveDraft(modelContext: modelContext)
         retriedAfterTimeout = false
         let userMessage = ChatMessage(role: .user, content: [.text(text)])
         messages.append(userMessage)

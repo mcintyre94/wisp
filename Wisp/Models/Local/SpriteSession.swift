@@ -9,6 +9,7 @@ final class SpriteSession {
     var workingDirectory: String
     var lastUsed: Date
     var messagesData: Data?
+    var draftInputText: String?
 
     init(spriteName: String, workingDirectory: String = "/home/sprite/project") {
         self.spriteName = spriteName
