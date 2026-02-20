@@ -47,7 +47,15 @@ struct ChatView: View {
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
                 viewModel.resumeAfterBackground(apiClient: apiClient, modelContext: modelContext)
+            } else {
+                viewModel.saveDraft(modelContext: modelContext)
             }
+        }
+        .onChange(of: viewModel.inputText) {
+            viewModel.saveDraft(modelContext: modelContext)
+        }
+        .onDisappear {
+            viewModel.saveDraft(modelContext: modelContext)
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
             ChatInputBar(
