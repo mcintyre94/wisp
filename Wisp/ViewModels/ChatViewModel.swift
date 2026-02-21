@@ -283,7 +283,7 @@ final class ChatViewModel {
 
         saveSession(modelContext: modelContext)
 
-        if case .streaming = status {
+        if case .streaming = status, !Task.isCancelled {
             status = .idle
         }
 
@@ -329,8 +329,8 @@ final class ChatViewModel {
         }
 
         do {
-            for try await event in stream {
-                guard !Task.isCancelled else { break }
+            streamLoop: for try await event in stream {
+                guard !Task.isCancelled else { break streamLoop }
                 eventCount += 1
 
                 switch event.type {
@@ -352,6 +352,9 @@ final class ChatViewModel {
                     for parsedEvent in events {
                         handleEvent(parsedEvent, modelContext: modelContext)
                     }
+
+                    // Result event means Claude is done — stop waiting for more
+                    if receivedResultEvent { break streamLoop }
 
                     // Periodic persistence
                     let now = Date()
@@ -435,6 +438,7 @@ final class ChatViewModel {
         }
 
         receivedSystemEvent = false
+        receivedResultEvent = false
 
         let oldAssistantIndex = messages.lastIndex(where: { $0.role == .assistant })
 
@@ -578,6 +582,7 @@ final class ChatViewModel {
                 logger.error("Claude result error: \(resultEvent.result ?? "unknown", privacy: .public)")
             }
             receivedResultEvent = true
+            currentAssistantMessage?.isStreaming = false
             sessionId = resultEvent.sessionId
             saveSession(modelContext: modelContext)
 
