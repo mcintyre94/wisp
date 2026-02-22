@@ -33,7 +33,12 @@ struct SpriteDetailView: View {
         case .chat:
             if let chatViewModel {
                 let isReadOnly = chatListViewModel.activeChat?.isClosed == true
-                ChatView(viewModel: chatViewModel, isReadOnly: isReadOnly, topAccessory: AnyView(pickerView))
+                ChatView(
+                    viewModel: chatViewModel,
+                    isReadOnly: isReadOnly,
+                    topAccessory: AnyView(pickerView),
+                    existingSessionIds: Set(chatListViewModel.chats.filter { !$0.isClosed }.compactMap(\.claudeSessionId))
+                )
                     .id(chatViewModel.chatId)
             } else {
                 ProgressView()
@@ -119,6 +124,8 @@ struct SpriteDetailView: View {
     }
 
     private func switchToChat(_ chat: SpriteChat) {
+        guard chatViewModel?.chatId != chat.id else { return }
+
         // Detach old VM (cancel stream but keep service running)
         if let oldVM = chatViewModel {
             let wasStreaming = oldVM.detach(modelContext: modelContext)

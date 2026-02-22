@@ -26,6 +26,8 @@ final class ChatViewModel {
     var inputText = ""
     var status: ChatStatus = .idle
     var modelName: String?
+    var remoteSessions: [ClaudeSessionEntry] = []
+    var isLoadingRemoteSessions = false
 
     private var serviceName: String
     private var sessionId: String?
@@ -78,6 +80,68 @@ final class ChatViewModel {
         guard let chat = fetchChat(modelContext: modelContext) else { return }
         chat.draftInputText = inputText.isEmpty ? nil : inputText
         try? modelContext.save()
+    }
+
+    func fetchRemoteSessions(apiClient: SpritesAPIClient, existingSessionIds: Set<String>) {
+        guard !isLoadingRemoteSessions else { return }
+        isLoadingRemoteSessions = true
+
+        Task {
+            defer { isLoadingRemoteSessions = false }
+
+            // Claude Code stores sessions as {uuid}.jsonl files under the project dir.
+            let encodedPath = workingDirectory
+                .replacingOccurrences(of: "/", with: "-")
+            let projectDir = "/home/sprite/.claude/projects/\(encodedPath)"
+
+            // For each session .jsonl, extract the first user message and the file's last-modified time.
+            let command = """
+            for f in \(projectDir)/*.jsonl; do [ -f "$f" ] && \
+            mtime=$(stat -c %Y "$f" 2>/dev/null || stat -f %m "$f" 2>/dev/null) && \
+            grep -m1 '"type":"user"' "$f" | \
+            jq -c --arg mt "$mtime" '{sessionId,timestamp,prompt:.message.content,mtime:($mt|tonumber)}'; \
+            done 2>/dev/null
+            """
+
+            let (output, _) = await apiClient.runExec(
+                spriteName: spriteName,
+                command: command,
+                timeout: 15
+            )
+
+            guard !output.isEmpty else { return }
+
+            // Each line from jq is: {"sessionId":"...","timestamp":"...","prompt":"..."}
+            var entries: [ClaudeSessionEntry] = []
+            for line in output.split(separator: "\n") {
+                guard let data = line.data(using: .utf8),
+                      let parsed = try? JSONDecoder().decode(SessionSummary.self, from: data),
+                      let sessionId = parsed.sessionId, !sessionId.isEmpty
+                else { continue }
+                let modifiedDate = parsed.mtime.map { Date(timeIntervalSince1970: TimeInterval($0)) }
+                entries.append(ClaudeSessionEntry(
+                    sessionId: sessionId,
+                    firstPrompt: parsed.prompt,
+                    messageCount: nil,
+                    modifiedDate: modifiedDate,
+                    gitBranch: nil
+                ))
+            }
+
+            let filtered = entries
+                .filter { !existingSessionIds.contains($0.sessionId) }
+                .sorted { a, b in
+                    (a.modifiedDate ?? .distantPast) > (b.modifiedDate ?? .distantPast)
+                }
+            remoteSessions = Array(filtered.prefix(5))
+            logger.info("Found \(entries.count) remote sessions, \(self.remoteSessions.count) available to resume")
+        }
+    }
+
+    func selectRemoteSession(_ entry: ClaudeSessionEntry, modelContext: ModelContext) {
+        sessionId = entry.sessionId
+        remoteSessions = []
+        saveSession(modelContext: modelContext)
     }
 
     func persistMessages(modelContext: ModelContext) {

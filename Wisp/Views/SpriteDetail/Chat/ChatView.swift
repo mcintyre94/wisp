@@ -7,12 +7,21 @@ struct ChatView: View {
     @Bindable var viewModel: ChatViewModel
     var isReadOnly: Bool = false
     var topAccessory: AnyView? = nil
+    var existingSessionIds: Set<String> = []
     @FocusState private var isInputFocused: Bool
 
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(spacing: 12) {
+                    if viewModel.messages.isEmpty && !isReadOnly {
+                        SessionSuggestionsView(
+                            sessions: viewModel.remoteSessions,
+                            isLoading: viewModel.isLoadingRemoteSessions
+                        ) { entry in
+                            viewModel.selectRemoteSession(entry, modelContext: modelContext)
+                        }
+                    }
                     ForEach(viewModel.messages) { message in
                         ChatMessageView(message: message)
                             .id(message.id)
@@ -43,6 +52,10 @@ struct ChatView: View {
             try? await Task.sleep(for: .milliseconds(100))
             if viewModel.messages.isEmpty && !isReadOnly {
                 isInputFocused = true
+                viewModel.fetchRemoteSessions(
+                    apiClient: apiClient,
+                    existingSessionIds: existingSessionIds
+                )
             }
         }
         .onChange(of: scenePhase) { _, newPhase in

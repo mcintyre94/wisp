@@ -81,6 +81,8 @@
 		D4E5F6A7B8C90A31526D7E90 /* ChatSwitcherSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E5F6A7B8C90A31526D7E8F /* ChatSwitcherSheet.swift */; };
 		E5F6A7B8C9D00B42637E8F91 /* SpriteChatListViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5F6A7B8C9D00B42637E8F90 /* SpriteChatListViewModelTests.swift */; };
 		F6A7B8C9D0E10C53748F9002 /* SpriteChatMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6A7B8C9D0E10C53748F9001 /* SpriteChatMigrationTests.swift */; };
+		A1B2C3D4E5F6071829CAFE02 /* ClaudeSessionEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6071829CAFE01 /* ClaudeSessionEntry.swift */; };
+		B2C3D4E5F6A7081930DBFF02 /* SessionSuggestionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F6A7081930DBFF01 /* SessionSuggestionsView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -169,6 +171,8 @@
 		D4E5F6A7B8C90A31526D7E8F /* ChatSwitcherSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatSwitcherSheet.swift; sourceTree = "<group>"; };
 		E5F6A7B8C9D00B42637E8F90 /* SpriteChatListViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpriteChatListViewModelTests.swift; sourceTree = "<group>"; };
 		F6A7B8C9D0E10C53748F9001 /* SpriteChatMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpriteChatMigrationTests.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F6071829CAFE01 /* ClaudeSessionEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeSessionEntry.swift; sourceTree = "<group>"; };
+		B2C3D4E5F6A7081930DBFF01 /* SessionSuggestionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SessionSuggestionsView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -269,6 +273,7 @@
 				AE09C632E049BE561A702FDF /* ChatMessage.swift */,
 				2B299898C61EA80D1A91AF37 /* ClaudeEventTypes.swift */,
 				C1A0DE4B5F6E7A8293B4D5E6 /* ClaudeModel.swift */,
+				A1B2C3D4E5F6071829CAFE01 /* ClaudeSessionEntry.swift */,
 				BC36140C33E21A73C41606C6 /* ClaudeStreamEvent.swift */,
 			);
 			path = Claude;
@@ -360,6 +365,7 @@
 				42C4A8D129C538233C34B2A6 /* ChatStatusBar.swift */,
 				D4E5F6A7B8C90A31526D7E8F /* ChatSwitcherSheet.swift */,
 				4FB02E9F26B9003B6E1DBE7C /* ChatView.swift */,
+				B2C3D4E5F6A7081930DBFF01 /* SessionSuggestionsView.swift */,
 				E5956E839208B00B1EE0C88A /* StreamingIndicator.swift */,
 				AB04F3FB6C647DE1F6DC0FD0 /* ToolInputDetailView.swift */,
 				3B8BD6A5D86571BFF9ECB5B2 /* ToolResultCardView.swift */,
@@ -575,6 +581,8 @@
 				F32DE1DDC53913E28250E70D /* UserBubbleView.swift in Sources */,
 				E5F6A7B8C9D0E1F2A3B4C5D6 /* WebViewPage.swift in Sources */,
 				DD11EE22FF334455AA66BB02 /* ServiceTypes.swift in Sources */,
+				A1B2C3D4E5F6071829CAFE02 /* ClaudeSessionEntry.swift in Sources */,
+				B2C3D4E5F6A7081930DBFF02 /* SessionSuggestionsView.swift in Sources */,
 				C575C7232C5FCA1A3F18A9D8 /* WispApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
