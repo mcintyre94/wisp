@@ -43,6 +43,7 @@ means we have all the flexibility of Sprites, through a mobile chat UX.
 - Make the URL public and open it in Safari
 - View checkpoints, create a new one and restore to any checkpoint
 - Optional Github auth - if connected then every Sprite is authenticated automatically when created
+- Multiple simultaneous chats per Sprite 
 
 ## How does Chat work?
 
@@ -50,6 +51,6 @@ Wisp uses the
 [Sprite services API](https://sprites.dev/api/sprites/services#create-service)
 to run Claude on the Sprite and listen for its response. It calls Claude in
 non-interactive mode `-p`, with `--output-format stream-json`. The JSON messages
-are received at the websocket, and displayed in the chat as Claude responds.
+are received in the streaming response, and displayed in the chat as Claude responds.
 When you send a follow up message `--resume` is used to pass the previous
 session ID to Claude and continue the chat.
