@@ -63,7 +63,7 @@ struct SpriteDetailView: View {
                         } label: {
                             Image(systemName: "square.and.pencil")
                         }
-                        .disabled(chatViewModel?.isStreaming == true)
+                        .disabled(chatViewModel?.status.isConnecting == true)
                     }
                 }
             }

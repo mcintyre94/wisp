@@ -10,6 +10,11 @@ enum ChatStatus: Sendable {
     case streaming
     case reconnecting
     case error(String)
+
+    var isConnecting: Bool {
+        if case .connecting = self { return true }
+        return false
+    }
 }
 
 @Observable
