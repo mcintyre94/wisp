@@ -18,7 +18,7 @@ struct SessionSuggestionsView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.top, 40)
             } else if sessions.isEmpty {
-                Text("No other previous sessions")
+                Text("No other previous Claude sessions")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity)
