@@ -2,7 +2,7 @@
 
 ## Overview
 
-Each chat is an independent Claude Code session backed by a unique named sprite service (e.g. `claude-1`, `claude-2`). Users can create new chats and switch between them within the Chat tab of a sprite. Only the active chat streams; inactive chats are dormant until selected.
+Each chat is an independent Claude Code session backed by a unique named sprite service. Users can create new chats and switch between them within the Chat tab of a sprite. Only the active chat streams; inactive chats are dormant until selected.
 
 ## UI Design
 
@@ -40,7 +40,7 @@ final class SpriteChat {
     var spriteName: String              // which sprite this belongs to
     var chatNumber: Int                 // assigned at creation, never reused
     var customName: String?             // optional user-provided name
-    var serviceName: String             // e.g. "claude-1", "claude-2"
+    var currentServiceName: String?     // last-used service name; nil until first send
     var claudeSessionId: String?        // for --resume
     var workingDirectory: String
     var createdAt: Date
@@ -54,13 +54,14 @@ final class SpriteChat {
 ```
 
 - `SpriteSession` is replaced by `SpriteChat`
-- Migration: on first launch, convert existing `SpriteSession` records to `SpriteChat` with `chatNumber = 1`, `serviceName = "claude-1"`
-- Service names are `"claude-\(chatNumber)"` — stable, deterministic per chat
+- Migration: on first launch, convert existing `SpriteSession` records to `SpriteChat` with `chatNumber = 1`, `currentServiceName = nil`, copying over other fields
+- **Service names are random, not deterministic.** `ChatViewModel` already generates `"claude-\(UUID().uuidString.prefix(8).lowercased())"` on each `executeClaudeCommand` call. `currentServiceName` in `SpriteChat` tracks whatever name was last used, so reconnect logic can find the running service after a chat switch.
 
 ### `ChatViewModel` changes
 
 - Takes a `SpriteChat` (or just its `id`) instead of bare `spriteName`
-- `serviceName` becomes `chat.serviceName` (dynamic, not hardcoded `"claude"`)
+- Initialises `serviceName` from `chat.currentServiceName` if present, otherwise generates a fresh random name
+- Whenever `serviceName` is updated inside `executeClaudeCommand`, write the new value back to `SpriteChat.currentServiceName` and persist
 - `sessionId` and `workingDirectory` loaded from/saved to `SpriteChat`
 
 ## New: `SpriteChatManager` (or integrated into `SpriteDetailViewModel`)
@@ -132,13 +133,13 @@ struct ChatSwitcherSheet: View {
 ## `ChatViewModel` switching logic
 
 When the user selects a different chat:
-1. Call `activeViewModel.interrupt(apiClient:)` on the current one (stops the stream, leaves service alive on the sprite)
+1. Call `activeViewModel.interrupt()` on the current one (cancels the local stream task — note: `interrupt()` no longer takes `apiClient`; it just cancels the task and leaves the service running on the sprite)
 2. Persist current draft
 3. Instantiate new `ChatViewModel(chat: newChat)`
 4. Call `loadSession` on it (loads persisted messages + draft)
 5. Update `SpriteDetailView`'s `chatViewModel` binding
 
-The inactive chat's service keeps running on the sprite. When re-selected, the same `resumeAfterBackground` path is used to reconnect to the service logs — identical to how backgrounding/foregrounding works today.
+The inactive chat's service keeps running on the sprite. When re-selected, the `resumeAfterBackground` path reconnects via `reconnectToServiceLogs`. Note that this now **reuses the existing last assistant message** (clears its content and replays the full log into it) rather than appending a new message — which avoids duplicates on reconnect.
 
 ## Files to Create/Modify
 
@@ -158,9 +159,10 @@ The inactive chat's service keeps running on the sprite. When re-selected, the s
 
 On first launch after update:
 - Fetch all existing `SpriteSession` records
-- For each, create a `SpriteChat` with `chatNumber=1`, `serviceName="claude-1"`, copying over `claudeSessionId`, `workingDirectory`, `messagesData`, `draftInputText`
+- For each, create a `SpriteChat` with `chatNumber=1`, `currentServiceName=nil` (the service name will be regenerated on the next send), copying over `claudeSessionId`, `workingDirectory`, `messagesData`, `draftInputText`
 - Delete the `SpriteSession` records
 - Can be a lightweight `ModelMigrationPlan` or handled at app startup
+- `WispTests/ChatViewModelTests.swift` and `WispTests/ChatViewModelHelpersTests.swift` (added on `main`) currently include `SpriteSession` in the test `ModelContainer` schema — update these to use `SpriteChat` once the model is replaced
 
 ## Decisions
 
