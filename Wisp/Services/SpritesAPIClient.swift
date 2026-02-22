@@ -270,6 +270,103 @@ final class SpritesAPIClient {
         let _: EmptyResponse = try await request(method: "DELETE", path: "/sprites/\(spriteName)/services/\(serviceName)", timeout: 5)
     }
 
+    // MARK: - File Upload
+
+    struct FileUploadResponse: Codable, Sendable {
+        let path: String
+        let size: Int
+        let mode: String
+    }
+
+    func fileExists(spriteName: String, remotePath: String) async throws -> Bool {
+        guard let token = spritesToken else {
+            throw AppError.noToken
+        }
+
+        var components = URLComponents(string: baseURL + "/sprites/\(spriteName)/fs/read")!
+        components.queryItems = [
+            URLQueryItem(name: "path", value: remotePath),
+        ]
+
+        guard let url = components.url else {
+            throw AppError.invalidURL
+        }
+
+        var urlRequest = URLRequest(url: url)
+        urlRequest.httpMethod = "GET"
+        urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+
+        let (_, response) = try await URLSession.shared.data(for: urlRequest)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw AppError.networkError(URLError(.badServerResponse))
+        }
+
+        switch httpResponse.statusCode {
+        case 200...299:
+            return true
+        case 404:
+            return false
+        case 401:
+            throw AppError.unauthorized
+        default:
+            throw AppError.serverError(statusCode: httpResponse.statusCode, message: nil)
+        }
+    }
+
+    func uploadFile(spriteName: String, remotePath: String, data: Data) async throws -> FileUploadResponse {
+        let maxSize = 10 * 1024 * 1024 // 10 MB
+        guard data.count <= maxSize else {
+            throw AppError.fileTooLarge(data.count)
+        }
+
+        guard let token = spritesToken else {
+            throw AppError.noToken
+        }
+
+        var components = URLComponents(string: baseURL + "/sprites/\(spriteName)/fs/write")!
+        components.queryItems = [
+            URLQueryItem(name: "path", value: remotePath),
+            URLQueryItem(name: "mkdir", value: "true"),
+        ]
+
+        guard let url = components.url else {
+            throw AppError.invalidURL
+        }
+
+        var urlRequest = URLRequest(url: url)
+        urlRequest.httpMethod = "PUT"
+        urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
+        urlRequest.setValue("application/octet-stream", forHTTPHeaderField: "Content-Type")
+        urlRequest.httpBody = data
+
+        let (responseData, response) = try await URLSession.shared.data(for: urlRequest)
+
+        guard let httpResponse = response as? HTTPURLResponse else {
+            throw AppError.networkError(URLError(.badServerResponse))
+        }
+
+        let raw = String(data: responseData, encoding: .utf8) ?? "<binary>"
+        logger.info("PUT /sprites/\(spriteName)/fs/write → \(httpResponse.statusCode): \(raw)")
+
+        switch httpResponse.statusCode {
+        case 200...299:
+            do {
+                return try decoder.decode(FileUploadResponse.self, from: responseData)
+            } catch {
+                logger.error("Decode FileUploadResponse: \(error)")
+                throw AppError.decodingError(error)
+            }
+        case 401:
+            throw AppError.unauthorized
+        case 404:
+            throw AppError.notFound
+        default:
+            let message = String(data: responseData, encoding: .utf8)
+            throw AppError.serverError(statusCode: httpResponse.statusCode, message: message)
+        }
+    }
+
     // MARK: - Exec Helpers
 
     /// Run a command on a sprite via exec WebSocket, collecting output.

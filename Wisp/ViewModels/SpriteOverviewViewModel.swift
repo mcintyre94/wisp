@@ -20,6 +20,17 @@ final class SpriteOverviewViewModel {
     var spritesCLIAuthStatus: SpritesCLIAuth = .unknown
     var isAuthenticatingSprites = false
     var errorMessage: String?
+    var isUploading = false
+    var uploadResult: SpritesAPIClient.FileUploadResponse?
+    var uploadError: String?
+    var pendingUpload: PendingUpload?
+
+    struct PendingUpload {
+        let data: Data
+        let filename: String
+        let remotePath: String
+        let apiClient: SpritesAPIClient
+    }
 
     init(sprite: Sprite) {
         self.sprite = sprite
@@ -89,6 +100,79 @@ final class SpriteOverviewViewModel {
             spritesCLIAuthStatus = .authenticated
         } else {
             spritesCLIAuthStatus = .notAuthenticated
+        }
+    }
+
+    func uploadFile(apiClient: SpritesAPIClient, fileURL: URL, workingDirectory: String) async {
+        let accessing = fileURL.startAccessingSecurityScopedResource()
+        let data: Data
+        do {
+            data = try Data(contentsOf: fileURL)
+        } catch {
+            if accessing { fileURL.stopAccessingSecurityScopedResource() }
+            uploadError = "Failed to read file: \(error.localizedDescription)"
+            return
+        }
+        if accessing { fileURL.stopAccessingSecurityScopedResource() }
+
+        await uploadData(apiClient: apiClient, data: data, filename: fileURL.lastPathComponent, workingDirectory: workingDirectory)
+    }
+
+    func uploadData(apiClient: SpritesAPIClient, data: Data, filename: String, workingDirectory: String) async {
+        let remotePath = workingDirectory.hasSuffix("/")
+            ? workingDirectory + filename
+            : workingDirectory + "/" + filename
+
+        isUploading = true
+        uploadError = nil
+        uploadResult = nil
+
+        do {
+            let exists = try await apiClient.fileExists(spriteName: sprite.name, remotePath: remotePath)
+            if exists {
+                pendingUpload = PendingUpload(data: data, filename: filename, remotePath: remotePath, apiClient: apiClient)
+                isUploading = false
+                return
+            }
+            try await performUpload(apiClient: apiClient, remotePath: remotePath, data: data)
+        } catch {
+            uploadError = error.localizedDescription
+        }
+
+        isUploading = false
+    }
+
+    func confirmOverwrite() async {
+        guard let pending = pendingUpload else { return }
+        pendingUpload = nil
+        isUploading = true
+        uploadError = nil
+
+        do {
+            try await performUpload(apiClient: pending.apiClient, remotePath: pending.remotePath, data: pending.data)
+        } catch {
+            uploadError = error.localizedDescription
+        }
+
+        isUploading = false
+    }
+
+    func cancelOverwrite() {
+        pendingUpload = nil
+    }
+
+    private func performUpload(apiClient: SpritesAPIClient, remotePath: String, data: Data) async throws {
+        let result = try await apiClient.uploadFile(
+            spriteName: sprite.name,
+            remotePath: remotePath,
+            data: data
+        )
+        uploadResult = result
+        Task {
+            try? await Task.sleep(for: .seconds(3))
+            if uploadResult?.path == result.path {
+                uploadResult = nil
+            }
         }
     }
 

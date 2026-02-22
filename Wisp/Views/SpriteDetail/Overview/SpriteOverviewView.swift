@@ -1,5 +1,7 @@
 import SwiftUI
 import SwiftData
+import UniformTypeIdentifiers
+import PhotosUI
 
 struct SpriteOverviewView: View {
     @Environment(SpritesAPIClient.self) private var apiClient
@@ -7,6 +9,11 @@ struct SpriteOverviewView: View {
     @Environment(\.modelContext) private var modelContext
     @State private var viewModel: SpriteOverviewViewModel
     @State private var workingDirectory = "/home/sprite/project"
+    @State private var showUploadOptions = false
+    @State private var showFilePicker = false
+    @State private var showPhotoPicker = false
+    @State private var selectedPhotos: [PhotosPickerItem] = []
+    @State private var showOverwriteConfirmation = false
 
     init(sprite: Sprite) {
         _viewModel = State(initialValue: SpriteOverviewViewModel(sprite: sprite))
@@ -95,6 +102,48 @@ struct SpriteOverviewView: View {
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                     }
+                }
+            }
+
+            Section("Files") {
+                Button {
+                    showUploadOptions = true
+                } label: {
+                    HStack {
+                        Label("Upload File", systemImage: "square.and.arrow.up")
+                        Spacer()
+                        if viewModel.isUploading {
+                            ProgressView()
+                        }
+                    }
+                }
+                .disabled(viewModel.isUploading)
+                .confirmationDialog("Upload", isPresented: $showUploadOptions) {
+                    Button {
+                        showPhotoPicker = true
+                    } label: {
+                        Label("Photo Library", systemImage: "photo")
+                    }
+                    Button {
+                        showFilePicker = true
+                    } label: {
+                        Label("Choose File", systemImage: "doc")
+                    }
+                }
+
+                if let result = viewModel.uploadResult {
+                    HStack {
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                        Text("\(URL(filePath: result.path).lastPathComponent) (\(ByteCountFormatter.string(fromByteCount: Int64(result.size), countStyle: .file)))")
+                            .foregroundStyle(.green)
+                    }
+                }
+
+                if let error = viewModel.uploadError {
+                    Text(error)
+                        .foregroundStyle(.red)
+                        .font(.caption)
                 }
             }
 
@@ -205,6 +254,62 @@ struct SpriteOverviewView: View {
         } message: {
             if let error = viewModel.errorMessage {
                 Text(error)
+            }
+        }
+        .alert(
+            "File Already Exists",
+            isPresented: $showOverwriteConfirmation
+        ) {
+            Button("Replace", role: .destructive) {
+                Task { await viewModel.confirmOverwrite() }
+            }
+            Button("Cancel", role: .cancel) {
+                viewModel.cancelOverwrite()
+            }
+        } message: {
+            if let pending = viewModel.pendingUpload {
+                Text("\"\(pending.filename)\" already exists in the working directory. Do you want to replace it?")
+            }
+        }
+        .onChange(of: viewModel.pendingUpload != nil) { _, hasPending in
+            showOverwriteConfirmation = hasPending
+        }
+        .photosPicker(isPresented: $showPhotoPicker, selection: $selectedPhotos, maxSelectionCount: 1, matching: .images)
+        .onChange(of: selectedPhotos) { _, items in
+            guard let item = items.first else { return }
+            selectedPhotos = []
+            Task {
+                guard let data = try? await item.loadTransferable(type: Data.self) else {
+                    viewModel.uploadError = "Failed to load photo"
+                    return
+                }
+                let ext = item.supportedContentTypes.first?.preferredFilenameExtension ?? "jpg"
+                let filename = "photo_\(Int(Date().timeIntervalSince1970)).\(ext)"
+                await viewModel.uploadData(
+                    apiClient: apiClient,
+                    data: data,
+                    filename: filename,
+                    workingDirectory: workingDirectory
+                )
+            }
+        }
+        .fileImporter(
+            isPresented: $showFilePicker,
+            allowedContentTypes: [.item],
+            allowsMultipleSelection: false
+        ) { result in
+            switch result {
+            case .success(let urls):
+                guard let url = urls.first else { return }
+                Task {
+                    await viewModel.uploadFile(
+                        apiClient: apiClient,
+                        fileURL: url,
+                        workingDirectory: workingDirectory
+                    )
+                }
+            case .failure(let error):
+                viewModel.uploadError = error.localizedDescription
             }
         }
     }

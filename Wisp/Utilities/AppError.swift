@@ -9,6 +9,7 @@ enum AppError: LocalizedError {
     case webSocketError(String)
     case invalidURL
     case noToken
+    case fileTooLarge(Int)
 
     var errorDescription: String? {
         switch self {
@@ -31,6 +32,9 @@ enum AppError: LocalizedError {
             return "Invalid URL."
         case .noToken:
             return "No API token configured. Please sign in."
+        case .fileTooLarge(let bytes):
+            let mb = Double(bytes) / 1_000_000
+            return String(format: "File too large (%.1f MB). Maximum is 10 MB.", mb)
         }
     }
 }
