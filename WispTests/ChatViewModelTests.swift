@@ -9,15 +9,28 @@ struct ChatViewModelTests {
 
     private func makeModelContext() throws -> ModelContext {
         let config = ModelConfiguration(isStoredInMemoryOnly: true)
-        let container = try ModelContainer(for: SpriteSession.self, configurations: config)
+        let container = try ModelContainer(for: SpriteChat.self, SpriteSession.self, configurations: config)
         return ModelContext(container)
+    }
+
+    private func makeChatViewModel(modelContext: ModelContext) -> (ChatViewModel, SpriteChat) {
+        let chat = SpriteChat(spriteName: "test", chatNumber: 1)
+        modelContext.insert(chat)
+        try? modelContext.save()
+        let vm = ChatViewModel(
+            spriteName: "test",
+            chatId: chat.id,
+            currentServiceName: nil,
+            workingDirectory: chat.workingDirectory
+        )
+        return (vm, chat)
     }
 
     // MARK: - handleEvent: system
 
     @Test func handleEvent_systemSetsModelName() throws {
-        let vm = ChatViewModel(spriteName: "test")
         let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
 
         let msg = ChatMessage(role: .assistant, isStreaming: true)
         vm.messages.append(msg)
@@ -34,8 +47,8 @@ struct ChatViewModelTests {
     // MARK: - handleEvent: assistant text
 
     @Test func handleEvent_assistantTextAppended() throws {
-        let vm = ChatViewModel(spriteName: "test")
         let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
 
         let msg = ChatMessage(role: .assistant, isStreaming: true)
         vm.messages.append(msg)
@@ -56,8 +69,8 @@ struct ChatViewModelTests {
     }
 
     @Test func handleEvent_consecutiveTextMerged() throws {
-        let vm = ChatViewModel(spriteName: "test")
         let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
 
         let msg = ChatMessage(role: .assistant, isStreaming: true)
         vm.messages.append(msg)
@@ -85,8 +98,8 @@ struct ChatViewModelTests {
     // MARK: - handleEvent: tool use
 
     @Test func handleEvent_toolUseAppended() throws {
-        let vm = ChatViewModel(spriteName: "test")
         let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
 
         let msg = ChatMessage(role: .assistant, isStreaming: true)
         vm.messages.append(msg)
@@ -112,8 +125,8 @@ struct ChatViewModelTests {
     // MARK: - handleEvent: tool result
 
     @Test func handleEvent_toolResultMatchedById() throws {
-        let vm = ChatViewModel(spriteName: "test")
         let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
 
         let msg = ChatMessage(role: .assistant, isStreaming: true)
         vm.messages.append(msg)
@@ -149,8 +162,8 @@ struct ChatViewModelTests {
     // MARK: - handleEvent: result
 
     @Test func handleEvent_resultClearsStreaming() throws {
-        let vm = ChatViewModel(spriteName: "test")
         let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
 
         let msg = ChatMessage(role: .assistant, isStreaming: true)
         vm.messages.append(msg)

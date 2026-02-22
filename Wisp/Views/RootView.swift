@@ -3,6 +3,7 @@ import SwiftUI
 struct RootView: View {
     @Environment(SpritesAPIClient.self) private var apiClient
     @Environment(InAppBrowserCoordinator.self) private var browserCoordinator
+    @Environment(\.modelContext) private var modelContext
 
     var body: some View {
         @Bindable var browser = browserCoordinator
@@ -25,6 +26,9 @@ struct RootView: View {
             if let url = browserCoordinator.presentedURL {
                 InAppBrowserSheet(initialURL: url, authToken: browserCoordinator.authToken)
             }
+        }
+        .task {
+            migrateSpriteSessionsIfNeeded(modelContext: modelContext)
         }
     }
 }

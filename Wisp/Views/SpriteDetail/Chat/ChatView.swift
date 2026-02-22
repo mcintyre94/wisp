@@ -5,6 +5,7 @@ struct ChatView: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
     @Bindable var viewModel: ChatViewModel
+    var isReadOnly: Bool = false
     var topAccessory: AnyView? = nil
     @FocusState private var isInputFocused: Bool
 
@@ -40,7 +41,7 @@ struct ChatView: View {
         .task {
             // Small delay to let loadSession populate messages first
             try? await Task.sleep(for: .milliseconds(100))
-            if viewModel.messages.isEmpty {
+            if viewModel.messages.isEmpty && !isReadOnly {
                 isInputFocused = true
             }
         }
@@ -56,18 +57,35 @@ struct ChatView: View {
             viewModel.saveDraft(modelContext: modelContext)
         }
         .safeAreaInset(edge: .bottom, spacing: 0) {
-            ChatInputBar(
-                text: $viewModel.inputText,
-                isStreaming: viewModel.isStreaming,
-                onSend: {
-                    isInputFocused = false
-                    viewModel.sendMessage(apiClient: apiClient, modelContext: modelContext)
-                },
-                onInterrupt: {
-                    viewModel.interrupt(apiClient: apiClient, modelContext: modelContext)
-                },
-                isFocused: $isInputFocused
-            )
+            if isReadOnly {
+                closedChatBar
+            } else {
+                ChatInputBar(
+                    text: $viewModel.inputText,
+                    isStreaming: viewModel.isStreaming,
+                    onSend: {
+                        isInputFocused = false
+                        viewModel.sendMessage(apiClient: apiClient, modelContext: modelContext)
+                    },
+                    onInterrupt: {
+                        viewModel.interrupt(apiClient: apiClient, modelContext: modelContext)
+                    },
+                    isFocused: $isInputFocused
+                )
+            }
         }
+    }
+
+    private var closedChatBar: some View {
+        HStack {
+            Image(systemName: "archivebox")
+                .foregroundStyle(.secondary)
+            Text("This chat is closed")
+                .foregroundStyle(.secondary)
+        }
+        .font(.subheadline)
+        .frame(maxWidth: .infinity)
+        .padding(.vertical, 12)
+        .background(.bar)
     }
 }

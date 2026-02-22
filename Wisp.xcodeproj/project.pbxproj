@@ -75,6 +75,12 @@
 		EE22FF334455AA66BB770002 /* ExecSessionURLTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE22FF334455AA66BB770001 /* ExecSessionURLTests.swift */; };
 		FF11AA22BB33CC44DD55EE02 /* ChatViewModelHelpersTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF11AA22BB33CC44DD55EE01 /* ChatViewModelHelpersTests.swift */; };
 		FF11AA22BB33CC44DD55EE04 /* ChatViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF11AA22BB33CC44DD55EE03 /* ChatViewModelTests.swift */; };
+		A1B2C3D4E5F60718293A4B5E /* SpriteChat.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5D /* SpriteChat.swift */; };
+		B2C3D4E5F6A70819304B5C6E /* SpriteChatMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F6A70819304B5C6D /* SpriteChatMigration.swift */; };
+		C3D4E5F6A7B80920415C6D7F /* SpriteChatListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3D4E5F6A7B80920415C6D7E /* SpriteChatListViewModel.swift */; };
+		D4E5F6A7B8C90A31526D7E90 /* ChatSwitcherSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E5F6A7B8C90A31526D7E8F /* ChatSwitcherSheet.swift */; };
+		E5F6A7B8C9D00B42637E8F91 /* SpriteChatListViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5F6A7B8C9D00B42637E8F90 /* SpriteChatListViewModelTests.swift */; };
+		F6A7B8C9D0E10C53748F9002 /* SpriteChatMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6A7B8C9D0E10C53748F9001 /* SpriteChatMigrationTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -157,6 +163,12 @@
 		EE22FF334455AA66BB770001 /* ExecSessionURLTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExecSessionURLTests.swift; sourceTree = "<group>"; };
 		FF11AA22BB33CC44DD55EE01 /* ChatViewModelHelpersTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModelHelpersTests.swift; sourceTree = "<group>"; };
 		FF11AA22BB33CC44DD55EE03 /* ChatViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModelTests.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60718293A4B5D /* SpriteChat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpriteChat.swift; sourceTree = "<group>"; };
+		B2C3D4E5F6A70819304B5C6D /* SpriteChatMigration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpriteChatMigration.swift; sourceTree = "<group>"; };
+		C3D4E5F6A7B80920415C6D7E /* SpriteChatListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpriteChatListViewModel.swift; sourceTree = "<group>"; };
+		D4E5F6A7B8C90A31526D7E8F /* ChatSwitcherSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatSwitcherSheet.swift; sourceTree = "<group>"; };
+		E5F6A7B8C9D00B42637E8F90 /* SpriteChatListViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpriteChatListViewModelTests.swift; sourceTree = "<group>"; };
+		F6A7B8C9D0E10C53748F9001 /* SpriteChatMigrationTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpriteChatMigrationTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -215,6 +227,7 @@
 			isa = PBXGroup;
 			children = (
 				F1E2D3C4B5A60798192A3B4C /* PersistedChatMessage.swift */,
+				A1B2C3D4E5F60718293A4B5D /* SpriteChat.swift */,
 				D6BE6E0D68BBB35DE56600E1 /* SpriteSession.swift */,
 			);
 			path = Local;
@@ -236,6 +249,7 @@
 				C8C4C3A1F2B2D57313431E50 /* Extensions.swift */,
 				A1B2C3D4E5F6A7B8C9D0E1F2 /* InAppBrowserCoordinator.swift */,
 				3893EEF3ADDA05DF7A9C0909 /* JSONValue.swift */,
+				B2C3D4E5F6A70819304B5C6D /* SpriteChatMigration.swift */,
 			);
 			path = Utilities;
 			sourceTree = "<group>";
@@ -300,6 +314,7 @@
 				540685D9D567596E24E4EF82 /* ChatViewModel.swift */,
 				D0AD6D912964E32FC8685EA3 /* CheckpointsViewModel.swift */,
 				EF49F7E0F4AC02FDF496D379 /* DashboardViewModel.swift */,
+				C3D4E5F6A7B80920415C6D7E /* SpriteChatListViewModel.swift */,
 				AC9BFD0F0AC39C136C9E828A /* SpriteOverviewViewModel.swift */,
 			);
 			path = ViewModels;
@@ -343,6 +358,7 @@
 				7C308D530B9DAC21AD2A843B /* ChatInputBar.swift */,
 				D9BC746AE628458445D34FCE /* ChatMessageView.swift */,
 				42C4A8D129C538233C34B2A6 /* ChatStatusBar.swift */,
+				D4E5F6A7B8C90A31526D7E8F /* ChatSwitcherSheet.swift */,
 				4FB02E9F26B9003B6E1DBE7C /* ChatView.swift */,
 				E5956E839208B00B1EE0C88A /* StreamingIndicator.swift */,
 				AB04F3FB6C647DE1F6DC0FD0 /* ToolInputDetailView.swift */,
@@ -407,6 +423,8 @@
 				AABB0011223344556677F00B /* ExtensionsTests.swift */,
 				AA11BB22CC33DD44EE55FF07 /* GitHubDeviceFlowClientTests.swift */,
 				AABB0011223344556677F003 /* JSONValueTests.swift */,
+				E5F6A7B8C9D00B42637E8F90 /* SpriteChatListViewModelTests.swift */,
+				F6A7B8C9D0E10C53748F9001 /* SpriteChatMigrationTests.swift */,
 				DD11EE22FF334455AA66BB03 /* ServiceTypesTests.swift */,
 				EE22FF334455AA66BB770001 /* ExecSessionURLTests.swift */,
 			);
@@ -544,6 +562,10 @@
 				C77F2C1E11DECAE31E0F5ECC /* SpriteOverviewView.swift in Sources */,
 				974996B0FB4D30828E89DD21 /* SpriteOverviewViewModel.swift in Sources */,
 				0418F9D619251B7E6DB0276F /* SpriteRowView.swift in Sources */,
+				A1B2C3D4E5F60718293A4B5E /* SpriteChat.swift in Sources */,
+				B2C3D4E5F6A70819304B5C6E /* SpriteChatMigration.swift in Sources */,
+				C3D4E5F6A7B80920415C6D7F /* SpriteChatListViewModel.swift in Sources */,
+				D4E5F6A7B8C90A31526D7E90 /* ChatSwitcherSheet.swift in Sources */,
 				61CBE460AC96CBE6BF8AF0B0 /* SpriteSession.swift in Sources */,
 				AFD1F0F805631C7AE9679AC7 /* SpritesAPIClient.swift in Sources */,
 				86270E2378D87B3719964114 /* StreamingIndicator.swift in Sources */,
@@ -573,6 +595,8 @@
 				AABB0011223344556677F004 /* JSONValueTests.swift in Sources */,
 				DD11EE22FF334455AA66BB04 /* ServiceTypesTests.swift in Sources */,
 				EE22FF334455AA66BB770002 /* ExecSessionURLTests.swift in Sources */,
+				E5F6A7B8C9D00B42637E8F91 /* SpriteChatListViewModelTests.swift in Sources */,
+				F6A7B8C9D0E10C53748F9002 /* SpriteChatMigrationTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

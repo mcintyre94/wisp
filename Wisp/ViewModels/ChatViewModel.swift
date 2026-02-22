@@ -16,12 +16,13 @@ enum ChatStatus: Sendable {
 @MainActor
 final class ChatViewModel {
     let spriteName: String
+    let chatId: UUID
     var messages: [ChatMessage] = []
     var inputText = ""
     var status: ChatStatus = .idle
     var modelName: String?
 
-    private var serviceName: String = "claude-\(UUID().uuidString.prefix(8).lowercased())"
+    private var serviceName: String
     private var sessionId: String?
     private var workingDirectory: String
     private var streamTask: Task<Void, Never>?
@@ -34,9 +35,11 @@ final class ChatViewModel {
     private var queuedPrompt: String?
     private var retriedAfterTimeout = false
 
-    init(spriteName: String) {
+    init(spriteName: String, chatId: UUID, currentServiceName: String?, workingDirectory: String) {
         self.spriteName = spriteName
-        self.workingDirectory = "/home/sprite/project"
+        self.chatId = chatId
+        self.serviceName = currentServiceName ?? "claude-\(UUID().uuidString.prefix(8).lowercased())"
+        self.workingDirectory = workingDirectory
     }
 
     var isStreaming: Bool {
@@ -47,53 +50,35 @@ final class ChatViewModel {
     }
 
     func loadSession(apiClient: SpritesAPIClient, modelContext: ModelContext) {
-        let name = spriteName
-        let descriptor = FetchDescriptor<SpriteSession>(
-            predicate: #Predicate { $0.spriteName == name }
-        )
-        if let session = try? modelContext.fetch(descriptor).first {
-            sessionId = session.claudeSessionId
-            workingDirectory = session.workingDirectory
+        guard let chat = fetchChat(modelContext: modelContext) else { return }
 
-            if messages.isEmpty {
-                let persisted = session.loadMessages()
-                messages = persisted.map { ChatMessage(from: $0) }
-                rebuildToolUseIndex()
-            }
+        sessionId = chat.claudeSessionId
+        workingDirectory = chat.workingDirectory
+        if let svcName = chat.currentServiceName {
+            serviceName = svcName
+        }
 
-            if inputText.isEmpty, let draft = session.draftInputText, !draft.isEmpty {
-                inputText = draft
-            }
+        if messages.isEmpty {
+            let persisted = chat.loadMessages()
+            messages = persisted.map { ChatMessage(from: $0) }
+            rebuildToolUseIndex()
+        }
+
+        if inputText.isEmpty, let draft = chat.draftInputText, !draft.isEmpty {
+            inputText = draft
         }
     }
 
     func saveDraft(modelContext: ModelContext) {
-        let session = fetchOrCreateSession(modelContext: modelContext)
-        session.draftInputText = inputText.isEmpty ? nil : inputText
+        guard let chat = fetchChat(modelContext: modelContext) else { return }
+        chat.draftInputText = inputText.isEmpty ? nil : inputText
         try? modelContext.save()
     }
 
     func persistMessages(modelContext: ModelContext) {
         let persisted = messages.map { $0.toPersisted() }
-        let session = fetchOrCreateSession(modelContext: modelContext)
-        session.saveMessages(persisted)
-        try? modelContext.save()
-    }
-
-    func startNewChat(apiClient: SpritesAPIClient, modelContext: ModelContext) {
-        // Don't pass apiClient — the fire-and-forget delete can race with
-        // executeClaudeCommand's PUT, killing the newly-created service.
-        // executeClaudeCommand already does its own awaited delete first.
-        interrupt()
-        messages = []
-        sessionId = nil
-        toolUseIndex = [:]
-        persistMessages(modelContext: modelContext)
-
-        let session = fetchOrCreateSession(modelContext: modelContext)
-        session.claudeSessionId = nil
-        session.execSessionId = nil
-        workingDirectory = session.workingDirectory
+        guard let chat = fetchChat(modelContext: modelContext) else { return }
+        chat.saveMessages(persisted)
         try? modelContext.save()
     }
 
@@ -141,7 +126,12 @@ final class ChatViewModel {
         }
     }
 
-    func interrupt(apiClient: SpritesAPIClient? = nil, modelContext: ModelContext? = nil) {
+    /// Stop streaming without deleting the service (used when switching away from a chat).
+    /// Returns true if the VM was actively streaming when detached.
+    @discardableResult
+    func detach(modelContext: ModelContext? = nil) -> Bool {
+        let wasStreaming = isStreaming
+
         streamTask?.cancel()
         streamTask = nil
 
@@ -151,6 +141,15 @@ final class ChatViewModel {
         currentAssistantMessage = nil
         status = .idle
 
+        if let modelContext {
+            persistMessages(modelContext: modelContext)
+        }
+        return wasStreaming
+    }
+
+    func interrupt(apiClient: SpritesAPIClient? = nil, modelContext: ModelContext? = nil) {
+        detach(modelContext: modelContext)
+
         // Delete the service to stop it
         if let apiClient {
             let sName = spriteName
@@ -159,9 +158,15 @@ final class ChatViewModel {
                 try? await apiClient.deleteService(spriteName: sName, serviceName: svcName)
             }
         }
+    }
 
-        if let modelContext {
-            persistMessages(modelContext: modelContext)
+    /// Attempt to reconnect to an existing service when switching back to this chat.
+    /// Called after loadSession — checks if service logs might have new content.
+    func reconnectIfNeeded(apiClient: SpritesAPIClient, modelContext: ModelContext) {
+        guard !isStreaming, !messages.isEmpty else { return }
+
+        streamTask = Task {
+            await reconnectToServiceLogs(apiClient: apiClient, modelContext: modelContext)
         }
     }
 
@@ -178,6 +183,9 @@ final class ChatViewModel {
         let oldServiceName = serviceName
         serviceName = "claude-\(UUID().uuidString.prefix(8).lowercased())"
         try? await apiClient.deleteService(spriteName: spriteName, serviceName: oldServiceName)
+
+        // Persist the new service name immediately for reconnect
+        saveSession(modelContext: modelContext)
 
         guard let claudeToken = apiClient.claudeToken else {
             status = .error("No Claude token configured")
@@ -563,25 +571,19 @@ final class ChatViewModel {
         }
     }
 
-    private func fetchOrCreateSession(modelContext: ModelContext) -> SpriteSession {
-        let name = spriteName
-        let descriptor = FetchDescriptor<SpriteSession>(
-            predicate: #Predicate { $0.spriteName == name }
+    private func fetchChat(modelContext: ModelContext) -> SpriteChat? {
+        let id = chatId
+        let descriptor = FetchDescriptor<SpriteChat>(
+            predicate: #Predicate { $0.id == id }
         )
-
-        if let existing = try? modelContext.fetch(descriptor).first {
-            return existing
-        }
-
-        let session = SpriteSession(spriteName: spriteName, workingDirectory: workingDirectory)
-        modelContext.insert(session)
-        return session
+        return try? modelContext.fetch(descriptor).first
     }
 
     private func saveSession(modelContext: ModelContext) {
-        let session = fetchOrCreateSession(modelContext: modelContext)
-        session.claudeSessionId = sessionId
-        session.lastUsed = Date()
+        guard let chat = fetchChat(modelContext: modelContext) else { return }
+        chat.claudeSessionId = sessionId
+        chat.currentServiceName = serviceName
+        chat.lastUsed = Date()
         try? modelContext.save()
     }
 
