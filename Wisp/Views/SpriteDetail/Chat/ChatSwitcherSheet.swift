@@ -7,6 +7,8 @@ struct ChatSwitcherSheet: View {
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @State private var chatToDelete: SpriteChat?
+    @State private var chatToRename: SpriteChat?
+    @State private var renameText = ""
 
     var body: some View {
         NavigationStack {
@@ -20,6 +22,14 @@ struct ChatSwitcherSheet: View {
                     .onTapGesture {
                         viewModel.selectChat(chat)
                         dismiss()
+                    }
+                    .contextMenu {
+                        Button {
+                            renameText = chat.customName ?? ""
+                            chatToRename = chat
+                        } label: {
+                            Label("Rename", systemImage: "pencil")
+                        }
                     }
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
                         Button(role: .destructive) {
@@ -70,6 +80,21 @@ struct ChatSwitcherSheet: View {
                 }
             } message: {
                 Text("This will permanently delete the chat and its history.")
+            }
+            .alert("Rename Chat", isPresented: Binding(
+                get: { chatToRename != nil },
+                set: { if !$0 { chatToRename = nil } }
+            )) {
+                TextField("Chat name", text: $renameText)
+                Button("Save") {
+                    if let chat = chatToRename {
+                        viewModel.renameChat(chat, name: renameText, modelContext: modelContext)
+                        chatToRename = nil
+                    }
+                }
+                Button("Cancel", role: .cancel) {
+                    chatToRename = nil
+                }
             }
         }
     }
