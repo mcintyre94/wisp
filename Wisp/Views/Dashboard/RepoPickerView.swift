@@ -83,6 +83,7 @@ struct RepoPickerView: View {
         .navigationTitle("Select Repository")
         .navigationBarTitleDisplayMode(.inline)
         .searchable(text: $searchText, prompt: "Search repositories")
+        .textInputAutocapitalization(.never)
         .onChange(of: searchText) { _, newValue in
             searchTask?.cancel()
             if newValue.isEmpty {
