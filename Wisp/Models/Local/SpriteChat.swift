@@ -16,6 +16,7 @@ final class SpriteChat {
     var draftInputText: String?
     var isClosed: Bool
     var spriteCreatedAt: Date?
+    var firstMessagePreview: String?
 
     var displayName: String {
         customName ?? "Chat \(chatNumber)"
@@ -46,5 +47,13 @@ final class SpriteChat {
 
     func saveMessages(_ messages: [PersistedChatMessage]) {
         messagesData = try? JSONEncoder().encode(messages)
+
+        if firstMessagePreview == nil, let first = messages.first(where: { $0.role == .user }) {
+            let text = first.content.compactMap { if case .text(let t) = $0 { t } else { nil } }.joined()
+            if !text.isEmpty {
+                let collapsed = text.replacingOccurrences(of: "\n", with: " ")
+                firstMessagePreview = String(collapsed.prefix(100))
+            }
+        }
     }
 }

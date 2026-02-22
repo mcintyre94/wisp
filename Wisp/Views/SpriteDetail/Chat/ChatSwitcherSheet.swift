@@ -94,9 +94,19 @@ private struct ChatRowView: View {
                             .background(.fill.tertiary, in: Capsule())
                     }
                 }
-                Text(chat.lastUsed, style: .relative)
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
+                if let preview = chat.firstMessagePreview {
+                    Text(preview)
+                        .font(.subheadline)
+                        .foregroundStyle(.secondary)
+                        .lineLimit(2)
+                }
+                HStack(spacing: 0) {
+                    Text("Updated ")
+                    Text(chat.lastUsed, style: .relative)
+                    Text(" ago")
+                }
+                .font(.caption)
+                .foregroundStyle(.tertiary)
             }
             Spacer()
             if isActive {
