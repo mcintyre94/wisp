@@ -67,4 +67,19 @@ struct SpriteChatMigrationTests {
         let chats = try ctx.fetch(chatDescriptor)
         #expect(chats.isEmpty)
     }
+
+    @Test func migratedChatsHaveNilSpriteCreatedAt() throws {
+        let ctx = try makeModelContext()
+
+        let session = SpriteSession(spriteName: "migrated-sprite")
+        ctx.insert(session)
+        try ctx.save()
+
+        migrateSpriteSessionsIfNeeded(modelContext: ctx)
+
+        let chatDescriptor = FetchDescriptor<SpriteChat>()
+        let chats = try ctx.fetch(chatDescriptor)
+        #expect(chats.count == 1)
+        #expect(chats[0].spriteCreatedAt == nil)
+    }
 }

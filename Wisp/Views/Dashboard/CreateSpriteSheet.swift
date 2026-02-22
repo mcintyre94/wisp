@@ -124,13 +124,15 @@ struct CreateSpriteSheet: View {
 
         do {
             _ = try await apiClient.createSprite(name: name)
-            // Clear any stale session from a previous sprite with the same name
+            // Clear any stale chats from a previous sprite with the same name
             let spriteName = name
-            let descriptor = FetchDescriptor<SpriteSession>(
+            let descriptor = FetchDescriptor<SpriteChat>(
                 predicate: #Predicate { $0.spriteName == spriteName }
             )
-            if let staleSession = try? modelContext.fetch(descriptor).first {
-                modelContext.delete(staleSession)
+            if let staleChats = try? modelContext.fetch(descriptor), !staleChats.isEmpty {
+                for chat in staleChats {
+                    modelContext.delete(chat)
+                }
                 try? modelContext.save()
             }
 
@@ -153,24 +155,15 @@ struct CreateSpriteSheet: View {
             }
 
             // Clone repo if specified
-            var workingDirectory = "/home/sprite/project"
             if let info = repoInfo {
                 creationStatus = "Cloning repository..."
                 let clonePath = "/home/sprite/\(info.repoName)"
-                let result = await apiClient.runExec(
+                _ = await apiClient.runExec(
                     spriteName: spriteName,
                     command: "git clone --depth 1 '\(info.cloneURL)' '\(clonePath)'",
                     timeout: 60
                 )
-                if result.success {
-                    workingDirectory = clonePath
-                }
             }
-
-            // Create session with correct working directory
-            let session = SpriteSession(spriteName: spriteName, workingDirectory: workingDirectory)
-            modelContext.insert(session)
-            try? modelContext.save()
 
             dismiss()
         } catch {

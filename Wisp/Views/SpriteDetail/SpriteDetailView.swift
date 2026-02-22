@@ -8,6 +8,7 @@ struct SpriteDetailView: View {
     @State private var chatViewModel: ChatViewModel?
     @State private var checkpointsViewModel: CheckpointsViewModel
     @State private var showChatSwitcher = false
+    @State private var showStaleChatsAlert = false
     @State private var streamingChatIds: Set<UUID> = []
     @Environment(SpritesAPIClient.self) private var apiClient
     @Environment(\.modelContext) private var modelContext
@@ -69,7 +70,15 @@ struct SpriteDetailView: View {
             }
         }
         .task {
+            chatListViewModel.spriteCreatedAt = sprite.createdAt
             chatListViewModel.loadChats(modelContext: modelContext)
+
+            // Detect stale chats from a recreated sprite
+            if let spriteCreated = sprite.createdAt,
+               let storedCreated = chatListViewModel.chats.first?.spriteCreatedAt,
+               spriteCreated > storedCreated {
+                showStaleChatsAlert = true
+            }
 
             // Create first chat if none exist
             if chatListViewModel.chats.isEmpty {
@@ -93,6 +102,18 @@ struct SpriteDetailView: View {
         }
         .sheet(isPresented: $showChatSwitcher) {
             ChatSwitcherSheet(viewModel: chatListViewModel)
+        }
+        .alert("Sprite Recreated", isPresented: $showStaleChatsAlert) {
+            Button("Start Fresh", role: .destructive) {
+                chatListViewModel.clearAllChats(apiClient: apiClient, modelContext: modelContext)
+                let chat = chatListViewModel.createChat(modelContext: modelContext)
+                switchToChat(chat)
+            }
+            Button("Keep History", role: .cancel) {
+                chatListViewModel.updateSpriteCreatedAt(sprite.createdAt, modelContext: modelContext)
+            }
+        } message: {
+            Text("This sprite was created after your existing chats. Would you like to start fresh?")
         }
     }
 

@@ -10,6 +10,7 @@ final class SpriteChatListViewModel {
     let spriteName: String
     private(set) var chats: [SpriteChat] = []
     var activeChatId: UUID?
+    var spriteCreatedAt: Date?
 
     var activeChat: SpriteChat? {
         guard let id = activeChatId else { return nil }
@@ -34,11 +35,13 @@ final class SpriteChatListViewModel {
         }
     }
 
+    @discardableResult
     func createChat(modelContext: ModelContext) -> SpriteChat {
         let maxNumber = chats.map(\.chatNumber).max() ?? 0
         let chat = SpriteChat(
             spriteName: spriteName,
-            chatNumber: maxNumber + 1
+            chatNumber: maxNumber + 1,
+            spriteCreatedAt: spriteCreatedAt
         )
         modelContext.insert(chat)
         try? modelContext.save()
@@ -93,6 +96,30 @@ final class SpriteChatListViewModel {
 
     func renameChat(_ chat: SpriteChat, name: String, modelContext: ModelContext) {
         chat.customName = name.isEmpty ? nil : name
+        try? modelContext.save()
+    }
+
+    func clearAllChats(apiClient: SpritesAPIClient, modelContext: ModelContext) {
+        let sName = spriteName
+        for chat in chats {
+            if let serviceName = chat.currentServiceName {
+                Task {
+                    try? await apiClient.deleteService(spriteName: sName, serviceName: serviceName)
+                }
+            }
+            modelContext.delete(chat)
+        }
+        try? modelContext.save()
+        chats = []
+        activeChatId = nil
+        logger.info("Cleared all chats for \(self.spriteName)")
+    }
+
+    func updateSpriteCreatedAt(_ date: Date?, modelContext: ModelContext) {
+        spriteCreatedAt = date
+        for chat in chats {
+            chat.spriteCreatedAt = date
+        }
         try? modelContext.save()
     }
 

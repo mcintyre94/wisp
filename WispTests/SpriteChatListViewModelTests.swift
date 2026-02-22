@@ -123,4 +123,65 @@ struct SpriteChatListViewModelTests {
         vm.selectChat(chat1)
         #expect(vm.activeChatId == chat1.id)
     }
+
+    // MARK: - clearAllChats
+
+    @Test func clearAllChats_removesAllChatsAndResetsState() throws {
+        let ctx = try makeModelContext()
+        let vm = SpriteChatListViewModel(spriteName: "test-sprite")
+        let apiClient = SpritesAPIClient()
+
+        _ = vm.createChat(modelContext: ctx)
+        _ = vm.createChat(modelContext: ctx)
+        _ = vm.createChat(modelContext: ctx)
+        #expect(vm.chats.count == 3)
+
+        vm.clearAllChats(apiClient: apiClient, modelContext: ctx)
+
+        #expect(vm.chats.isEmpty)
+        #expect(vm.activeChatId == nil)
+
+        // Verify SwiftData records are deleted
+        let descriptor = FetchDescriptor<SpriteChat>()
+        let remaining = try ctx.fetch(descriptor)
+        #expect(remaining.isEmpty)
+    }
+
+    // MARK: - spriteCreatedAt
+
+    @Test func createChat_storesSpriteCreatedAt() throws {
+        let ctx = try makeModelContext()
+        let vm = SpriteChatListViewModel(spriteName: "test-sprite")
+        let date = Date(timeIntervalSince1970: 1700000000)
+        vm.spriteCreatedAt = date
+
+        let chat = vm.createChat(modelContext: ctx)
+
+        #expect(chat.spriteCreatedAt == date)
+    }
+
+    @Test func createChat_spriteCreatedAtNilByDefault() throws {
+        let ctx = try makeModelContext()
+        let vm = SpriteChatListViewModel(spriteName: "test-sprite")
+
+        let chat = vm.createChat(modelContext: ctx)
+
+        #expect(chat.spriteCreatedAt == nil)
+    }
+
+    @Test func updateSpriteCreatedAt_updatesAllChats() throws {
+        let ctx = try makeModelContext()
+        let vm = SpriteChatListViewModel(spriteName: "test-sprite")
+
+        _ = vm.createChat(modelContext: ctx)
+        _ = vm.createChat(modelContext: ctx)
+
+        let newDate = Date(timeIntervalSince1970: 1800000000)
+        vm.updateSpriteCreatedAt(newDate, modelContext: ctx)
+
+        #expect(vm.spriteCreatedAt == newDate)
+        for chat in vm.chats {
+            #expect(chat.spriteCreatedAt == newDate)
+        }
+    }
 }

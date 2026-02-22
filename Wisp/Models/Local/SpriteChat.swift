@@ -15,6 +15,7 @@ final class SpriteChat {
     var messagesData: Data?
     var draftInputText: String?
     var isClosed: Bool
+    var spriteCreatedAt: Date?
 
     var displayName: String {
         customName ?? "Chat \(chatNumber)"
@@ -24,7 +25,8 @@ final class SpriteChat {
         spriteName: String,
         chatNumber: Int,
         workingDirectory: String = "/home/sprite/project",
-        customName: String? = nil
+        customName: String? = nil,
+        spriteCreatedAt: Date? = nil
     ) {
         self.id = UUID()
         self.spriteName = spriteName
@@ -34,6 +36,7 @@ final class SpriteChat {
         self.createdAt = Date()
         self.lastUsed = Date()
         self.isClosed = false
+        self.spriteCreatedAt = spriteCreatedAt
     }
 
     func loadMessages() -> [PersistedChatMessage] {
