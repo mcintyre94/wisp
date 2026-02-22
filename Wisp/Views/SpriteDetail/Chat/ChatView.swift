@@ -51,7 +51,6 @@ struct ChatView: View {
             // Small delay to let loadSession populate messages first
             try? await Task.sleep(for: .milliseconds(100))
             if viewModel.messages.isEmpty && !isReadOnly {
-                isInputFocused = true
                 viewModel.fetchRemoteSessions(
                     apiClient: apiClient,
                     existingSessionIds: existingSessionIds
