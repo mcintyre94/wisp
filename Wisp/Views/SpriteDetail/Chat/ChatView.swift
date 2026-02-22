@@ -17,9 +17,9 @@ struct ChatView: View {
                     if viewModel.messages.isEmpty && !isReadOnly {
                         SessionSuggestionsView(
                             sessions: viewModel.remoteSessions,
-                            isLoading: viewModel.isLoadingRemoteSessions
+                            isLoading: viewModel.isLoadingRemoteSessions || viewModel.isLoadingHistory
                         ) { entry in
-                            viewModel.selectRemoteSession(entry, modelContext: modelContext)
+                            viewModel.selectRemoteSession(entry, apiClient: apiClient, modelContext: modelContext)
                         }
                     }
                     ForEach(viewModel.messages) { message in

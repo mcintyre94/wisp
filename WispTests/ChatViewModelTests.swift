@@ -161,6 +161,114 @@ struct ChatViewModelTests {
 
     // MARK: - handleEvent: result
 
+    // MARK: - parseSessionJSONL
+
+    @Test func parseSessionJSONL_userTextMessage() {
+        let jsonl = """
+        {"type":"user","message":{"role":"user","content":"Hello world"}}
+        """
+        let messages = ChatViewModel.parseSessionJSONL(jsonl)
+        #expect(messages.count == 1)
+        #expect(messages[0].role == .user)
+        #expect(messages[0].textContent == "Hello world")
+    }
+
+    @Test func parseSessionJSONL_assistantTextMessage() {
+        let jsonl = """
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Hi there"}]}}
+        """
+        let messages = ChatViewModel.parseSessionJSONL(jsonl)
+        #expect(messages.count == 1)
+        #expect(messages[0].role == .assistant)
+        #expect(messages[0].textContent == "Hi there")
+    }
+
+    @Test func parseSessionJSONL_toolUseAndResult() {
+        let jsonl = """
+        {"type":"user","message":{"role":"user","content":"List files"}}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"tu-1","name":"Bash","input":{"command":"ls"}}]}}
+        {"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tu-1","content":"file1.txt"}]}}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Found 2 files."}]}}
+        """
+        let messages = ChatViewModel.parseSessionJSONL(jsonl)
+        // user, assistant (with tool_use + tool_result + text)
+        #expect(messages.count == 2)
+        #expect(messages[0].role == .user)
+        #expect(messages[1].role == .assistant)
+        // Assistant should have tool_use, tool_result, and text
+        #expect(messages[1].content.count == 3)
+        if case .toolUse(let card) = messages[1].content[0] {
+            #expect(card.toolName == "Bash")
+        } else {
+            Issue.record("Expected tool use")
+        }
+        if case .toolResult(let card) = messages[1].content[1] {
+            #expect(card.toolName == "Bash")
+        } else {
+            Issue.record("Expected tool result")
+        }
+        if case .text(let text) = messages[1].content[2] {
+            #expect(text == "Found 2 files.")
+        } else {
+            Issue.record("Expected text")
+        }
+    }
+
+    @Test func parseSessionJSONL_skipsUnknownTypes() {
+        let jsonl = """
+        {"type":"system","session_id":"s-1","model":"claude-sonnet-4-20250514"}
+        {"type":"user","message":{"role":"user","content":"Hello"}}
+        {"type":"progress","data":{}}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Hi"}]}}
+        {"type":"result","session_id":"s-1","is_error":false}
+        """
+        let messages = ChatViewModel.parseSessionJSONL(jsonl)
+        #expect(messages.count == 2)
+    }
+
+    @Test func parseSessionJSONL_skipsThinkingBlocks() {
+        let jsonl = """
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"thinking","thinking":"let me think..."},{"type":"text","text":"Answer"}]}}
+        """
+        let messages = ChatViewModel.parseSessionJSONL(jsonl)
+        #expect(messages.count == 1)
+        #expect(messages[0].content.count == 1)
+        #expect(messages[0].textContent == "Answer")
+    }
+
+    @Test func parseSessionJSONL_emptyInput() {
+        let messages = ChatViewModel.parseSessionJSONL("")
+        #expect(messages.isEmpty)
+    }
+
+    @Test func parseSessionJSONL_corruptLinesSkipped() {
+        let jsonl = """
+        not json at all
+        {"type":"user","message":{"role":"user","content":"Hello"}}
+        {invalid json}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Hi"}]}}
+        """
+        let messages = ChatViewModel.parseSessionJSONL(jsonl)
+        #expect(messages.count == 2)
+    }
+
+    @Test func parseSessionJSONL_toolResultArrayContent() {
+        let jsonl = """
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"tu-1","name":"Read","input":{"file_path":"/tmp/f"}}]}}
+        {"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tu-1","content":[{"type":"text","text":"line1"},{"type":"text","text":"line2"}]}]}}
+        """
+        let messages = ChatViewModel.parseSessionJSONL(jsonl)
+        #expect(messages.count == 1)
+        if case .toolResult(let card) = messages[0].content[1] {
+            #expect(card.displayContent.contains("line1"))
+            #expect(card.displayContent.contains("line2"))
+        } else {
+            Issue.record("Expected tool result")
+        }
+    }
+
+    // MARK: - handleEvent: result
+
     @Test func handleEvent_resultClearsStreaming() throws {
         let ctx = try makeModelContext()
         let (vm, _) = makeChatViewModel(modelContext: ctx)

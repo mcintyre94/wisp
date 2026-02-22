@@ -28,6 +28,7 @@ final class ChatViewModel {
     var modelName: String?
     var remoteSessions: [ClaudeSessionEntry] = []
     var isLoadingRemoteSessions = false
+    var isLoadingHistory = false
 
     private var serviceName: String
     private var sessionId: String?
@@ -138,10 +139,141 @@ final class ChatViewModel {
         }
     }
 
-    func selectRemoteSession(_ entry: ClaudeSessionEntry, modelContext: ModelContext) {
+    func selectRemoteSession(_ entry: ClaudeSessionEntry, apiClient: SpritesAPIClient, modelContext: ModelContext) {
         sessionId = entry.sessionId
         remoteSessions = []
         saveSession(modelContext: modelContext)
+
+        Task {
+            await loadRemoteHistory(apiClient: apiClient, modelContext: modelContext)
+        }
+    }
+
+    private func loadRemoteHistory(apiClient: SpritesAPIClient, modelContext: ModelContext) async {
+        guard let sessionId else { return }
+        isLoadingHistory = true
+        defer { isLoadingHistory = false }
+
+        let encodedPath = workingDirectory
+            .replacingOccurrences(of: "/", with: "-")
+        let projectDir = "/home/sprite/.claude/projects/\(encodedPath)"
+        let command = "cat '\(projectDir)/\(sessionId).jsonl' 2>/dev/null"
+
+        let (output, _) = await apiClient.runExec(
+            spriteName: spriteName,
+            command: command,
+            timeout: 15
+        )
+
+        guard !output.isEmpty else { return }
+
+        let parsed = Self.parseSessionJSONL(output)
+        guard !parsed.isEmpty else { return }
+
+        messages = parsed
+        rebuildToolUseIndex()
+        persistMessages(modelContext: modelContext)
+    }
+
+    /// Parse a Claude session JSONL string into ChatMessages.
+    /// Resilient — skips any lines that fail to decode.
+    static func parseSessionJSONL(_ jsonl: String) -> [ChatMessage] {
+        var messages: [ChatMessage] = []
+        var currentAssistant: ChatMessage?
+        var toolUseNames: [String: String] = [:]  // toolUseId -> toolName
+
+        for line in jsonl.split(separator: "\n", omittingEmptySubsequences: true) {
+            guard let data = line.data(using: .utf8),
+                  let entry = try? JSONDecoder().decode(SessionJSONLLine.self, from: data),
+                  let type = entry.type
+            else { continue }
+
+            switch type {
+            case "user":
+                guard let content = entry.message?.content else { continue }
+                switch content {
+                case .string(let text):
+                    // User prompt — finalize any current assistant message
+                    if let assistant = currentAssistant {
+                        messages.append(assistant)
+                        currentAssistant = nil
+                    }
+                    let msg = ChatMessage(role: .user, content: [.text(text)])
+                    messages.append(msg)
+
+                case .blocks(let blocks):
+                    // Tool results — append to current assistant message
+                    let assistant = currentAssistant ?? ChatMessage(role: .assistant)
+                    if currentAssistant == nil {
+                        currentAssistant = assistant
+                    }
+                    for block in blocks {
+                        guard block.type == "tool_result",
+                              let toolUseId = block.toolUseId
+                        else { continue }
+                        let toolName = toolUseNames[toolUseId] ?? "Tool"
+                        let resultContent: JSONValue
+                        if let c = block.content {
+                            resultContent = .string(c.textValue)
+                        } else {
+                            resultContent = .null
+                        }
+                        let card = ToolResultCard(
+                            toolUseId: toolUseId,
+                            toolName: toolName,
+                            content: resultContent
+                        )
+                        assistant.content.append(.toolResult(card))
+                    }
+                }
+
+            case "assistant":
+                guard let blocks = entry.message?.content,
+                      case .blocks(let contentBlocks) = blocks
+                else { continue }
+
+                let assistant = currentAssistant ?? ChatMessage(role: .assistant)
+                if currentAssistant == nil {
+                    currentAssistant = assistant
+                }
+
+                for block in contentBlocks {
+                    switch block.type {
+                    case "text":
+                        guard let text = block.text, !text.isEmpty else { continue }
+                        // Merge consecutive text blocks
+                        if case .text(let existing) = assistant.content.last {
+                            assistant.content[assistant.content.count - 1] = .text(existing + text)
+                        } else {
+                            assistant.content.append(.text(text))
+                        }
+                    case "tool_use":
+                        guard let id = block.id, let name = block.name else { continue }
+                        toolUseNames[id] = name
+                        let card = ToolUseCard(
+                            toolUseId: id,
+                            toolName: name,
+                            input: block.input ?? .null
+                        )
+                        assistant.content.append(.toolUse(card))
+                    default:
+                        // Skip thinking, server_tool_use, etc.
+                        break
+                    }
+                }
+
+            default:
+                // Skip system, result, progress, etc.
+                continue
+            }
+        }
+
+        // Finalize any trailing assistant message
+        if let assistant = currentAssistant {
+            messages.append(assistant)
+        }
+
+        return messages
     }
 
     func persistMessages(modelContext: ModelContext) {
