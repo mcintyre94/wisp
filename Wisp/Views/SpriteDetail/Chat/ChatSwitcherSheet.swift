@@ -32,11 +32,12 @@ struct ChatSwitcherSheet: View {
                         }
                     }
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
-                        Button(role: .destructive) {
+                        Button {
                             chatToDelete = chat
                         } label: {
                             Label("Delete", systemImage: "trash")
                         }
+                        .tint(.red)
 
                         if !chat.isClosed {
                             Button {
@@ -46,6 +47,21 @@ struct ChatSwitcherSheet: View {
                             }
                             .tint(.orange)
                         }
+                    }
+                    .confirmationDialog(
+                        "Delete Chat",
+                        isPresented: Binding(
+                            get: { chatToDelete?.id == chat.id },
+                            set: { if !$0 { chatToDelete = nil } }
+                        ),
+                        titleVisibility: .visible
+                    ) {
+                        Button("Delete", role: .destructive) {
+                            viewModel.deleteChat(chat, apiClient: apiClient, modelContext: modelContext)
+                            chatToDelete = nil
+                        }
+                    } message: {
+                        Text("This will permanently delete the chat and its history.")
                     }
                 }
             }
@@ -63,23 +79,6 @@ struct ChatSwitcherSheet: View {
                         Image(systemName: "plus")
                     }
                 }
-            }
-            .confirmationDialog(
-                "Delete Chat",
-                isPresented: Binding(
-                    get: { chatToDelete != nil },
-                    set: { if !$0 { chatToDelete = nil } }
-                ),
-                titleVisibility: .visible
-            ) {
-                Button("Delete", role: .destructive) {
-                    if let chat = chatToDelete {
-                        viewModel.deleteChat(chat, apiClient: apiClient, modelContext: modelContext)
-                        chatToDelete = nil
-                    }
-                }
-            } message: {
-                Text("This will permanently delete the chat and its history.")
             }
             .alert("Rename Chat", isPresented: Binding(
                 get: { chatToRename != nil },

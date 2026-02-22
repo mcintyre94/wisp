@@ -36,9 +36,20 @@ struct DashboardView: View {
                                 SpriteRowView(sprite: sprite)
                             }
                             .swipeActions(edge: .trailing) {
-                                Button("Delete", role: .destructive) {
+                                Button("Delete") {
                                     viewModel.spriteToDelete = sprite
                                 }
+                                .tint(.red)
+                            }
+                            .confirmationDialog("Delete Sprite?", isPresented: .init(
+                                get: { viewModel.spriteToDelete?.id == sprite.id },
+                                set: { if !$0 { viewModel.spriteToDelete = nil } }
+                            )) {
+                                Button("Delete", role: .destructive) {
+                                    Task { await viewModel.deleteSprite(sprite, apiClient: apiClient) }
+                                }
+                            } message: {
+                                Text("This will permanently delete \"\(sprite.name)\". This action cannot be undone.")
                             }
                         }
                     }
@@ -87,20 +98,6 @@ struct DashboardView: View {
                     .onDisappear {
                         Task { await viewModel.loadSprites(apiClient: apiClient) }
                     }
-            }
-            .confirmationDialog("Delete Sprite?", isPresented: .init(
-                get: { viewModel.spriteToDelete != nil },
-                set: { if !$0 { viewModel.spriteToDelete = nil } }
-            )) {
-                Button("Delete", role: .destructive) {
-                    if let sprite = viewModel.spriteToDelete {
-                        Task { await viewModel.deleteSprite(sprite, apiClient: apiClient) }
-                    }
-                }
-            } message: {
-                if let sprite = viewModel.spriteToDelete {
-                    Text("This will permanently delete \"\(sprite.name)\". This action cannot be undone.")
-                }
             }
             .alert("Error", isPresented: .init(
                 get: { viewModel.errorMessage != nil },
