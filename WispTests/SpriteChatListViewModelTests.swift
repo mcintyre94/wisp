@@ -160,6 +160,27 @@ struct SpriteChatListViewModelTests {
         #expect(chat.spriteCreatedAt == date)
     }
 
+    @Test func createChat_usesWorkingDirectoryFromSpriteSession() throws {
+        let ctx = try makeModelContext()
+        let session = SpriteSession(spriteName: "test-sprite", workingDirectory: "/home/sprite/my-repo")
+        ctx.insert(session)
+        try ctx.save()
+
+        let vm = SpriteChatListViewModel(spriteName: "test-sprite")
+        let chat = vm.createChat(modelContext: ctx)
+
+        #expect(chat.workingDirectory == "/home/sprite/my-repo")
+    }
+
+    @Test func createChat_fallsBackToDefaultWithoutSpriteSession() throws {
+        let ctx = try makeModelContext()
+        let vm = SpriteChatListViewModel(spriteName: "test-sprite")
+
+        let chat = vm.createChat(modelContext: ctx)
+
+        #expect(chat.workingDirectory == "/home/sprite/project")
+    }
+
     @Test func createChat_spriteCreatedAtNilByDefault() throws {
         let ctx = try makeModelContext()
         let vm = SpriteChatListViewModel(spriteName: "test-sprite")

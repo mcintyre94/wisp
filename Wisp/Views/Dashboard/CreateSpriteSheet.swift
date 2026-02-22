@@ -154,7 +154,7 @@ struct CreateSpriteSheet: View {
                 )
             }
 
-            // Clone repo if specified
+            // Clone repo if specified — set working directory on SpriteSession
             if let info = repoInfo {
                 creationStatus = "Cloning repository..."
                 let clonePath = "/home/sprite/\(info.repoName)"
@@ -163,6 +163,9 @@ struct CreateSpriteSheet: View {
                     command: "git clone --depth 1 '\(info.cloneURL)' '\(clonePath)'",
                     timeout: 60
                 )
+                let session = SpriteSession(spriteName: spriteName, workingDirectory: clonePath)
+                modelContext.insert(session)
+                try? modelContext.save()
             }
 
             dismiss()
