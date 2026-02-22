@@ -17,7 +17,13 @@ struct SessionSuggestionsView: View {
                 }
                 .frame(maxWidth: .infinity)
                 .padding(.top, 40)
-            } else if !sessions.isEmpty {
+            } else if sessions.isEmpty {
+                Text("No other previous sessions")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 40)
+            } else {
                 Text("Resume a previous session")
                     .font(.subheadline.weight(.medium))
                     .foregroundStyle(.secondary)
