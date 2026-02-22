@@ -10,6 +10,7 @@ struct SpriteDetailView: View {
     @State private var showChatSwitcher = false
     @State private var showStaleChatsAlert = false
     @State private var streamingChatIds: Set<UUID> = []
+    @State private var showCopiedFeedback = false
     @Environment(SpritesAPIClient.self) private var apiClient
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
@@ -52,9 +53,24 @@ struct SpriteDetailView: View {
 
     var body: some View {
         tabContent
-        .navigationTitle(sprite.name)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
+            ToolbarItem(placement: .principal) {
+                Text(showCopiedFeedback ? "Copied!" : sprite.name)
+                    .font(.headline)
+                    .contentTransition(.numericText())
+                    .onTapGesture {
+                        UIPasteboard.general.string = sprite.name
+                        withAnimation {
+                            showCopiedFeedback = true
+                        }
+                        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                            withAnimation {
+                                showCopiedFeedback = false
+                            }
+                        }
+                    }
+            }
             if selectedTab == .chat {
                 ToolbarItem(placement: .primaryAction) {
                     HStack(spacing: 12) {
