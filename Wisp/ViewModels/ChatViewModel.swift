@@ -450,7 +450,7 @@ final class ChatViewModel {
         messages.append(assistantMessage)
         currentAssistantMessage = assistantMessage
 
-        let streamResult = await processServiceStream(stream: stream, modelContext: modelContext)
+        let streamResult = await processServiceStream(stream: stream, modelContext: modelContext, breakOnComplete: true)
         logger.info("[Chat] Main stream ended: result=\(streamResult), cancelled=\(Task.isCancelled)")
 
         // If cancelled (e.g. by resumeAfterBackground), bail out immediately.
@@ -529,10 +529,15 @@ final class ChatViewModel {
         }
     }
 
-    /// Process events from a service log stream (two-level NDJSON parsing)
+    /// Process events from a service log stream (two-level NDJSON parsing).
+    /// `breakOnComplete`: when true, exit the loop on a `.complete` event. Used for the
+    /// initial PUT stream where `.complete` means the service process ended. For GET logs
+    /// reconnection, `.complete` just means the log replay finished and the stream ends
+    /// naturally, so we leave it as false.
     private func processServiceStream(
         stream: AsyncThrowingStream<ServiceLogEvent, Error>,
-        modelContext: ModelContext
+        modelContext: ModelContext,
+        breakOnComplete: Bool = false
     ) async -> StreamResult {
         var receivedData = false
         var lastPersistTime = Date.distantPast
@@ -607,6 +612,13 @@ final class ChatViewModel {
 
                 case .complete:
                     timeoutTask.cancel()
+                    if breakOnComplete {
+                        let flushed = await parser.flush()
+                        for e in flushed {
+                            handleEvent(e, modelContext: modelContext)
+                        }
+                        break streamLoop
+                    }
 
                 case .started:
                     if case .connecting = status { status = .streaming }
