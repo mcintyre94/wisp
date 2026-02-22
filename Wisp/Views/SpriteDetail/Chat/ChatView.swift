@@ -9,6 +9,7 @@ struct ChatView: View {
     var topAccessory: AnyView? = nil
     var existingSessionIds: Set<String> = []
     @FocusState private var isInputFocused: Bool
+    @State private var contentOpacity: Double = 0
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -19,6 +20,7 @@ struct ChatView: View {
                             sessions: viewModel.remoteSessions,
                             isLoading: viewModel.isLoadingRemoteSessions || viewModel.isLoadingHistory
                         ) { entry in
+                            contentOpacity = 0
                             viewModel.selectRemoteSession(entry, apiClient: apiClient, modelContext: modelContext)
                         }
                     }
@@ -28,6 +30,7 @@ struct ChatView: View {
                     }
                     Color.clear.frame(height: 1).id("bottom")
                 }
+                .opacity(contentOpacity)
                 .padding()
             }
             .defaultScrollAnchor(.bottom)
@@ -47,6 +50,13 @@ struct ChatView: View {
                 ChatStatusBar(status: viewModel.status, modelName: viewModel.modelName)
             }
         }
+        .onAppear {
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
+                withAnimation(.easeOut(duration: 0.3)) {
+                    contentOpacity = 1
+                }
+            }
+        }
         .task {
             // Small delay to let loadSession populate messages first
             try? await Task.sleep(for: .milliseconds(100))
@@ -55,6 +65,13 @@ struct ChatView: View {
                     apiClient: apiClient,
                     existingSessionIds: existingSessionIds
                 )
+            }
+        }
+        .onChange(of: viewModel.isLoadingHistory) {
+            if !viewModel.isLoadingHistory {
+                withAnimation(.easeOut(duration: 0.3)) {
+                    contentOpacity = 1
+                }
             }
         }
         .onChange(of: scenePhase) { _, newPhase in
