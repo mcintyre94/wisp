@@ -21,7 +21,7 @@ final class ChatViewModel {
     var status: ChatStatus = .idle
     var modelName: String?
 
-    private let serviceName = "claude"
+    private var serviceName: String = "claude-\(UUID().uuidString.prefix(8).lowercased())"
     private var sessionId: String?
     private var workingDirectory: String
     private var streamTask: Task<Void, Never>?
@@ -81,7 +81,10 @@ final class ChatViewModel {
     }
 
     func startNewChat(apiClient: SpritesAPIClient, modelContext: ModelContext) {
-        interrupt(apiClient: apiClient)
+        // Don't pass apiClient — the fire-and-forget delete can race with
+        // executeClaudeCommand's PUT, killing the newly-created service.
+        // executeClaudeCommand already does its own awaited delete first.
+        interrupt()
         messages = []
         sessionId = nil
         toolUseIndex = [:]
@@ -171,8 +174,10 @@ final class ChatViewModel {
     ) async {
         status = .connecting
 
-        // Delete any existing service so the PUT creates a fresh one
-        try? await apiClient.deleteService(spriteName: spriteName, serviceName: serviceName)
+        // Delete old service, then use a fresh name so logs start clean
+        let oldServiceName = serviceName
+        serviceName = "claude-\(UUID().uuidString.prefix(8).lowercased())"
+        try? await apiClient.deleteService(spriteName: spriteName, serviceName: oldServiceName)
 
         guard let claudeToken = apiClient.claudeToken else {
             status = .error("No Claude token configured")
@@ -238,22 +243,25 @@ final class ChatViewModel {
 
         let streamResult = await processServiceStream(stream: stream, modelContext: modelContext)
         logger.info("[Chat] Main stream ended: result=\(streamResult), cancelled=\(Task.isCancelled)")
+
+        // If cancelled (e.g. by resumeAfterBackground), bail out immediately.
+        // The reconnect task now owns the assistant message and shared state.
+        guard !Task.isCancelled else { return }
+
         assistantMessage.isStreaming = false
-        // Only clear currentAssistantMessage if it hasn't been replaced by a
-        // concurrent reconnect task (which would have set its own message).
         if currentAssistantMessage?.id == assistantMessage.id {
             currentAssistantMessage = nil
         }
 
         // Attempt reconnection on disconnect
-        if case .disconnected = streamResult, !Task.isCancelled {
+        if case .disconnected = streamResult {
             logger.info("[Chat] Disconnected mid-stream, attempting reconnect via service logs")
             await reconnectToServiceLogs(apiClient: apiClient, modelContext: modelContext)
             return
         }
 
         // If timed out with no data, clear Claude lock files and retry once
-        if case .timedOut = streamResult, !retriedAfterTimeout, !Task.isCancelled {
+        if case .timedOut = streamResult, !retriedAfterTimeout {
             logger.info("Timeout — clearing Claude lock files and retrying")
             retriedAfterTimeout = true
             status = .connecting
@@ -268,7 +276,7 @@ final class ChatViewModel {
         }
 
         // If --resume failed (no system event received), retry without it
-        if usedResume && !receivedSystemEvent && !Task.isCancelled {
+        if usedResume && !receivedSystemEvent {
             logger.info("Stale session detected, retrying without --resume")
             if let idx = messages.firstIndex(where: { $0.id == assistantMessage.id }) {
                 messages.remove(at: idx)
@@ -283,13 +291,13 @@ final class ChatViewModel {
 
         saveSession(modelContext: modelContext)
 
-        if case .streaming = status, !Task.isCancelled {
+        if case .streaming = status {
             status = .idle
         }
 
         persistMessages(modelContext: modelContext)
 
-        if let queued = queuedPrompt, !Task.isCancelled {
+        if let queued = queuedPrompt {
             queuedPrompt = nil
             await executeClaudeCommand(prompt: queued, apiClient: apiClient, modelContext: modelContext)
         }
@@ -421,7 +429,9 @@ final class ChatViewModel {
         }
     }
 
-    /// Reconnect to a running service via GET logs (provides full history)
+    /// Reconnect to a running service via GET logs (provides full history).
+    /// Reuses the existing assistant message — clears its content and replays
+    /// the full service log into it, avoiding duplicate messages entirely.
     private func reconnectToServiceLogs(
         apiClient: SpritesAPIClient,
         modelContext: ModelContext
@@ -429,27 +439,29 @@ final class ChatViewModel {
         status = .reconnecting
         logger.info("[Chat] Reconnecting to service logs")
 
-        persistMessages(modelContext: modelContext)
-
-        // Mark old assistant message as no longer streaming
-        if let currentMsg = currentAssistantMessage {
-            currentMsg.isStreaming = false
-            currentAssistantMessage = nil
-        }
-
         receivedSystemEvent = false
         receivedResultEvent = false
 
-        let oldAssistantIndex = messages.lastIndex(where: { $0.role == .assistant })
+        // Reuse the existing assistant message — clear and replay into it
+        let assistantMessage: ChatMessage
+        if let existing = currentAssistantMessage {
+            assistantMessage = existing
+            assistantMessage.content = []
+            assistantMessage.isStreaming = true
+        } else if let last = messages.last(where: { $0.role == .assistant }) {
+            assistantMessage = last
+            assistantMessage.content = []
+            assistantMessage.isStreaming = true
+            currentAssistantMessage = last
+        } else {
+            // No assistant message exists (shouldn't happen, but be safe)
+            assistantMessage = ChatMessage(role: .assistant, isStreaming: true)
+            messages.append(assistantMessage)
+            currentAssistantMessage = assistantMessage
+        }
 
-        // Reset parser for fresh replay from logs
+        // Reset parser and tool index for fresh replay
         await parser.reset()
-
-        // Create new assistant message for replayed content
-        let assistantMessage = ChatMessage(role: .assistant, isStreaming: true)
-        messages.append(assistantMessage)
-        currentAssistantMessage = assistantMessage
-
         toolUseIndex = [:]
         rebuildToolUseIndex()
 
@@ -462,65 +474,25 @@ final class ChatViewModel {
         let streamResult = await processServiceStream(stream: stream, modelContext: modelContext)
 
         assistantMessage.isStreaming = false
-        // Only clear currentAssistantMessage if it hasn't been replaced by a
-        // subsequent reconnect task.
         if currentAssistantMessage?.id == assistantMessage.id {
             currentAssistantMessage = nil
         }
 
-        let reattachGotData = !assistantMessage.content.isEmpty
-        logger.info("[Chat] Reconnect stream ended: result=\(streamResult), gotData=\(reattachGotData)")
+        logger.info("[Chat] Reconnect stream ended: result=\(streamResult), content=\(assistantMessage.content.count)")
 
-        switch streamResult {
-        case .completed where reattachGotData:
-            // Scrollback arrived — remove the old partial assistant message
-            if let oldIdx = oldAssistantIndex, oldIdx < messages.count,
-               messages[oldIdx].role == .assistant, messages[oldIdx].id != assistantMessage.id {
-                messages.remove(at: oldIdx)
-            }
-            saveSession(modelContext: modelContext)
-            if case .streaming = status { status = .idle }
-            persistMessages(modelContext: modelContext)
-
-        case .disconnected:
-            // Remove empty reconnect message, keep old one
-            if !reattachGotData, let idx = messages.firstIndex(where: { $0.id == assistantMessage.id }) {
-                messages.remove(at: idx)
-            }
-            // If we already got the result event, treat as completed — don't reconnect
-            if receivedResultEvent {
-                logger.info("[Chat] Disconnected after result event, treating as completed")
-                if let oldIdx = oldAssistantIndex, oldIdx < messages.count,
-                   messages[oldIdx].role == .assistant, messages[oldIdx].id != assistantMessage.id {
-                    messages.remove(at: oldIdx)
-                }
-                saveSession(modelContext: modelContext)
-                status = .idle
-                persistMessages(modelContext: modelContext)
-                break
-            }
-            // Retry reconnection
-            if !Task.isCancelled {
-                logger.info("Disconnected again during reconnect, retrying")
-                await reconnectToServiceLogs(apiClient: apiClient, modelContext: modelContext)
-                return
-            }
-            fallthrough
-
-        default:
-            // Reconnect failed — remove empty message, keep old partial
-            if !reattachGotData, let idx = messages.firstIndex(where: { $0.id == assistantMessage.id }) {
-                messages.remove(at: idx)
-            } else if reattachGotData, let oldIdx = oldAssistantIndex, oldIdx < messages.count,
-                      messages[oldIdx].role == .assistant, messages[oldIdx].id != assistantMessage.id {
-                messages.remove(at: oldIdx)
-            }
-            saveSession(modelContext: modelContext)
-            if !Task.isCancelled {
-                status = .idle
-            }
-            persistMessages(modelContext: modelContext)
+        // Retry on disconnect if Claude hasn't finished
+        if case .disconnected = streamResult, !receivedResultEvent, !Task.isCancelled {
+            logger.info("Disconnected again during reconnect, retrying")
+            await reconnectToServiceLogs(apiClient: apiClient, modelContext: modelContext)
+            return
         }
+
+        // Finalize
+        saveSession(modelContext: modelContext)
+        if !Task.isCancelled {
+            status = .idle
+        }
+        persistMessages(modelContext: modelContext)
 
         if let queued = queuedPrompt, !Task.isCancelled {
             queuedPrompt = nil
@@ -528,7 +500,7 @@ final class ChatViewModel {
         }
     }
 
-    private func handleEvent(_ event: ClaudeStreamEvent, modelContext: ModelContext) {
+    func handleEvent(_ event: ClaudeStreamEvent, modelContext: ModelContext) {
         switch event {
         case .system(let systemEvent):
             receivedSystemEvent = true
@@ -616,7 +588,7 @@ final class ChatViewModel {
     /// Strip timestamp prefixes from service log lines.
     /// The logs endpoint returns lines like "2026-02-19T09:13:24.665Z [stdout] {...}"
     /// but the PUT stream returns just "{...}". This normalizes both formats.
-    private static func stripLogTimestamps(_ text: String) -> String {
+    nonisolated static func stripLogTimestamps(_ text: String) -> String {
         text.split(separator: "\n", omittingEmptySubsequences: false)
             .map { line in
                 // Match "TIMESTAMP [stdout] " or "TIMESTAMP [stderr] " prefix
@@ -628,7 +600,7 @@ final class ChatViewModel {
             .joined(separator: "\n")
     }
 
-    private static func sanitize(_ string: String) -> String {
+    nonisolated static func sanitize(_ string: String) -> String {
         string.replacingOccurrences(
             of: "CLAUDE_CODE_OAUTH_TOKEN[=%][^&\\s,}]*",
             with: "CLAUDE_CODE_OAUTH_TOKEN=<redacted>",
@@ -656,4 +628,10 @@ final class ChatViewModel {
         session.disconnect()
         return !timedOut
     }
+
+    #if DEBUG
+    func setCurrentAssistantMessage(_ message: ChatMessage?) {
+        currentAssistantMessage = message
+    }
+    #endif
 }

@@ -73,6 +73,8 @@
 		DD11EE22FF334455AA66BB02 /* ServiceTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD11EE22FF334455AA66BB01 /* ServiceTypes.swift */; };
 		DD11EE22FF334455AA66BB04 /* ServiceTypesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD11EE22FF334455AA66BB03 /* ServiceTypesTests.swift */; };
 		EE22FF334455AA66BB770002 /* ExecSessionURLTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE22FF334455AA66BB770001 /* ExecSessionURLTests.swift */; };
+		FF11AA22BB33CC44DD55EE02 /* ChatViewModelHelpersTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF11AA22BB33CC44DD55EE01 /* ChatViewModelHelpersTests.swift */; };
+		FF11AA22BB33CC44DD55EE04 /* ChatViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF11AA22BB33CC44DD55EE03 /* ChatViewModelTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -153,6 +155,8 @@
 		DD11EE22FF334455AA66BB01 /* ServiceTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceTypes.swift; sourceTree = "<group>"; };
 		DD11EE22FF334455AA66BB03 /* ServiceTypesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceTypesTests.swift; sourceTree = "<group>"; };
 		EE22FF334455AA66BB770001 /* ExecSessionURLTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExecSessionURLTests.swift; sourceTree = "<group>"; };
+		FF11AA22BB33CC44DD55EE01 /* ChatViewModelHelpersTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModelHelpersTests.swift; sourceTree = "<group>"; };
+		FF11AA22BB33CC44DD55EE03 /* ChatViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModelTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -395,6 +399,8 @@
 			children = (
 				AABB0011223344556677F007 /* APIModelTests.swift */,
 				AABB0011223344556677F009 /* AppErrorTests.swift */,
+				FF11AA22BB33CC44DD55EE01 /* ChatViewModelHelpersTests.swift */,
+				FF11AA22BB33CC44DD55EE03 /* ChatViewModelTests.swift */,
 				B5C3D17E8A9FABC001D2E3F4 /* ClaudeModelTests.swift */,
 				AABB0011223344556677F005 /* ClaudeStreamEventTests.swift */,
 				AABB0011223344556677F001 /* ClaudeStreamParserTests.swift */,
@@ -557,6 +563,8 @@
 			files = (
 				AABB0011223344556677F008 /* APIModelTests.swift in Sources */,
 				AABB0011223344556677F00A /* AppErrorTests.swift in Sources */,
+				FF11AA22BB33CC44DD55EE02 /* ChatViewModelHelpersTests.swift in Sources */,
+				FF11AA22BB33CC44DD55EE04 /* ChatViewModelTests.swift in Sources */,
 				C6D4E28F9B0ABCD112E3F405 /* ClaudeModelTests.swift in Sources */,
 				AABB0011223344556677F006 /* ClaudeStreamEventTests.swift in Sources */,
 				AABB0011223344556677F002 /* ClaudeStreamParserTests.swift in Sources */,
