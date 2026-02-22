@@ -43,7 +43,7 @@ final class ChatViewModel {
     init(spriteName: String, chatId: UUID, currentServiceName: String?, workingDirectory: String) {
         self.spriteName = spriteName
         self.chatId = chatId
-        self.serviceName = currentServiceName ?? "claude-\(UUID().uuidString.prefix(8).lowercased())"
+        self.serviceName = currentServiceName ?? "wisp-claude-\(UUID().uuidString.prefix(8).lowercased())"
         self.workingDirectory = workingDirectory
     }
 
@@ -186,7 +186,7 @@ final class ChatViewModel {
 
         // Delete old service, then use a fresh name so logs start clean
         let oldServiceName = serviceName
-        serviceName = "claude-\(UUID().uuidString.prefix(8).lowercased())"
+        serviceName = "wisp-claude-\(UUID().uuidString.prefix(8).lowercased())"
         try? await apiClient.deleteService(spriteName: spriteName, serviceName: oldServiceName)
 
         // Persist the new service name immediately for reconnect
