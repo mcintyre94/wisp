@@ -47,7 +47,7 @@ means we have all the flexibility of Sprites, through a mobile chat UX.
 ## How does Chat work?
 
 Wisp uses the
-[Sprite websocket exec API](https://sprites.dev/api/sprites/exec#execute-command)
+[Sprite services API](https://sprites.dev/api/sprites/services#create-service)
 to run Claude on the Sprite and listen for its response. It calls Claude in
 non-interactive mode `-p`, with `--output-format stream-json`. The JSON messages
 are received at the websocket, and displayed in the chat as Claude responds.
