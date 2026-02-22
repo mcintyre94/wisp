@@ -34,6 +34,7 @@ struct SpriteDetailView: View {
             if let chatViewModel {
                 let isReadOnly = chatListViewModel.activeChat?.isClosed == true
                 ChatView(viewModel: chatViewModel, isReadOnly: isReadOnly, topAccessory: AnyView(pickerView))
+                    .id(chatViewModel.chatId)
             } else {
                 ProgressView()
                     .safeAreaInset(edge: .top, spacing: 0) { pickerView }
