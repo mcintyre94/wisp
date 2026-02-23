@@ -164,7 +164,9 @@ final class SpritesAPIClient {
                     urlRequest.httpMethod = "PUT"
                     urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
                     urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-                    urlRequest.timeoutInterval = 3600
+                    // Idle timeout: if no data arrives for 120s, assume connection dropped.
+                    // The reconnect logic will re-establish from service logs.
+                    urlRequest.timeoutInterval = 120
                     urlRequest.httpBody = try encoder.encode(config)
 
                     let (bytes, response) = try await URLSession.shared.bytes(for: urlRequest)
@@ -187,8 +189,11 @@ final class SpritesAPIClient {
                     let decoder = JSONDecoder()
                     for try await line in bytes.lines {
                         guard !line.isEmpty, let data = line.data(using: .utf8) else { continue }
-                        if let event = try? decoder.decode(ServiceLogEvent.self, from: data) {
+                        do {
+                            let event = try decoder.decode(ServiceLogEvent.self, from: data)
                             continuation.yield(event)
+                        } catch {
+                            logger.warning("Failed to decode service event: \(error.localizedDescription, privacy: .public) line: \(line.prefix(200), privacy: .public)")
                         }
                     }
                     continuation.finish()
@@ -227,7 +232,7 @@ final class SpritesAPIClient {
                     var urlRequest = URLRequest(url: url)
                     urlRequest.httpMethod = "GET"
                     urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-                    urlRequest.timeoutInterval = 3600
+                    urlRequest.timeoutInterval = 120
 
                     let (bytes, response) = try await URLSession.shared.bytes(for: urlRequest)
 
@@ -248,8 +253,11 @@ final class SpritesAPIClient {
                     let decoder = JSONDecoder()
                     for try await line in bytes.lines {
                         guard !line.isEmpty, let data = line.data(using: .utf8) else { continue }
-                        if let event = try? decoder.decode(ServiceLogEvent.self, from: data) {
+                        do {
+                            let event = try decoder.decode(ServiceLogEvent.self, from: data)
                             continuation.yield(event)
+                        } catch {
+                            logger.warning("Failed to decode service log event: \(error.localizedDescription, privacy: .public) line: \(line.prefix(200), privacy: .public)")
                         }
                     }
                     continuation.finish()
