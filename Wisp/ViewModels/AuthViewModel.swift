@@ -88,6 +88,21 @@ final class AuthViewModel {
 
                 try keychain.save(token, for: .githubToken)
                 isPollingGitHub = false
+
+                // Auto-populate git identity from GitHub profile
+                let github = GitHubAPIClient(token: token)
+                if let profile = try? await github.fetchUserProfile() {
+                    let name = profile.name ?? profile.login
+                    UserDefaults.standard.set(name, forKey: "gitName")
+                    var email = profile.email
+                    if email == nil {
+                        email = try? await github.fetchPrimaryEmail()
+                    }
+                    if let email {
+                        UserDefaults.standard.set(email, forKey: "gitEmail")
+                    }
+                }
+
                 apiClient.refreshAuthState()
             } catch is CancellationError {
                 isPollingGitHub = false

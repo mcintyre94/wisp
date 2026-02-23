@@ -58,7 +58,7 @@ struct GitHubDeviceFlowClient: Sendable {
         request.httpMethod = "POST"
         request.setValue("application/json", forHTTPHeaderField: "Accept")
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
-        request.httpBody = "client_id=\(Self.clientID)&scope=repo,read:org,gist,workflow".data(using: .utf8)
+        request.httpBody = "client_id=\(Self.clientID)&scope=repo,read:org,gist,workflow,read:user,user:email".data(using: .utf8)
 
         let (data, response) = try await URLSession.shared.data(for: request)
 

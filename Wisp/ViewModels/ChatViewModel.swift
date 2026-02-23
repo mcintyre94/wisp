@@ -406,6 +406,17 @@ final class ChatViewModel {
             "cd \(workingDirectory)",
         ]
 
+        let gitName = UserDefaults.standard.string(forKey: "gitName") ?? ""
+        let gitEmail = UserDefaults.standard.string(forKey: "gitEmail") ?? ""
+        if !gitName.isEmpty {
+            let escapedName = gitName.replacingOccurrences(of: "'", with: "'\\''")
+            commandParts.append("git config --global user.name '\(escapedName)'")
+        }
+        if !gitEmail.isEmpty {
+            let escapedEmail = gitEmail.replacingOccurrences(of: "'", with: "'\\''")
+            commandParts.append("git config --global user.email '\(escapedEmail)'")
+        }
+
         var claudeCmd = "claude -p --verbose --output-format stream-json --dangerously-skip-permissions"
 
         let modelId = UserDefaults.standard.string(forKey: "claudeModel") ?? ClaudeModel.sonnet.rawValue

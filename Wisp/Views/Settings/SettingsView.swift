@@ -4,6 +4,8 @@ struct SettingsView: View {
     @Environment(SpritesAPIClient.self) private var apiClient
     @AppStorage("claudeModel") private var claudeModel: String = ClaudeModel.sonnet.rawValue
     @AppStorage("maxTurns") private var maxTurns: Int = 0
+    @AppStorage("gitName") private var gitName: String = ""
+    @AppStorage("gitEmail") private var gitEmail: String = ""
     @AppStorage("customInstructions") private var customInstructions: String = ""
     @AppStorage("theme") private var theme: String = "system"
     @State private var showSignOutConfirmation = false
@@ -26,6 +28,7 @@ struct SettingsView: View {
     var body: some View {
         Form {
             accountSection
+            gitIdentitySection
             claudeSection
             instructionsSection
             appearanceSection
@@ -131,6 +134,27 @@ struct SettingsView: View {
                 ForEach(1...50, id: \.self) { n in
                     Text("\(n)").tag(n)
                 }
+            }
+        }
+    }
+
+    private var gitIdentitySection: some View {
+        Section {
+            TextField("Name", text: $gitName)
+                .textContentType(.name)
+                .autocorrectionDisabled()
+            TextField("Email", text: $gitEmail)
+                .textContentType(.emailAddress)
+                .keyboardType(.emailAddress)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+        } header: {
+            Text("Git Identity")
+        } footer: {
+            if apiClient.hasGitHubToken {
+                Text("Auto-populated from your GitHub profile. Used for git commits on Sprites.")
+            } else {
+                Text("Used for git commits on Sprites.")
             }
         }
     }

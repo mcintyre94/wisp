@@ -12,8 +12,28 @@ struct GitHubRepo: Identifiable, Hashable, Sendable {
     }
 }
 
+struct GitHubUser: Sendable {
+    let name: String?
+    let email: String?
+    let login: String
+}
+
 struct GitHubAPIClient: Sendable {
     let token: String?
+
+    func fetchUserProfile() async throws -> GitHubUser {
+        let url = URL(string: "https://api.github.com/user")!
+        let data = try await performRequest(url: url)
+        let json = try JSONDecoder().decode(UserJSON.self, from: data)
+        return GitHubUser(name: json.name, email: json.email, login: json.login)
+    }
+
+    func fetchPrimaryEmail() async throws -> String? {
+        let url = URL(string: "https://api.github.com/user/emails")!
+        let data = try await performRequest(url: url)
+        let emails = try JSONDecoder().decode([EmailJSON].self, from: data)
+        return emails.first(where: { $0.primary })?.email ?? emails.first?.email
+    }
 
     func fetchUserRepos() async throws -> [GitHubRepo] {
         guard token != nil else { return [] }
@@ -85,4 +105,15 @@ private struct RepoJSON: Decodable {
 
 private struct SearchResultJSON: Decodable {
     let items: [RepoJSON]
+}
+
+private struct UserJSON: Decodable {
+    let login: String
+    let name: String?
+    let email: String?
+}
+
+private struct EmailJSON: Decodable {
+    let email: String
+    let primary: Bool
 }
