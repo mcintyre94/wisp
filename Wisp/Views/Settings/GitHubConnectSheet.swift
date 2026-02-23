@@ -77,6 +77,21 @@ struct GitHubConnectSheet: View {
 
                 try KeychainService.shared.save(token, for: .githubToken)
                 apiClient.refreshAuthState()
+
+                // Auto-populate git identity from GitHub profile
+                let github = GitHubAPIClient(token: token)
+                if let profile = try? await github.fetchUserProfile() {
+                    let name = profile.name ?? profile.login
+                    UserDefaults.standard.set(name, forKey: "gitName")
+                    var email = profile.email
+                    if email == nil {
+                        email = try? await github.fetchPrimaryEmail()
+                    }
+                    if let email {
+                        UserDefaults.standard.set(email, forKey: "gitEmail")
+                    }
+                }
+
                 dismiss()
             } catch is CancellationError {
                 // User cancelled
