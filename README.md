@@ -68,7 +68,7 @@ Replaces the basic streaming indicator with a richer UX during Claude's tool use
 
 ### Dynamic Island Live Activity
 
-An ActivityKit Live Activity shows Claude's progress in the Dynamic Island and on the Lock Screen, even when the app is backgrounded:
+Inspired by [Chowder-iOS](https://github.com/newmaterialco/chowder-iOS). An ActivityKit Live Activity shows Claude's progress in the Dynamic Island and on the Lock Screen, even when the app is backgrounded:
 
 - **Dynamic Island compact** -- colored status dot (blue = active, green = done) and current intent text
 - **Dynamic Island expanded** -- sprite name, current tool, step count, and previously completed tool

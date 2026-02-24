@@ -28,6 +28,18 @@ struct Sprite: Codable, Identifiable, Sendable, Hashable {
         urlSettings = try container.decodeIfPresent(UrlSettings.self, forKey: .urlSettings)
     }
 
+    #if DEBUG
+    init(id: String = UUID().uuidString, name: String, status: SpriteStatus,
+         url: String? = nil, createdAt: Date? = nil, urlSettings: UrlSettings? = nil) {
+        self.id = id
+        self.name = name
+        self.status = status
+        self.url = url
+        self.createdAt = createdAt
+        self.urlSettings = urlSettings
+    }
+    #endif
+
     func encode(to encoder: Encoder) throws {
         var container = encoder.container(keyedBy: CodingKeys.self)
         try container.encode(id, forKey: .id)

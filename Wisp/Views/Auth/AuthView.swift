@@ -7,6 +7,12 @@ struct AuthView: View {
     var body: some View {
         NavigationStack {
             Form {
+                Section {
+                    StepIndicator(currentStep: viewModel.step)
+                        .listRowBackground(Color.clear)
+                        .listRowInsets(EdgeInsets(top: 8, leading: 0, bottom: 8, trailing: 0))
+                }
+
                 switch viewModel.step {
                 case .spritesToken:
                     spritesTokenSection
@@ -30,10 +36,14 @@ struct AuthView: View {
 
     private var spritesTokenSection: some View {
         Section {
-            SecureField("Sprites API Token", text: $viewModel.spritesToken)
-                .textContentType(.password)
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.never)
+            HStack {
+                SecureField("Sprites API Token", text: $viewModel.spritesToken)
+                    .textContentType(.password)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+
+                pasteButton(binding: $viewModel.spritesToken)
+            }
 
             Button {
                 Task {
@@ -58,10 +68,14 @@ struct AuthView: View {
 
     private var claudeTokenSection: some View {
         Section {
-            SecureField("Claude Code OAuth Token", text: $viewModel.claudeToken)
-                .textContentType(.password)
-                .autocorrectionDisabled()
-                .textInputAutocapitalization(.never)
+            HStack {
+                SecureField("Claude Code OAuth Token", text: $viewModel.claudeToken)
+                    .textContentType(.password)
+                    .autocorrectionDisabled()
+                    .textInputAutocapitalization(.never)
+
+                pasteButton(binding: $viewModel.claudeToken)
+            }
 
             Button("Save & Continue") {
                 viewModel.saveClaudeToken(apiClient: apiClient)
@@ -104,5 +118,86 @@ struct AuthView: View {
         } footer: {
             Text("Connect GitHub to clone repos directly onto your Sprites. You can always connect later from Settings.")
         }
+    }
+
+    private func pasteButton(binding: Binding<String>) -> some View {
+        Button {
+            if let pasted = UIPasteboard.general.string {
+                binding.wrappedValue = pasted.trimmingCharacters(in: .whitespacesAndNewlines)
+            }
+        } label: {
+            Image(systemName: "doc.on.clipboard")
+                .font(.system(size: 14))
+                .foregroundStyle(.secondary)
+        }
+        .buttonStyle(.bordered)
+        .buttonBorderShape(.roundedRectangle(radius: 6))
+        .controlSize(.small)
+    }
+}
+
+// MARK: - Step Indicator
+
+private struct StepIndicator: View {
+    let currentStep: AuthViewModel.AuthStep
+
+    private let steps: [(label: String, step: AuthViewModel.AuthStep)] = [
+        ("Sprites", .spritesToken),
+        ("Claude", .claudeToken),
+        ("GitHub", .githubToken),
+    ]
+
+    var body: some View {
+        HStack(spacing: 0) {
+            ForEach(Array(steps.enumerated()), id: \.offset) { index, item in
+                if index > 0 {
+                    Rectangle()
+                        .fill(isCompleted(item.step) ? Color.accentColor : Color(.systemGray4))
+                        .frame(height: 2)
+                        .frame(maxWidth: .infinity)
+                }
+
+                VStack(spacing: 4) {
+                    ZStack {
+                        Circle()
+                            .fill(circleColor(for: item.step))
+                            .frame(width: 28, height: 28)
+
+                        if isCompleted(item.step) {
+                            Image(systemName: "checkmark")
+                                .font(.system(size: 12, weight: .bold))
+                                .foregroundStyle(.white)
+                        } else {
+                            Text("\(index + 1)")
+                                .font(.system(size: 12, weight: .semibold))
+                                .foregroundStyle(isCurrent(item.step) ? .white : .secondary)
+                        }
+                    }
+
+                    Text(item.label)
+                        .font(.caption2)
+                        .foregroundStyle(isCurrent(item.step) ? .primary : .secondary)
+                }
+            }
+        }
+        .padding(.horizontal, 8)
+    }
+
+    private func circleColor(for step: AuthViewModel.AuthStep) -> Color {
+        if isCompleted(step) || isCurrent(step) {
+            return .accentColor
+        }
+        return Color(.systemGray5)
+    }
+
+    private func isCurrent(_ step: AuthViewModel.AuthStep) -> Bool {
+        step == currentStep
+    }
+
+    private func isCompleted(_ step: AuthViewModel.AuthStep) -> Bool {
+        let order: [AuthViewModel.AuthStep] = [.spritesToken, .claudeToken, .githubToken]
+        guard let currentIndex = order.firstIndex(of: currentStep),
+              let stepIndex = order.firstIndex(of: step) else { return false }
+        return stepIndex < currentIndex
     }
 }

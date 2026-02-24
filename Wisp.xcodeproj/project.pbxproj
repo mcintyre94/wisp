@@ -26,6 +26,7 @@
 		A1A2A3A4B5B6C7C800000001 /* ThinkingShimmerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A2A3A4B5B6C7C800000002 /* ThinkingShimmerView.swift */; };
 		A1A2A3A4B5B6C7C800000003 /* ToolStepRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A2A3A4B5B6C7C800000004 /* ToolStepRow.swift */; };
 		A1A2A3A4B5B6C7C800000005 /* ToolDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A2A3A4B5B6C7C800000006 /* ToolDetailSheet.swift */; };
+		A1A2A3A4B5B6C7C800000007 /* ScreenshotPreviews.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A2A3A4B5B6C7C800000008 /* ScreenshotPreviews.swift */; };
 		8F72503BCFF96CEF02334CA8 /* ChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 540685D9D567596E24E4EF82 /* ChatViewModel.swift */; };
 		974996B0FB4D30828E89DD21 /* SpriteOverviewViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC9BFD0F0AC39C136C9E828A /* SpriteOverviewViewModel.swift */; };
 		994D6CD07165B1FDF9AE7300 /* ChatInputBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C308D530B9DAC21AD2A843B /* ChatInputBar.swift */; };
@@ -91,6 +92,32 @@
 		D1A2B3C4E5F60200BB000013 /* WispActivityWidgetBundle.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A2B3C4E5F60100AA000003 /* WispActivityWidgetBundle.swift */; };
 		D1A2B3C4E5F60200BB000014 /* LiveActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = D1A2B3C4E5F60100AA000007 /* LiveActivityManager.swift */; };
 		D1A2B3C4E5F60200BB000015 /* WispActivityWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D1A2B3C4E5F60100AA000006 /* WispActivityWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		E1F2A3B4C5D6E7F800000012 /* WispCodeHighlighter.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F2A3B4C5D6E7F800000001 /* WispCodeHighlighter.swift */; };
+		E1F2A3B4C5D6E7F800000013 /* WispMarkdownTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F2A3B4C5D6E7F800000002 /* WispMarkdownTheme.swift */; };
+		E1F2A3B4C5D6E7F800000014 /* UnifiedDiffView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F2A3B4C5D6E7F800000003 /* UnifiedDiffView.swift */; };
+		F3A2B3C4D5E6F7A8B9C00001 /* SwiftTreeSitter in Frameworks */ = {isa = PBXBuildFile; productRef = F2A2B3C4D5E6F7A8B9C00001 /* SwiftTreeSitter */; };
+		F3A2B3C4D5E6F7A8B9C00002 /* TreeSitterSwift in Frameworks */ = {isa = PBXBuildFile; productRef = F2A2B3C4D5E6F7A8B9C00002 /* TreeSitterSwift */; };
+		F3A2B3C4D5E6F7A8B9C00003 /* TreeSitterSwiftQueries in Frameworks */ = {isa = PBXBuildFile; productRef = F2A2B3C4D5E6F7A8B9C00003 /* TreeSitterSwiftQueries */; };
+		F3A2B3C4D5E6F7A8B9C00004 /* TreeSitterPython in Frameworks */ = {isa = PBXBuildFile; productRef = F2A2B3C4D5E6F7A8B9C00004 /* TreeSitterPython */; };
+		F3A2B3C4D5E6F7A8B9C00005 /* TreeSitterPythonQueries in Frameworks */ = {isa = PBXBuildFile; productRef = F2A2B3C4D5E6F7A8B9C00005 /* TreeSitterPythonQueries */; };
+		F3A2B3C4D5E6F7A8B9C00006 /* TreeSitterJavaScript in Frameworks */ = {isa = PBXBuildFile; productRef = F2A2B3C4D5E6F7A8B9C00006 /* TreeSitterJavaScript */; };
+		F3A2B3C4D5E6F7A8B9C00007 /* TreeSitterJavaScriptQueries in Frameworks */ = {isa = PBXBuildFile; productRef = F2A2B3C4D5E6F7A8B9C00007 /* TreeSitterJavaScriptQueries */; };
+		F3A2B3C4D5E6F7A8B9C00008 /* TreeSitterTypeScript in Frameworks */ = {isa = PBXBuildFile; productRef = F2A2B3C4D5E6F7A8B9C00008 /* TreeSitterTypeScript */; };
+		F3A2B3C4D5E6F7A8B9C00009 /* TreeSitterTypeScriptQueries in Frameworks */ = {isa = PBXBuildFile; productRef = F2A2B3C4D5E6F7A8B9C00009 /* TreeSitterTypeScriptQueries */; };
+		F3A2B3C4D5E6F7A8B9C0000A /* TreeSitterRust in Frameworks */ = {isa = PBXBuildFile; productRef = F2A2B3C4D5E6F7A8B9C0000A /* TreeSitterRust */; };
+		F3A2B3C4D5E6F7A8B9C0000B /* TreeSitterRustQueries in Frameworks */ = {isa = PBXBuildFile; productRef = F2A2B3C4D5E6F7A8B9C0000B /* TreeSitterRustQueries */; };
+		F3A2B3C4D5E6F7A8B9C0000C /* TreeSitterGo in Frameworks */ = {isa = PBXBuildFile; productRef = F2A2B3C4D5E6F7A8B9C0000C /* TreeSitterGo */; };
+		F3A2B3C4D5E6F7A8B9C0000D /* TreeSitterGoQueries in Frameworks */ = {isa = PBXBuildFile; productRef = F2A2B3C4D5E6F7A8B9C0000D /* TreeSitterGoQueries */; };
+		F3A2B3C4D5E6F7A8B9C0000E /* TreeSitterBash in Frameworks */ = {isa = PBXBuildFile; productRef = F2A2B3C4D5E6F7A8B9C0000E /* TreeSitterBash */; };
+		F3A2B3C4D5E6F7A8B9C0000F /* TreeSitterBashQueries in Frameworks */ = {isa = PBXBuildFile; productRef = F2A2B3C4D5E6F7A8B9C0000F /* TreeSitterBashQueries */; };
+		F3A2B3C4D5E6F7A8B9C00010 /* TreeSitterJSON in Frameworks */ = {isa = PBXBuildFile; productRef = F2A2B3C4D5E6F7A8B9C00010 /* TreeSitterJSON */; };
+		F3A2B3C4D5E6F7A8B9C00011 /* TreeSitterJSONQueries in Frameworks */ = {isa = PBXBuildFile; productRef = F2A2B3C4D5E6F7A8B9C00011 /* TreeSitterJSONQueries */; };
+		F3A2B3C4D5E6F7A8B9C00012 /* TreeSitterYAML in Frameworks */ = {isa = PBXBuildFile; productRef = F2A2B3C4D5E6F7A8B9C00012 /* TreeSitterYAML */; };
+		F3A2B3C4D5E6F7A8B9C00013 /* TreeSitterYAMLQueries in Frameworks */ = {isa = PBXBuildFile; productRef = F2A2B3C4D5E6F7A8B9C00013 /* TreeSitterYAMLQueries */; };
+		F3A2B3C4D5E6F7A8B9C00014 /* TreeSitterHTML in Frameworks */ = {isa = PBXBuildFile; productRef = F2A2B3C4D5E6F7A8B9C00014 /* TreeSitterHTML */; };
+		F3A2B3C4D5E6F7A8B9C00015 /* TreeSitterHTMLQueries in Frameworks */ = {isa = PBXBuildFile; productRef = F2A2B3C4D5E6F7A8B9C00015 /* TreeSitterHTMLQueries */; };
+		F3A2B3C4D5E6F7A8B9C00016 /* TreeSitterCSS in Frameworks */ = {isa = PBXBuildFile; productRef = F2A2B3C4D5E6F7A8B9C00016 /* TreeSitterCSS */; };
+		F3A2B3C4D5E6F7A8B9C00017 /* TreeSitterCSSQueries in Frameworks */ = {isa = PBXBuildFile; productRef = F2A2B3C4D5E6F7A8B9C00017 /* TreeSitterCSSQueries */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -152,6 +179,7 @@
 		A1A2A3A4B5B6C7C800000002 /* ThinkingShimmerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThinkingShimmerView.swift; sourceTree = "<group>"; };
 		A1A2A3A4B5B6C7C800000004 /* ToolStepRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolStepRow.swift; sourceTree = "<group>"; };
 		A1A2A3A4B5B6C7C800000006 /* ToolDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolDetailSheet.swift; sourceTree = "<group>"; };
+		A1A2A3A4B5B6C7C800000008 /* ScreenshotPreviews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotPreviews.swift; sourceTree = "<group>"; };
 		EA1634863D8543868BA11B02 /* CreateSpriteSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateSpriteSheet.swift; sourceTree = "<group>"; };
 		EF49F7E0F4AC02FDF496D379 /* DashboardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardViewModel.swift; sourceTree = "<group>"; };
 		F1E2D3C4B5A60798192A3B4C /* PersistedChatMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistedChatMessage.swift; sourceTree = "<group>"; };
@@ -198,6 +226,9 @@
 		D1A2B3C4E5F60100AA000006 /* WispActivityWidget.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = WispActivityWidget.appex; sourceTree = BUILT_PRODUCTS_DIR; };
 		D1A2B3C4E5F60100AA000007 /* LiveActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityManager.swift; sourceTree = "<group>"; };
 		D1A2B3C4E5F60100AA000008 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		E1F2A3B4C5D6E7F800000001 /* WispCodeHighlighter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WispCodeHighlighter.swift; sourceTree = "<group>"; };
+		E1F2A3B4C5D6E7F800000002 /* WispMarkdownTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WispMarkdownTheme.swift; sourceTree = "<group>"; };
+		E1F2A3B4C5D6E7F800000003 /* UnifiedDiffView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnifiedDiffView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -206,6 +237,29 @@
 			buildActionMask = 2147483647;
 			files = (
 				9CAC809156C87B9CBD77F706 /* MarkdownUI in Frameworks */,
+				F3A2B3C4D5E6F7A8B9C00001 /* SwiftTreeSitter in Frameworks */,
+				F3A2B3C4D5E6F7A8B9C00002 /* TreeSitterSwift in Frameworks */,
+				F3A2B3C4D5E6F7A8B9C00003 /* TreeSitterSwiftQueries in Frameworks */,
+				F3A2B3C4D5E6F7A8B9C00004 /* TreeSitterPython in Frameworks */,
+				F3A2B3C4D5E6F7A8B9C00005 /* TreeSitterPythonQueries in Frameworks */,
+				F3A2B3C4D5E6F7A8B9C00006 /* TreeSitterJavaScript in Frameworks */,
+				F3A2B3C4D5E6F7A8B9C00007 /* TreeSitterJavaScriptQueries in Frameworks */,
+				F3A2B3C4D5E6F7A8B9C00008 /* TreeSitterTypeScript in Frameworks */,
+				F3A2B3C4D5E6F7A8B9C00009 /* TreeSitterTypeScriptQueries in Frameworks */,
+				F3A2B3C4D5E6F7A8B9C0000A /* TreeSitterRust in Frameworks */,
+				F3A2B3C4D5E6F7A8B9C0000B /* TreeSitterRustQueries in Frameworks */,
+				F3A2B3C4D5E6F7A8B9C0000C /* TreeSitterGo in Frameworks */,
+				F3A2B3C4D5E6F7A8B9C0000D /* TreeSitterGoQueries in Frameworks */,
+				F3A2B3C4D5E6F7A8B9C0000E /* TreeSitterBash in Frameworks */,
+				F3A2B3C4D5E6F7A8B9C0000F /* TreeSitterBashQueries in Frameworks */,
+				F3A2B3C4D5E6F7A8B9C00010 /* TreeSitterJSON in Frameworks */,
+				F3A2B3C4D5E6F7A8B9C00011 /* TreeSitterJSONQueries in Frameworks */,
+				F3A2B3C4D5E6F7A8B9C00012 /* TreeSitterYAML in Frameworks */,
+				F3A2B3C4D5E6F7A8B9C00013 /* TreeSitterYAMLQueries in Frameworks */,
+				F3A2B3C4D5E6F7A8B9C00014 /* TreeSitterHTML in Frameworks */,
+				F3A2B3C4D5E6F7A8B9C00015 /* TreeSitterHTMLQueries in Frameworks */,
+				F3A2B3C4D5E6F7A8B9C00016 /* TreeSitterCSS in Frameworks */,
+				F3A2B3C4D5E6F7A8B9C00017 /* TreeSitterCSSQueries in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -390,9 +444,18 @@
 				902EF50E1CB6723AF748F886 /* Dashboard */,
 				A5E41B8F9DACBEC637F8192A /* Settings */,
 				90D05FE8D8DC0D59A74BAD85 /* SpriteDetail */,
+				A1A2A3A4B5B6C7C800000009 /* Previews */,
 				A7B8C9D0E1F2A3B4C5D6E7F8 /* WebView */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		A1A2A3A4B5B6C7C800000009 /* Previews */ = {
+			isa = PBXGroup;
+			children = (
+				A1A2A3A4B5B6C7C800000008 /* ScreenshotPreviews.swift */,
+			);
+			path = Previews;
 			sourceTree = "<group>";
 		};
 		A7B8C9D0E1F2A3B4C5D6E7F8 /* WebView */ = {
@@ -420,7 +483,10 @@
 				3B8BD6A5D86571BFF9ECB5B2 /* ToolResultCardView.swift */,
 				A1A2A3A4B5B6C7C800000004 /* ToolStepRow.swift */,
 				8A278B4716095105A7024CF8 /* ToolUseCardView.swift */,
+				E1F2A3B4C5D6E7F800000003 /* UnifiedDiffView.swift */,
 				45BC8CB419377B55A1D1F896 /* UserBubbleView.swift */,
+				E1F2A3B4C5D6E7F800000001 /* WispCodeHighlighter.swift */,
+				E1F2A3B4C5D6E7F800000002 /* WispMarkdownTheme.swift */,
 			);
 			path = Chat;
 			sourceTree = "<group>";
@@ -521,6 +587,29 @@
 			name = Wisp;
 			packageProductDependencies = (
 				6F228BF923FFA9401FFC29C5 /* MarkdownUI */,
+				F2A2B3C4D5E6F7A8B9C00001 /* SwiftTreeSitter */,
+				F2A2B3C4D5E6F7A8B9C00002 /* TreeSitterSwift */,
+				F2A2B3C4D5E6F7A8B9C00003 /* TreeSitterSwiftQueries */,
+				F2A2B3C4D5E6F7A8B9C00004 /* TreeSitterPython */,
+				F2A2B3C4D5E6F7A8B9C00005 /* TreeSitterPythonQueries */,
+				F2A2B3C4D5E6F7A8B9C00006 /* TreeSitterJavaScript */,
+				F2A2B3C4D5E6F7A8B9C00007 /* TreeSitterJavaScriptQueries */,
+				F2A2B3C4D5E6F7A8B9C00008 /* TreeSitterTypeScript */,
+				F2A2B3C4D5E6F7A8B9C00009 /* TreeSitterTypeScriptQueries */,
+				F2A2B3C4D5E6F7A8B9C0000A /* TreeSitterRust */,
+				F2A2B3C4D5E6F7A8B9C0000B /* TreeSitterRustQueries */,
+				F2A2B3C4D5E6F7A8B9C0000C /* TreeSitterGo */,
+				F2A2B3C4D5E6F7A8B9C0000D /* TreeSitterGoQueries */,
+				F2A2B3C4D5E6F7A8B9C0000E /* TreeSitterBash */,
+				F2A2B3C4D5E6F7A8B9C0000F /* TreeSitterBashQueries */,
+				F2A2B3C4D5E6F7A8B9C00010 /* TreeSitterJSON */,
+				F2A2B3C4D5E6F7A8B9C00011 /* TreeSitterJSONQueries */,
+				F2A2B3C4D5E6F7A8B9C00012 /* TreeSitterYAML */,
+				F2A2B3C4D5E6F7A8B9C00013 /* TreeSitterYAMLQueries */,
+				F2A2B3C4D5E6F7A8B9C00014 /* TreeSitterHTML */,
+				F2A2B3C4D5E6F7A8B9C00015 /* TreeSitterHTMLQueries */,
+				F2A2B3C4D5E6F7A8B9C00016 /* TreeSitterCSS */,
+				F2A2B3C4D5E6F7A8B9C00017 /* TreeSitterCSSQueries */,
 			);
 			productName = Wisp;
 			productReference = 9419236D77396D53BBCDB867 /* Wisp.app */;
@@ -581,6 +670,8 @@
 			minimizedProjectReferenceProxies = 1;
 			packageReferences = (
 				CD9F08A1B3D7E7576367BDD2 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */,
+				F1A2B3C4D5E6F7A8B9C0D1E1 /* XCRemoteSwiftPackageReference "swift-tree-sitter" */,
+				F1A2B3C4D5E6F7A8B9C0D1E2 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */,
 			);
 			projectDirPath = "";
 			projectRoot = "";
@@ -669,10 +760,14 @@
 				A1A2A3A4B5B6C7C800000005 /* ToolDetailSheet.swift in Sources */,
 				3A36571818CB2EBA1ED78500 /* ToolInputDetailView.swift in Sources */,
 				A1A2A3A4B5B6C7C800000003 /* ToolStepRow.swift in Sources */,
+				A1A2A3A4B5B6C7C800000007 /* ScreenshotPreviews.swift in Sources */,
 				CAE817B1222FA7E85383EE25 /* ToolResultCardView.swift in Sources */,
 				A610B5413A578D4AA424595D /* ToolUseCardView.swift in Sources */,
+				E1F2A3B4C5D6E7F800000014 /* UnifiedDiffView.swift in Sources */,
 				F32DE1DDC53913E28250E70D /* UserBubbleView.swift in Sources */,
 				E5F6A7B8C9D0E1F2A3B4C5D6 /* WebViewPage.swift in Sources */,
+				E1F2A3B4C5D6E7F800000012 /* WispCodeHighlighter.swift in Sources */,
+				E1F2A3B4C5D6E7F800000013 /* WispMarkdownTheme.swift in Sources */,
 				DD11EE22FF334455AA66BB02 /* ServiceTypes.swift in Sources */,
 				A1B2C3D4E5F6071829CAFE02 /* ClaudeSessionEntry.swift in Sources */,
 				B2C3D4E5F6A7081930DBFF02 /* SessionSuggestionsView.swift in Sources */,
@@ -856,7 +951,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Wisp/Wisp.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = KXSWJN7WY8;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Wisp;
@@ -882,7 +977,7 @@
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Wisp/Wisp.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = KXSWJN7WY8;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Wisp;
@@ -907,7 +1002,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0.0;
@@ -924,7 +1019,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0.0;
@@ -941,7 +1036,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = WispActivityWidget/WispActivityWidget.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = KXSWJN7WY8;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = WispActivityWidget/Info.plist;
@@ -962,7 +1057,7 @@
 			buildSettings = {
 				CODE_SIGN_ENTITLEMENTS = WispActivityWidget/WispActivityWidget.entitlements;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 4;
+				CURRENT_PROJECT_VERSION = 5;
 				DEVELOPMENT_TEAM = KXSWJN7WY8;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = WispActivityWidget/Info.plist;
@@ -1028,6 +1123,22 @@
 				minimumVersion = 2.4.0;
 			};
 		};
+		F1A2B3C4D5E6F7A8B9C0D1E1 /* XCRemoteSwiftPackageReference "swift-tree-sitter" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/tree-sitter/swift-tree-sitter";
+			requirement = {
+				kind = upToNextMinorVersion;
+				minimumVersion = 0.9.0;
+			};
+		};
+		F1A2B3C4D5E6F7A8B9C0D1E2 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/simonbs/TreeSitterLanguages";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.1.10;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -1035,6 +1146,121 @@
 			isa = XCSwiftPackageProductDependency;
 			package = CD9F08A1B3D7E7576367BDD2 /* XCRemoteSwiftPackageReference "swift-markdown-ui" */;
 			productName = MarkdownUI;
+		};
+		F2A2B3C4D5E6F7A8B9C00001 /* SwiftTreeSitter */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F1A2B3C4D5E6F7A8B9C0D1E1 /* XCRemoteSwiftPackageReference "swift-tree-sitter" */;
+			productName = SwiftTreeSitter;
+		};
+		F2A2B3C4D5E6F7A8B9C00002 /* TreeSitterSwift */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F1A2B3C4D5E6F7A8B9C0D1E2 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */;
+			productName = TreeSitterSwift;
+		};
+		F2A2B3C4D5E6F7A8B9C00003 /* TreeSitterSwiftQueries */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F1A2B3C4D5E6F7A8B9C0D1E2 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */;
+			productName = TreeSitterSwiftQueries;
+		};
+		F2A2B3C4D5E6F7A8B9C00004 /* TreeSitterPython */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F1A2B3C4D5E6F7A8B9C0D1E2 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */;
+			productName = TreeSitterPython;
+		};
+		F2A2B3C4D5E6F7A8B9C00005 /* TreeSitterPythonQueries */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F1A2B3C4D5E6F7A8B9C0D1E2 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */;
+			productName = TreeSitterPythonQueries;
+		};
+		F2A2B3C4D5E6F7A8B9C00006 /* TreeSitterJavaScript */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F1A2B3C4D5E6F7A8B9C0D1E2 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */;
+			productName = TreeSitterJavaScript;
+		};
+		F2A2B3C4D5E6F7A8B9C00007 /* TreeSitterJavaScriptQueries */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F1A2B3C4D5E6F7A8B9C0D1E2 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */;
+			productName = TreeSitterJavaScriptQueries;
+		};
+		F2A2B3C4D5E6F7A8B9C00008 /* TreeSitterTypeScript */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F1A2B3C4D5E6F7A8B9C0D1E2 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */;
+			productName = TreeSitterTypeScript;
+		};
+		F2A2B3C4D5E6F7A8B9C00009 /* TreeSitterTypeScriptQueries */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F1A2B3C4D5E6F7A8B9C0D1E2 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */;
+			productName = TreeSitterTypeScriptQueries;
+		};
+		F2A2B3C4D5E6F7A8B9C0000A /* TreeSitterRust */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F1A2B3C4D5E6F7A8B9C0D1E2 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */;
+			productName = TreeSitterRust;
+		};
+		F2A2B3C4D5E6F7A8B9C0000B /* TreeSitterRustQueries */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F1A2B3C4D5E6F7A8B9C0D1E2 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */;
+			productName = TreeSitterRustQueries;
+		};
+		F2A2B3C4D5E6F7A8B9C0000C /* TreeSitterGo */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F1A2B3C4D5E6F7A8B9C0D1E2 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */;
+			productName = TreeSitterGo;
+		};
+		F2A2B3C4D5E6F7A8B9C0000D /* TreeSitterGoQueries */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F1A2B3C4D5E6F7A8B9C0D1E2 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */;
+			productName = TreeSitterGoQueries;
+		};
+		F2A2B3C4D5E6F7A8B9C0000E /* TreeSitterBash */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F1A2B3C4D5E6F7A8B9C0D1E2 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */;
+			productName = TreeSitterBash;
+		};
+		F2A2B3C4D5E6F7A8B9C0000F /* TreeSitterBashQueries */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F1A2B3C4D5E6F7A8B9C0D1E2 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */;
+			productName = TreeSitterBashQueries;
+		};
+		F2A2B3C4D5E6F7A8B9C00010 /* TreeSitterJSON */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F1A2B3C4D5E6F7A8B9C0D1E2 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */;
+			productName = TreeSitterJSON;
+		};
+		F2A2B3C4D5E6F7A8B9C00011 /* TreeSitterJSONQueries */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F1A2B3C4D5E6F7A8B9C0D1E2 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */;
+			productName = TreeSitterJSONQueries;
+		};
+		F2A2B3C4D5E6F7A8B9C00012 /* TreeSitterYAML */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F1A2B3C4D5E6F7A8B9C0D1E2 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */;
+			productName = TreeSitterYAML;
+		};
+		F2A2B3C4D5E6F7A8B9C00013 /* TreeSitterYAMLQueries */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F1A2B3C4D5E6F7A8B9C0D1E2 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */;
+			productName = TreeSitterYAMLQueries;
+		};
+		F2A2B3C4D5E6F7A8B9C00014 /* TreeSitterHTML */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F1A2B3C4D5E6F7A8B9C0D1E2 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */;
+			productName = TreeSitterHTML;
+		};
+		F2A2B3C4D5E6F7A8B9C00015 /* TreeSitterHTMLQueries */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F1A2B3C4D5E6F7A8B9C0D1E2 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */;
+			productName = TreeSitterHTMLQueries;
+		};
+		F2A2B3C4D5E6F7A8B9C00016 /* TreeSitterCSS */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F1A2B3C4D5E6F7A8B9C0D1E2 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */;
+			productName = TreeSitterCSS;
+		};
+		F2A2B3C4D5E6F7A8B9C00017 /* TreeSitterCSSQueries */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = F1A2B3C4D5E6F7A8B9C0D1E2 /* XCRemoteSwiftPackageReference "TreeSitterLanguages" */;
+			productName = TreeSitterCSSQueries;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
