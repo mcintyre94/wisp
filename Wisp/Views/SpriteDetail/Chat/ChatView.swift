@@ -8,6 +8,7 @@ struct ChatView: View {
     var isReadOnly: Bool = false
     var topAccessory: AnyView? = nil
     var existingSessionIds: Set<String> = []
+    var onFork: ((String, UUID) -> Void)? = nil
     @FocusState private var isInputFocused: Bool
     @State private var contentOpacity: Double = 0
 
@@ -25,8 +26,7 @@ struct ChatView: View {
                         }
                     }
                     ForEach(viewModel.messages) { message in
-                        ChatMessageView(message: message)
-                            .id(message.id)
+                        messageView(message)
                     }
                     Color.clear.frame(height: 1).id("bottom")
                 }
@@ -101,6 +101,28 @@ struct ChatView: View {
                     },
                     isFocused: $isInputFocused
                 )
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func messageView(_ message: ChatMessage) -> some View {
+        let isLastAssistant = message.role == .assistant
+            && message.id == viewModel.messages.last(where: { $0.role == .assistant })?.id
+        ChatMessageView(
+            message: message,
+            onCreateCheckpoint: isLastAssistant ? {
+                viewModel.createCheckpoint(for: message, modelContext: modelContext)
+            } : nil,
+            isCheckpointDisabled: viewModel.isCheckpointing
+        )
+        .id(message.id)
+
+        if let checkpointId = message.checkpointId {
+            CheckpointMarkerView(
+                comment: message.checkpointComment
+            ) {
+                onFork?(checkpointId, message.id)
             }
         }
     }

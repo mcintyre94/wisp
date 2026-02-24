@@ -42,6 +42,9 @@ final class ChatViewModel {
     private var usedResume = false
     private var queuedPrompt: String?
     private var retriedAfterTimeout = false
+    private var turnHasMutations = false
+    private var pendingForkContext: String?
+    private var apiClient: SpritesAPIClient?
     /// UUIDs of Claude NDJSON events already processed.
     /// Used by reconnect to skip already-handled events instead of clearing content.
     private var processedEventUUIDs: Set<String> = []
@@ -61,6 +64,7 @@ final class ChatViewModel {
     }
 
     func loadSession(apiClient: SpritesAPIClient, modelContext: ModelContext) {
+        self.apiClient = apiClient
         guard let chat = fetchChat(modelContext: modelContext) else { return }
 
         sessionId = chat.claudeSessionId
@@ -77,6 +81,12 @@ final class ChatViewModel {
 
         if inputText.isEmpty, let draft = chat.draftInputText, !draft.isEmpty {
             inputText = draft
+        }
+
+        if let context = chat.forkContext, !context.isEmpty {
+            let notice = ChatMessage(role: .system, content: [.text("Forked from a previous chat")])
+            messages.insert(notice, at: 0)
+            pendingForkContext = context
         }
     }
 
@@ -400,7 +410,17 @@ final class ChatViewModel {
             return
         }
 
-        let escapedPrompt = prompt
+        var fullPrompt = prompt
+        if let forkCtx = pendingForkContext {
+            fullPrompt = forkCtx + "\n\n---\n\n" + prompt
+            pendingForkContext = nil
+            if let chat = fetchChat(modelContext: modelContext) {
+                chat.forkContext = nil
+                try? modelContext.save()
+            }
+        }
+
+        let escapedPrompt = fullPrompt
             .replacingOccurrences(of: "'", with: "'\\''")
 
         // Build the full bash -c command with env vars inlined
@@ -448,6 +468,7 @@ final class ChatViewModel {
 
         receivedSystemEvent = false
         receivedResultEvent = false
+        turnHasMutations = false
         processedEventUUIDs = []
 
         logger.info("Service command: \(Self.sanitize(fullCommand))")
@@ -826,6 +847,9 @@ final class ChatViewModel {
                         messageIndex: messages.count - 1,
                         toolName: toolUse.name
                     )
+                    if ["Write", "Edit"].contains(toolUse.name) {
+                        turnHasMutations = true
+                    }
                 case .unknown:
                     break
                 }
@@ -853,9 +877,78 @@ final class ChatViewModel {
             sessionId = resultEvent.sessionId
             saveSession(modelContext: modelContext)
 
+            if turnHasMutations, let apiClient {
+                let assistantMsg = currentAssistantMessage
+                let comment = Self.checkpointComment(from: assistantMsg)
+                let sprite = spriteName
+                Task { [weak assistantMsg] in
+                    await self.createAutoCheckpoint(
+                        apiClient: apiClient,
+                        sprite: sprite,
+                        comment: comment,
+                        assistantMessage: assistantMsg,
+                        modelContext: modelContext
+                    )
+                }
+            }
+
         case .unknown:
             break
         }
+    }
+
+    // MARK: - Auto-Checkpoints
+
+    private func createAutoCheckpoint(
+        apiClient: SpritesAPIClient,
+        sprite: String,
+        comment: String?,
+        assistantMessage: ChatMessage?,
+        modelContext: ModelContext
+    ) async {
+        do {
+            try await apiClient.createCheckpoint(spriteName: sprite, comment: comment)
+            let checkpoints = try await apiClient.listCheckpoints(spriteName: sprite)
+            let newest = checkpoints
+                .filter { $0.id != "Current" }
+                .sorted { ($0.createTime ?? .distantPast) > ($1.createTime ?? .distantPast) }
+                .first
+            if let cp = newest {
+                assistantMessage?.checkpointId = cp.id
+                assistantMessage?.checkpointComment = comment
+                persistMessages(modelContext: modelContext)
+            }
+        } catch {
+            logger.error("Auto-checkpoint failed: \(error.localizedDescription)")
+        }
+    }
+
+    var isCheckpointing = false
+
+    func createCheckpoint(for message: ChatMessage, modelContext: ModelContext) {
+        guard let apiClient, message.checkpointId == nil else { return }
+        isCheckpointing = true
+        let comment = Self.checkpointComment(from: message)
+        let sprite = spriteName
+        Task { [weak message] in
+            defer { self.isCheckpointing = false }
+            await self.createAutoCheckpoint(
+                apiClient: apiClient,
+                sprite: sprite,
+                comment: comment,
+                assistantMessage: message,
+                modelContext: modelContext
+            )
+        }
+    }
+
+    nonisolated static func checkpointComment(from message: ChatMessage?) -> String? {
+        guard let message else { return nil }
+        // Must be called from @MainActor context — accessing textContent synchronously
+        let text = MainActor.assumeIsolated { message.textContent }
+        guard !text.isEmpty else { return nil }
+        let firstLine = text.split(separator: "\n", maxSplits: 1).first.map(String.init) ?? text
+        return String(firstLine.prefix(80))
     }
 
     private func fetchChat(modelContext: ModelContext) -> SpriteChat? {

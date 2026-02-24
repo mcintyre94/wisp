@@ -17,6 +17,7 @@ final class SpriteChat {
     var isClosed: Bool
     var spriteCreatedAt: Date?
     var firstMessagePreview: String?
+    var forkContext: String?
 
     var displayName: String {
         customName ?? "Chat \(chatNumber)"

@@ -7,6 +7,8 @@ struct PersistedChatMessage: Codable {
     let timestamp: Date
     let role: ChatRole
     let content: [PersistedChatContent]
+    var checkpointId: String? = nil
+    var checkpointComment: String? = nil
 }
 
 enum PersistedChatContent: Codable {
@@ -37,7 +39,9 @@ extension ChatMessage {
             id: id,
             timestamp: timestamp,
             role: role,
-            content: content.map { $0.toPersisted() }
+            content: content.map { $0.toPersisted() },
+            checkpointId: checkpointId,
+            checkpointComment: checkpointComment
         )
     }
 }
@@ -75,7 +79,9 @@ extension ChatMessage {
             id: persisted.id,
             timestamp: persisted.timestamp,
             role: persisted.role,
-            content: persisted.content.map { ChatContent(from: $0) }
+            content: persisted.content.map { ChatContent(from: $0) },
+            checkpointId: persisted.checkpointId,
+            checkpointComment: persisted.checkpointComment
         )
     }
 }

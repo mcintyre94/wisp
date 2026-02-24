@@ -3,6 +3,14 @@ import SwiftUI
 
 struct AssistantMessageView: View {
     let message: ChatMessage
+    var onCreateCheckpoint: (() -> Void)? = nil
+    var isCheckpointDisabled: Bool = false
+
+    private var canCheckpoint: Bool {
+        onCreateCheckpoint != nil
+            && message.checkpointId == nil
+            && !message.isStreaming
+    }
 
     var body: some View {
         HStack(alignment: .top) {
@@ -21,6 +29,14 @@ struct AssistantMessageView: View {
                                     UIPasteboard.general.string = text
                                 } label: {
                                     Label("Copy", systemImage: "doc.on.doc")
+                                }
+                                if canCheckpoint {
+                                    Button {
+                                        onCreateCheckpoint?()
+                                    } label: {
+                                        Label("Create Checkpoint", systemImage: "diamond")
+                                    }
+                                    .disabled(isCheckpointDisabled)
                                 }
                             }
                     case .toolUse(let card):
