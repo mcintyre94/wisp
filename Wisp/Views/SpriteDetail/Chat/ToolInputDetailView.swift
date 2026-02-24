@@ -68,13 +68,15 @@ struct ToolInputDetailView: View {
                 .font(.system(.caption, design: .monospaced))
                 .foregroundStyle(.secondary)
 
-            if let oldStr = input["old_string"]?.stringValue {
+            if let oldStr = input["old_string"]?.stringValue,
+               let newStr = input["new_string"]?.stringValue {
+                UnifiedDiffView(oldString: oldStr, newString: newStr)
+            } else if let oldStr = input["old_string"]?.stringValue {
                 Text("- \(oldStr)")
                     .font(.system(.caption2, design: .monospaced))
                     .foregroundStyle(.red)
                     .lineLimit(5)
-            }
-            if let newStr = input["new_string"]?.stringValue {
+            } else if let newStr = input["new_string"]?.stringValue {
                 Text("+ \(newStr)")
                     .font(.system(.caption2, design: .monospaced))
                     .foregroundStyle(.green)

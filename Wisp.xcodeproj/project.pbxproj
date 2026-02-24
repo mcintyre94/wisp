@@ -89,6 +89,7 @@
 		D5E6F7A8B9C00B52748FA0B2 /* AutoCheckpointTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5E6F7A8B9C00B52748FA0B1 /* AutoCheckpointTests.swift */; };
 		E1F2A3B4C5D6E7F800000012 /* WispCodeHighlighter.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F2A3B4C5D6E7F800000001 /* WispCodeHighlighter.swift */; };
 		E1F2A3B4C5D6E7F800000013 /* WispMarkdownTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F2A3B4C5D6E7F800000002 /* WispMarkdownTheme.swift */; };
+		E1F2A3B4C5D6E7F800000014 /* UnifiedDiffView.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F2A3B4C5D6E7F800000003 /* UnifiedDiffView.swift */; };
 		F3A2B3C4D5E6F7A8B9C00001 /* SwiftTreeSitter in Frameworks */ = {isa = PBXBuildFile; productRef = F2A2B3C4D5E6F7A8B9C00001 /* SwiftTreeSitter */; };
 		F3A2B3C4D5E6F7A8B9C00002 /* TreeSitterSwift in Frameworks */ = {isa = PBXBuildFile; productRef = F2A2B3C4D5E6F7A8B9C00002 /* TreeSitterSwift */; };
 		F3A2B3C4D5E6F7A8B9C00003 /* TreeSitterSwiftQueries in Frameworks */ = {isa = PBXBuildFile; productRef = F2A2B3C4D5E6F7A8B9C00003 /* TreeSitterSwiftQueries */; };
@@ -208,6 +209,7 @@
 		D5E6F7A8B9C00B52748FA0B1 /* AutoCheckpointTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoCheckpointTests.swift; sourceTree = "<group>"; };
 		E1F2A3B4C5D6E7F800000001 /* WispCodeHighlighter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WispCodeHighlighter.swift; sourceTree = "<group>"; };
 		E1F2A3B4C5D6E7F800000002 /* WispMarkdownTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WispMarkdownTheme.swift; sourceTree = "<group>"; };
+		E1F2A3B4C5D6E7F800000003 /* UnifiedDiffView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnifiedDiffView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -431,6 +433,7 @@
 				3B8BD6A5D86571BFF9ECB5B2 /* ToolResultCardView.swift */,
 				A1A2A3A4B5B6C7C800000004 /* ToolStepRow.swift */,
 				8A278B4716095105A7024CF8 /* ToolUseCardView.swift */,
+				E1F2A3B4C5D6E7F800000003 /* UnifiedDiffView.swift */,
 				45BC8CB419377B55A1D1F896 /* UserBubbleView.swift */,
 				E1F2A3B4C5D6E7F800000001 /* WispCodeHighlighter.swift */,
 				E1F2A3B4C5D6E7F800000002 /* WispMarkdownTheme.swift */,
@@ -675,6 +678,7 @@
 				A1B2C3D4E5F6071829CAFE02 /* ClaudeSessionEntry.swift in Sources */,
 				B2C3D4E5F6A7081930DBFF02 /* SessionSuggestionsView.swift in Sources */,
 				C4D5E6F7A8B90A41637E8FA2 /* CheckpointMarkerView.swift in Sources */,
+				E1F2A3B4C5D6E7F800000014 /* UnifiedDiffView.swift in Sources */,
 				C575C7232C5FCA1A3F18A9D8 /* WispApp.swift in Sources */,
 				E1F2A3B4C5D6E7F800000012 /* WispCodeHighlighter.swift in Sources */,
 				E1F2A3B4C5D6E7F800000013 /* WispMarkdownTheme.swift in Sources */,
