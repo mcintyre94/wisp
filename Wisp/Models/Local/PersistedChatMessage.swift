@@ -22,12 +22,14 @@ struct PersistedToolUse: Codable {
     let toolUseId: String
     let toolName: String
     let input: JSONValue
+    var startedAt: Date?
 }
 
 struct PersistedToolResult: Codable {
     let toolUseId: String
     let toolName: String
     let content: JSONValue
+    var completedAt: Date?
 }
 
 // MARK: - ChatMessage -> Persisted
@@ -56,13 +58,15 @@ extension ChatContent {
             return .toolUse(PersistedToolUse(
                 toolUseId: card.toolUseId,
                 toolName: card.toolName,
-                input: card.input
+                input: card.input,
+                startedAt: card.startedAt
             ))
         case .toolResult(let card):
             return .toolResult(PersistedToolResult(
                 toolUseId: card.toolUseId,
                 toolName: card.toolName,
-                content: card.content
+                content: card.content,
+                completedAt: card.completedAt
             ))
         case .error(let msg):
             return .error(msg)
@@ -96,13 +100,15 @@ extension ChatContent {
             self = .toolUse(ToolUseCard(
                 toolUseId: dto.toolUseId,
                 toolName: dto.toolName,
-                input: dto.input
+                input: dto.input,
+                startedAt: dto.startedAt ?? .distantPast
             ))
         case .toolResult(let dto):
             self = .toolResult(ToolResultCard(
                 toolUseId: dto.toolUseId,
                 toolName: dto.toolName,
-                content: dto.content
+                content: dto.content,
+                completedAt: dto.completedAt ?? .distantPast
             ))
         case .error(let msg):
             self = .error(msg)

@@ -23,7 +23,9 @@
 		735DA590AAB4728F7A8B5037 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8C4C3A1F2B2D57313431E50 /* Extensions.swift */; };
 		760347D84B9D49623B0A5BC5 /* AssistantMessageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39E3CEEE606D9AFF4265AB76 /* AssistantMessageView.swift */; };
 		7F8737574DF6D523DE958341 /* CheckpointsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EFC5211F749D2051DC28E77 /* CheckpointsView.swift */; };
-		86270E2378D87B3719964114 /* StreamingIndicator.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5956E839208B00B1EE0C88A /* StreamingIndicator.swift */; };
+		A1A2A3A4B5B6C7C800000001 /* ThinkingShimmerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A2A3A4B5B6C7C800000002 /* ThinkingShimmerView.swift */; };
+		A1A2A3A4B5B6C7C800000003 /* ToolStepRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A2A3A4B5B6C7C800000004 /* ToolStepRow.swift */; };
+		A1A2A3A4B5B6C7C800000005 /* ToolDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A2A3A4B5B6C7C800000006 /* ToolDetailSheet.swift */; };
 		8F72503BCFF96CEF02334CA8 /* ChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 540685D9D567596E24E4EF82 /* ChatViewModel.swift */; };
 		974996B0FB4D30828E89DD21 /* SpriteOverviewViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC9BFD0F0AC39C136C9E828A /* SpriteOverviewViewModel.swift */; };
 		994D6CD07165B1FDF9AE7300 /* ChatInputBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C308D530B9DAC21AD2A843B /* ChatInputBar.swift */; };
@@ -136,7 +138,9 @@
 		DD9CB342E72F33408AA0CB63 /* WispApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WispApp.swift; sourceTree = "<group>"; };
 		E01E14B5D87751457C549C17 /* SpritesAPIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpritesAPIClient.swift; sourceTree = "<group>"; };
 		E55993FF41BDC8D0BD81C177 /* Sprite.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Sprite.swift; sourceTree = "<group>"; };
-		E5956E839208B00B1EE0C88A /* StreamingIndicator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StreamingIndicator.swift; sourceTree = "<group>"; };
+		A1A2A3A4B5B6C7C800000002 /* ThinkingShimmerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThinkingShimmerView.swift; sourceTree = "<group>"; };
+		A1A2A3A4B5B6C7C800000004 /* ToolStepRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolStepRow.swift; sourceTree = "<group>"; };
+		A1A2A3A4B5B6C7C800000006 /* ToolDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolDetailSheet.swift; sourceTree = "<group>"; };
 		EA1634863D8543868BA11B02 /* CreateSpriteSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateSpriteSheet.swift; sourceTree = "<group>"; };
 		EF49F7E0F4AC02FDF496D379 /* DashboardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardViewModel.swift; sourceTree = "<group>"; };
 		F1E2D3C4B5A60798192A3B4C /* PersistedChatMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistedChatMessage.swift; sourceTree = "<group>"; };
@@ -371,9 +375,11 @@
 				D4E5F6A7B8C90A31526D7E8F /* ChatSwitcherSheet.swift */,
 				4FB02E9F26B9003B6E1DBE7C /* ChatView.swift */,
 				B2C3D4E5F6A7081930DBFF01 /* SessionSuggestionsView.swift */,
-				E5956E839208B00B1EE0C88A /* StreamingIndicator.swift */,
+				A1A2A3A4B5B6C7C800000002 /* ThinkingShimmerView.swift */,
+				A1A2A3A4B5B6C7C800000006 /* ToolDetailSheet.swift */,
 				AB04F3FB6C647DE1F6DC0FD0 /* ToolInputDetailView.swift */,
 				3B8BD6A5D86571BFF9ECB5B2 /* ToolResultCardView.swift */,
+				A1A2A3A4B5B6C7C800000004 /* ToolStepRow.swift */,
 				8A278B4716095105A7024CF8 /* ToolUseCardView.swift */,
 				45BC8CB419377B55A1D1F896 /* UserBubbleView.swift */,
 			);
@@ -580,8 +586,10 @@
 				D4E5F6A7B8C90A31526D7E90 /* ChatSwitcherSheet.swift in Sources */,
 				61CBE460AC96CBE6BF8AF0B0 /* SpriteSession.swift in Sources */,
 				AFD1F0F805631C7AE9679AC7 /* SpritesAPIClient.swift in Sources */,
-				86270E2378D87B3719964114 /* StreamingIndicator.swift in Sources */,
+				A1A2A3A4B5B6C7C800000001 /* ThinkingShimmerView.swift in Sources */,
+				A1A2A3A4B5B6C7C800000005 /* ToolDetailSheet.swift in Sources */,
 				3A36571818CB2EBA1ED78500 /* ToolInputDetailView.swift in Sources */,
+				A1A2A3A4B5B6C7C800000003 /* ToolStepRow.swift in Sources */,
 				CAE817B1222FA7E85383EE25 /* ToolResultCardView.swift in Sources */,
 				A610B5413A578D4AA424595D /* ToolUseCardView.swift in Sources */,
 				F32DE1DDC53913E28250E70D /* UserBubbleView.swift in Sources */,
@@ -759,6 +767,8 @@
 				INFOPLIST_KEY_CFBundleDisplayName = Wisp;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				"INFOPLIST_KEY_UISupportedInterfaceOrientations~ipad" = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",
@@ -781,6 +791,8 @@
 				INFOPLIST_KEY_CFBundleDisplayName = Wisp;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				"INFOPLIST_KEY_UISupportedInterfaceOrientations~ipad" = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
 				LD_RUNPATH_SEARCH_PATHS = (
 					"$(inherited)",
 					"@executable_path/Frameworks",

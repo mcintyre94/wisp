@@ -159,7 +159,152 @@ struct ChatViewModelTests {
         }
     }
 
-    // MARK: - handleEvent: result
+    // MARK: - handleEvent: tool result linking
+
+    @Test func handleEvent_toolResultLinkedToToolUse() throws {
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        let msg = ChatMessage(role: .assistant, isStreaming: true)
+        vm.messages.append(msg)
+        vm.setCurrentAssistantMessage(msg)
+
+        // Send tool use
+        let toolUseEvent = ClaudeStreamEvent.assistant(ClaudeAssistantEvent(
+            type: "assistant",
+            message: ClaudeAssistantMessage(role: "assistant", content: [
+                .toolUse(ClaudeToolUse(id: "tu-link", name: "Bash", input: .object(["command": .string("echo hi")])))
+            ])
+        ))
+        vm.handleEvent(toolUseEvent, modelContext: ctx)
+
+        // Verify tool use has no result yet
+        if case .toolUse(let card) = msg.content[0] {
+            #expect(card.result == nil)
+        }
+
+        // Send tool result
+        let resultEvent = ClaudeStreamEvent.user(ClaudeToolResultEvent(
+            type: "user",
+            message: ClaudeToolResultMessage(role: "user", content: [
+                ClaudeToolResult(type: "tool_result", toolUseId: "tu-link", content: .string("hi"))
+            ])
+        ))
+        vm.handleEvent(resultEvent, modelContext: ctx)
+
+        // Verify result is linked
+        if case .toolUse(let card) = msg.content[0] {
+            #expect(card.result != nil)
+            #expect(card.result?.toolUseId == "tu-link")
+        } else {
+            Issue.record("Expected tool use content")
+        }
+    }
+
+    // MARK: - activeToolLabel
+
+    @Test func activeToolLabel_returnsLabelForPendingTool() throws {
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        let msg = ChatMessage(role: .assistant, isStreaming: true)
+        vm.messages.append(msg)
+        vm.setCurrentAssistantMessage(msg)
+
+        let event = ClaudeStreamEvent.assistant(ClaudeAssistantEvent(
+            type: "assistant",
+            message: ClaudeAssistantMessage(role: "assistant", content: [
+                .toolUse(ClaudeToolUse(id: "tu-active", name: "Bash", input: .object(["command": .string("npm test")])))
+            ])
+        ))
+        vm.handleEvent(event, modelContext: ctx)
+
+        #expect(vm.activeToolLabel != nil)
+        #expect(vm.activeToolLabel?.contains("npm test") == true)
+    }
+
+    @Test func activeToolLabel_returnsNilWhenAllToolsComplete() throws {
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        let msg = ChatMessage(role: .assistant, isStreaming: true)
+        vm.messages.append(msg)
+        vm.setCurrentAssistantMessage(msg)
+
+        // Send tool use then result
+        let toolEvent = ClaudeStreamEvent.assistant(ClaudeAssistantEvent(
+            type: "assistant",
+            message: ClaudeAssistantMessage(role: "assistant", content: [
+                .toolUse(ClaudeToolUse(id: "tu-done", name: "Bash", input: .object(["command": .string("ls")])))
+            ])
+        ))
+        vm.handleEvent(toolEvent, modelContext: ctx)
+
+        let resultEvent = ClaudeStreamEvent.user(ClaudeToolResultEvent(
+            type: "user",
+            message: ClaudeToolResultMessage(role: "user", content: [
+                ClaudeToolResult(type: "tool_result", toolUseId: "tu-done", content: .string("output"))
+            ])
+        ))
+        vm.handleEvent(resultEvent, modelContext: ctx)
+
+        #expect(vm.activeToolLabel == nil)
+    }
+
+    // MARK: - ToolUseCard computed properties
+
+    @Test func toolUseCard_activityLabel_bash() {
+        let card = ToolUseCard(
+            toolUseId: "t1", toolName: "Bash",
+            input: .object(["command": .string("npm test")])
+        )
+        #expect(card.activityLabel == "Running npm test...")
+    }
+
+    @Test func toolUseCard_activityLabel_read() {
+        let card = ToolUseCard(
+            toolUseId: "t2", toolName: "Read",
+            input: .object(["file_path": .string("/Users/me/project/config.ts")])
+        )
+        #expect(card.activityLabel == "Reading config.ts...")
+    }
+
+    @Test func toolUseCard_activityLabel_grep() {
+        let card = ToolUseCard(
+            toolUseId: "t3", toolName: "Grep",
+            input: .object(["pattern": .string("TODO")])
+        )
+        #expect(card.activityLabel == "Searching TODO...")
+    }
+
+    @Test func toolUseCard_elapsedString_subSecond() {
+        let start = Date()
+        let card = ToolUseCard(toolUseId: "t4", toolName: "Bash", input: .null, startedAt: start)
+        let result = ToolResultCard(toolUseId: "t4", toolName: "Bash", content: .null, completedAt: start.addingTimeInterval(0.5))
+        card.result = result
+        #expect(card.elapsedString == "<1s")
+    }
+
+    @Test func toolUseCard_elapsedString_seconds() {
+        let start = Date()
+        let card = ToolUseCard(toolUseId: "t5", toolName: "Bash", input: .null, startedAt: start)
+        let result = ToolResultCard(toolUseId: "t5", toolName: "Bash", content: .null, completedAt: start.addingTimeInterval(3))
+        card.result = result
+        #expect(card.elapsedString == "3s")
+    }
+
+    @Test func toolUseCard_elapsedString_minutes() {
+        let start = Date()
+        let card = ToolUseCard(toolUseId: "t6", toolName: "Bash", input: .null, startedAt: start)
+        let result = ToolResultCard(toolUseId: "t6", toolName: "Bash", content: .null, completedAt: start.addingTimeInterval(83))
+        card.result = result
+        #expect(card.elapsedString == "1m 23s")
+    }
+
+    @Test func toolUseCard_elapsedString_nilWithoutResult() {
+        let card = ToolUseCard(toolUseId: "t7", toolName: "Bash", input: .null)
+        #expect(card.elapsedString == nil)
+    }
 
     // MARK: - parseSessionJSONL
 

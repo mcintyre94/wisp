@@ -28,6 +28,11 @@ struct ChatView: View {
                     ForEach(viewModel.messages) { message in
                         messageView(message)
                     }
+                    if viewModel.isStreaming {
+                        ThinkingShimmerView(label: viewModel.activeToolLabel ?? "Thinking...")
+                            .transition(.opacity.combined(with: .move(edge: .bottom)))
+                            .id("shimmer")
+                    }
                     Color.clear.frame(height: 1).id("bottom")
                 }
                 .opacity(contentOpacity)
@@ -40,6 +45,11 @@ struct ChatView: View {
             }
             .onChange(of: viewModel.messages.last?.content.count) {
                 if viewModel.messages.last?.isStreaming == true {
+                    proxy.scrollTo("bottom")
+                }
+            }
+            .onChange(of: viewModel.activeToolLabel) {
+                if viewModel.isStreaming {
                     proxy.scrollTo("bottom")
                 }
             }

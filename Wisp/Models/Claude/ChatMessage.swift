@@ -59,13 +59,16 @@ final class ToolUseCard: Identifiable {
     let toolName: String
     let input: JSONValue
     var isExpanded: Bool
+    let startedAt: Date
+    var result: ToolResultCard?
 
-    init(toolUseId: String, toolName: String, input: JSONValue, isExpanded: Bool = false) {
+    init(toolUseId: String, toolName: String, input: JSONValue, isExpanded: Bool = false, startedAt: Date = Date()) {
         self.id = toolUseId
         self.toolUseId = toolUseId
         self.toolName = toolName
         self.input = input
         self.isExpanded = isExpanded
+        self.startedAt = startedAt
     }
 
     var summary: String {
@@ -98,6 +101,48 @@ final class ToolUseCard: Identifiable {
         default: return "wrench"
         }
     }
+
+    var activityLabel: String {
+        switch toolName {
+        case "Bash":
+            let cmd = input["command"]?.stringValue ?? "command"
+            let truncated = cmd.prefix(60)
+            return "Running \(truncated)..."
+        case "Read":
+            return "Reading \(Self.fileName(from: input["file_path"]?.stringValue))..."
+        case "Write":
+            return "Writing \(Self.fileName(from: input["file_path"]?.stringValue))..."
+        case "Edit":
+            return "Editing \(Self.fileName(from: input["file_path"]?.stringValue))..."
+        case "Glob":
+            let pattern = input["pattern"]?.stringValue ?? "files"
+            return "Searching \(pattern)..."
+        case "Grep":
+            let pattern = input["pattern"]?.stringValue ?? "code"
+            return "Searching \(pattern)..."
+        default:
+            return "Running \(toolName)..."
+        }
+    }
+
+    var elapsedString: String? {
+        guard let completedAt = result?.completedAt else { return nil }
+        let elapsed = completedAt.timeIntervalSince(startedAt)
+        if elapsed < 1 {
+            return "<1s"
+        } else if elapsed < 60 {
+            return "\(Int(elapsed))s"
+        } else {
+            let minutes = Int(elapsed) / 60
+            let seconds = Int(elapsed) % 60
+            return "\(minutes)m \(seconds)s"
+        }
+    }
+
+    private static func fileName(from path: String?) -> String {
+        guard let path, !path.isEmpty else { return "file" }
+        return (path as NSString).lastPathComponent
+    }
 }
 
 @Observable
@@ -108,13 +153,15 @@ final class ToolResultCard: Identifiable {
     let toolName: String
     let content: JSONValue
     var isExpanded: Bool
+    let completedAt: Date
 
-    init(toolUseId: String, toolName: String, content: JSONValue, isExpanded: Bool = false) {
+    init(toolUseId: String, toolName: String, content: JSONValue, isExpanded: Bool = false, completedAt: Date = Date()) {
         self.id = toolUseId
         self.toolUseId = toolUseId
         self.toolName = toolName
         self.content = content
         self.isExpanded = isExpanded
+        self.completedAt = completedAt
     }
 
     var displayContent: String {
