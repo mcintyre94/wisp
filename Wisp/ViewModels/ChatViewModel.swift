@@ -794,7 +794,10 @@ final class ChatViewModel {
         hasPlayedFirstTextHaptic = false
 
         resetLiveActivityState()
-        LiveActivityManager.shared.startActivity(spriteName: spriteName, userTask: prompt)
+        let activityStarted = LiveActivityManager.shared.startActivity(spriteName: spriteName, userTask: prompt)
+        if !activityStarted, let error = LiveActivityManager.shared.lastError {
+            logger.warning("Live Activity not started: \(error)")
+        }
 
         logger.info("Service command: \(Self.sanitize(fullCommand))")
 

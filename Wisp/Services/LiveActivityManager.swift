@@ -14,22 +14,42 @@ final class LiveActivityManager {
     private var lastStepNumber: Int = 0
     private var activityStartDate: Date?
 
+    /// Last error from starting a Live Activity, surfaced for diagnostics.
+    private(set) var lastError: String?
+
+    /// Whether Live Activities are enabled on this device for this app.
+    var activitiesEnabled: Bool {
+        ActivityAuthorizationInfo().areActivitiesEnabled
+    }
+
     private init() {}
 
-    func startActivity(spriteName: String, userTask: String) {
+    /// Starts a Live Activity. Returns `true` if the activity was created successfully.
+    @discardableResult
+    func startActivity(spriteName: String, userTask: String) -> Bool {
         // End any existing activity first
         if currentActivity != nil {
             endActivity()
         }
 
-        guard ActivityAuthorizationInfo().areActivitiesEnabled else {
-            logger.info("Live Activities not enabled")
-            return
+        lastError = nil
+
+        guard activitiesEnabled else {
+            let msg = "Live Activities not enabled — check Settings > Wisp > Live Activities"
+            logger.warning("\(msg)")
+            lastError = msg
+            return false
         }
+
+        // ActivityKit has a 4KB limit on attributes + state payload.
+        // Truncate the user task to avoid exceeding it.
+        let truncatedTask = userTask.count > 200
+            ? String(userTask.prefix(200)) + "..."
+            : userTask
 
         let attributes = WispActivityAttributes(
             spriteName: spriteName,
-            userTask: userTask
+            userTask: truncatedTask
         )
 
         let now = Date()
@@ -52,9 +72,13 @@ final class LiveActivityManager {
                 content: .init(state: initialState, staleDate: nil),
                 pushType: nil
             )
-            logger.info("Started Live Activity for sprite: \(spriteName)")
+            logger.info("Started Live Activity: id=\(self.currentActivity?.id ?? "nil") sprite=\(spriteName)")
+            return true
         } catch {
-            logger.error("Failed to start Live Activity: \(error.localizedDescription)")
+            let msg = "Failed to start Live Activity: \(error)"
+            logger.error("\(msg)")
+            lastError = msg
+            return false
         }
     }
 
@@ -66,12 +90,14 @@ final class LiveActivityManager {
         secondPreviousIntent: String?,
         stepNumber: Int
     ) {
+        guard currentActivity != nil else { return }
+
         let state = WispActivityAttributes.ContentState(
-            subject: subject,
-            currentIntent: currentIntent,
+            subject: subject.map { String($0.prefix(100)) },
+            currentIntent: String(currentIntent.prefix(100)),
             currentIntentIcon: currentIntentIcon,
-            previousIntent: previousIntent,
-            secondPreviousIntent: secondPreviousIntent,
+            previousIntent: previousIntent.map { String($0.prefix(100)) },
+            secondPreviousIntent: secondPreviousIntent.map { String($0.prefix(100)) },
             intentStartDate: Date(),
             stepNumber: stepNumber
         )
@@ -110,7 +136,7 @@ final class LiveActivityManager {
                 .init(state: finalState, staleDate: nil),
                 dismissalPolicy: .after(.now + 8)
             )
-            logger.info("Ended Live Activity")
+            logger.info("Ended Live Activity: id=\(activity.id)")
         }
 
         currentActivity = nil
@@ -132,6 +158,7 @@ final class LiveActivityManager {
 
         Task {
             await activity.update(.init(state: state, staleDate: nil))
+            logger.debug("Updated Live Activity: id=\(activity.id) step=\(state.stepNumber)")
         }
     }
 }
