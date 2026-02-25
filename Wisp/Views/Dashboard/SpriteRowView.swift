@@ -45,7 +45,9 @@ struct SpriteRowView: View {
         .shadow(color: .black.opacity(0.05), radius: 4, y: 2)
         .onAppear {
             if sprite.status == .running {
-                isPulsing = true
+                DispatchQueue.main.async {
+                    isPulsing = true
+                }
             }
         }
         .onChange(of: sprite.status) { _, newValue in

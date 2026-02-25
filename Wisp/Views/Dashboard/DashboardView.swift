@@ -30,35 +30,42 @@ struct DashboardView: View {
                         description: Text("Create a Sprite to get started")
                     )
                 } else {
-                    ScrollView {
-                        LazyVStack(spacing: 12) {
-                            ForEach(sortedSprites) { sprite in
-                                NavigationLink(value: sprite) {
-                                    SpriteRowView(sprite: sprite)
+                    List {
+                        ForEach(sortedSprites) { sprite in
+                            NavigationLink(value: sprite) {
+                                SpriteRowView(sprite: sprite)
+                            }
+                            .buttonStyle(.plain)
+                            .swipeActions(edge: .trailing) {
+                                Button("Delete") {
+                                    viewModel.spriteToDelete = sprite
                                 }
-                                .buttonStyle(.plain)
-                                .contextMenu {
-                                    Button(role: .destructive) {
-                                        viewModel.spriteToDelete = sprite
-                                    } label: {
-                                        Label("Delete", systemImage: "trash")
-                                    }
-                                }
-                                .confirmationDialog("Delete Sprite?", isPresented: .init(
-                                    get: { viewModel.spriteToDelete?.id == sprite.id },
-                                    set: { if !$0 { viewModel.spriteToDelete = nil } }
-                                )) {
-                                    Button("Delete", role: .destructive) {
-                                        Task { await viewModel.deleteSprite(sprite, apiClient: apiClient) }
-                                    }
-                                } message: {
-                                    Text("This will permanently delete \"\(sprite.name)\". This action cannot be undone.")
+                                .tint(.red)
+                            }
+                            .contextMenu {
+                                Button(role: .destructive) {
+                                    viewModel.spriteToDelete = sprite
+                                } label: {
+                                    Label("Delete", systemImage: "trash")
                                 }
                             }
+                            .confirmationDialog("Delete Sprite?", isPresented: .init(
+                                get: { viewModel.spriteToDelete?.id == sprite.id },
+                                set: { if !$0 { viewModel.spriteToDelete = nil } }
+                            )) {
+                                Button("Delete", role: .destructive) {
+                                    Task { await viewModel.deleteSprite(sprite, apiClient: apiClient) }
+                                }
+                            } message: {
+                                Text("This will permanently delete \"\(sprite.name)\". This action cannot be undone.")
+                            }
+                            .listRowSeparator(.hidden)
+                            .listRowBackground(Color.clear)
+                            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                         }
-                        .padding(.horizontal)
-                        .padding(.top, 8)
                     }
+                    .listStyle(.plain)
+                    .scrollContentBackground(.hidden)
                     .refreshable {
                         await viewModel.loadSprites(apiClient: apiClient)
                     }
