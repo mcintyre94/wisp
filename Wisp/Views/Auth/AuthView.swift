@@ -36,14 +36,10 @@ struct AuthView: View {
 
     private var spritesTokenSection: some View {
         Section {
-            HStack {
-                SecureField("Sprites API Token", text: $viewModel.spritesToken)
-                    .textContentType(.password)
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
-
-                pasteButton(binding: $viewModel.spritesToken)
-            }
+            SecureField("Sprites API Token", text: $viewModel.spritesToken)
+                .textContentType(.password)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
 
             Button {
                 Task {
@@ -68,14 +64,10 @@ struct AuthView: View {
 
     private var claudeTokenSection: some View {
         Section {
-            HStack {
-                SecureField("Claude Code OAuth Token", text: $viewModel.claudeToken)
-                    .textContentType(.password)
-                    .autocorrectionDisabled()
-                    .textInputAutocapitalization(.never)
-
-                pasteButton(binding: $viewModel.claudeToken)
-            }
+            SecureField("Claude Code OAuth Token", text: $viewModel.claudeToken)
+                .textContentType(.password)
+                .autocorrectionDisabled()
+                .textInputAutocapitalization(.never)
 
             Button("Save & Continue") {
                 viewModel.saveClaudeToken(apiClient: apiClient)
@@ -120,20 +112,6 @@ struct AuthView: View {
         }
     }
 
-    private func pasteButton(binding: Binding<String>) -> some View {
-        Button {
-            if let pasted = UIPasteboard.general.string {
-                binding.wrappedValue = pasted.trimmingCharacters(in: .whitespacesAndNewlines)
-            }
-        } label: {
-            Image(systemName: "doc.on.clipboard")
-                .font(.system(size: 14))
-                .foregroundStyle(.secondary)
-        }
-        .buttonStyle(.bordered)
-        .buttonBorderShape(.roundedRectangle(radius: 6))
-        .controlSize(.small)
-    }
 }
 
 // MARK: - Step Indicator
