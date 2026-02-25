@@ -13,16 +13,14 @@ final class ChatMessage: Identifiable {
     let timestamp: Date
     let role: ChatRole
     var content: [ChatContent]
-    var isStreaming: Bool
     var checkpointId: String?
     var checkpointComment: String?
 
-    init(id: UUID = UUID(), timestamp: Date = Date(), role: ChatRole, content: [ChatContent] = [], isStreaming: Bool = false, checkpointId: String? = nil, checkpointComment: String? = nil) {
+    init(id: UUID = UUID(), timestamp: Date = Date(), role: ChatRole, content: [ChatContent] = [], checkpointId: String? = nil, checkpointComment: String? = nil) {
         self.id = id
         self.timestamp = timestamp
         self.role = role
         self.content = content
-        self.isStreaming = isStreaming
         self.checkpointId = checkpointId
         self.checkpointComment = checkpointComment
     }

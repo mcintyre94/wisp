@@ -32,7 +32,7 @@ struct ChatViewModelTests {
         let ctx = try makeModelContext()
         let (vm, _) = makeChatViewModel(modelContext: ctx)
 
-        let msg = ChatMessage(role: .assistant, isStreaming: true)
+        let msg = ChatMessage(role: .assistant)
         vm.messages.append(msg)
         vm.setCurrentAssistantMessage(msg)
 
@@ -50,7 +50,7 @@ struct ChatViewModelTests {
         let ctx = try makeModelContext()
         let (vm, _) = makeChatViewModel(modelContext: ctx)
 
-        let msg = ChatMessage(role: .assistant, isStreaming: true)
+        let msg = ChatMessage(role: .assistant)
         vm.messages.append(msg)
         vm.setCurrentAssistantMessage(msg)
 
@@ -72,7 +72,7 @@ struct ChatViewModelTests {
         let ctx = try makeModelContext()
         let (vm, _) = makeChatViewModel(modelContext: ctx)
 
-        let msg = ChatMessage(role: .assistant, isStreaming: true)
+        let msg = ChatMessage(role: .assistant)
         vm.messages.append(msg)
         vm.setCurrentAssistantMessage(msg)
 
@@ -101,7 +101,7 @@ struct ChatViewModelTests {
         let ctx = try makeModelContext()
         let (vm, _) = makeChatViewModel(modelContext: ctx)
 
-        let msg = ChatMessage(role: .assistant, isStreaming: true)
+        let msg = ChatMessage(role: .assistant)
         vm.messages.append(msg)
         vm.setCurrentAssistantMessage(msg)
 
@@ -128,7 +128,7 @@ struct ChatViewModelTests {
         let ctx = try makeModelContext()
         let (vm, _) = makeChatViewModel(modelContext: ctx)
 
-        let msg = ChatMessage(role: .assistant, isStreaming: true)
+        let msg = ChatMessage(role: .assistant)
         vm.messages.append(msg)
         vm.setCurrentAssistantMessage(msg)
 
@@ -165,7 +165,7 @@ struct ChatViewModelTests {
         let ctx = try makeModelContext()
         let (vm, _) = makeChatViewModel(modelContext: ctx)
 
-        let msg = ChatMessage(role: .assistant, isStreaming: true)
+        let msg = ChatMessage(role: .assistant)
         vm.messages.append(msg)
         vm.setCurrentAssistantMessage(msg)
 
@@ -207,7 +207,7 @@ struct ChatViewModelTests {
         let ctx = try makeModelContext()
         let (vm, _) = makeChatViewModel(modelContext: ctx)
 
-        let msg = ChatMessage(role: .assistant, isStreaming: true)
+        let msg = ChatMessage(role: .assistant)
         vm.messages.append(msg)
         vm.setCurrentAssistantMessage(msg)
 
@@ -227,7 +227,7 @@ struct ChatViewModelTests {
         let ctx = try makeModelContext()
         let (vm, _) = makeChatViewModel(modelContext: ctx)
 
-        let msg = ChatMessage(role: .assistant, isStreaming: true)
+        let msg = ChatMessage(role: .assistant)
         vm.messages.append(msg)
         vm.setCurrentAssistantMessage(msg)
 
@@ -412,22 +412,22 @@ struct ChatViewModelTests {
         }
     }
 
-    // MARK: - handleEvent: result
+    // MARK: - Streaming state (single source of truth)
 
-    @Test func handleEvent_resultClearsStreaming() throws {
+    @Test func currentAssistantMessageId_tracksCurrentMessage() throws {
         let ctx = try makeModelContext()
         let (vm, _) = makeChatViewModel(modelContext: ctx)
 
-        let msg = ChatMessage(role: .assistant, isStreaming: true)
+        #expect(vm.currentAssistantMessageId == nil)
+
+        let msg = ChatMessage(role: .assistant)
         vm.messages.append(msg)
         vm.setCurrentAssistantMessage(msg)
 
-        let event = ClaudeStreamEvent.result(ClaudeResultEvent(
-            type: "result", subtype: "success", sessionId: "sess-1",
-            isError: nil, durationMs: 1000, numTurns: 1, result: nil
-        ))
-        vm.handleEvent(event, modelContext: ctx)
+        #expect(vm.currentAssistantMessageId == msg.id)
 
-        #expect(msg.isStreaming == false)
+        vm.setCurrentAssistantMessage(nil)
+
+        #expect(vm.currentAssistantMessageId == nil)
     }
 }

@@ -3,6 +3,7 @@ import SwiftUI
 
 struct AssistantMessageView: View {
     let message: ChatMessage
+    var isStreaming: Bool = false
     var onCreateCheckpoint: (() -> Void)? = nil
     var isCheckpointDisabled: Bool = false
     @State private var selectedToolCard: ToolUseCard?
@@ -10,7 +11,7 @@ struct AssistantMessageView: View {
     private var canCheckpoint: Bool {
         onCreateCheckpoint != nil
             && message.checkpointId == nil
-            && !message.isStreaming
+            && !isStreaming
     }
 
     var body: some View {
@@ -47,7 +48,7 @@ struct AssistantMessageView: View {
                             ToolStepRow(card: card) {
                                 selectedToolCard = card
                             }
-                        } else if !message.isStreaming {
+                        } else if !isStreaming {
                             // Cancelled/incomplete tool (not streaming) -- muted row
                             HStack(spacing: 6) {
                                 Image(systemName: card.iconName)
@@ -73,6 +74,7 @@ struct AssistantMessageView: View {
                             .background(Color.red.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
                     }
                 }
+
             }
             Spacer(minLength: 60)
         }

@@ -44,7 +44,7 @@ struct ChatView: View {
                 proxy.scrollTo("bottom")
             }
             .onChange(of: viewModel.messages.last?.content.count) {
-                if viewModel.messages.last?.isStreaming == true {
+                if viewModel.isStreaming {
                     proxy.scrollTo("bottom")
                 }
             }
@@ -121,6 +121,7 @@ struct ChatView: View {
             && message.id == viewModel.messages.last(where: { $0.role == .assistant })?.id
         ChatMessageView(
             message: message,
+            isStreaming: viewModel.isStreaming && message.id == viewModel.currentAssistantMessageId,
             onCreateCheckpoint: isLastAssistant ? {
                 viewModel.createCheckpoint(for: message, modelContext: modelContext)
             } : nil,

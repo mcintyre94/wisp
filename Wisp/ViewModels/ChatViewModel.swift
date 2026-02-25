@@ -76,6 +76,12 @@ final class ChatViewModel {
         return nil
     }
 
+    /// The ID of the message currently being built by a streaming response.
+    /// Views use this alongside `isStreaming` to show typing indicators on the right bubble.
+    var currentAssistantMessageId: UUID? {
+        currentAssistantMessage?.id
+    }
+
     func loadSession(apiClient: SpritesAPIClient, modelContext: ModelContext) {
         self.apiClient = apiClient
         guard let chat = fetchChat(modelContext: modelContext) else { return }
@@ -372,9 +378,6 @@ final class ChatViewModel {
         streamTask?.cancel()
         streamTask = nil
 
-        if let msg = currentAssistantMessage {
-            msg.isStreaming = false
-        }
         currentAssistantMessage = nil
         status = .idle
 
@@ -510,7 +513,7 @@ final class ChatViewModel {
             config: config
         )
 
-        let assistantMessage = ChatMessage(role: .assistant, isStreaming: true)
+        let assistantMessage = ChatMessage(role: .assistant)
         messages.append(assistantMessage)
         currentAssistantMessage = assistantMessage
 
@@ -522,7 +525,6 @@ final class ChatViewModel {
         // The reconnect task now owns the assistant message and shared state.
         guard !Task.isCancelled else { return }
 
-        assistantMessage.isStreaming = false
         if currentAssistantMessage?.id == assistantMessage.id {
             currentAssistantMessage = nil
         }
@@ -765,14 +767,12 @@ final class ChatViewModel {
         if let existing = currentAssistantMessage {
             assistantMessage = existing
             if !hasPriorEvents { assistantMessage.content = [] }
-            assistantMessage.isStreaming = true
         } else if let last = messages.last(where: { $0.role == .assistant }) {
             assistantMessage = last
             if !hasPriorEvents { assistantMessage.content = [] }
-            assistantMessage.isStreaming = true
             currentAssistantMessage = last
         } else {
-            assistantMessage = ChatMessage(role: .assistant, isStreaming: true)
+            assistantMessage = ChatMessage(role: .assistant)
             messages.append(assistantMessage)
             currentAssistantMessage = assistantMessage
         }
@@ -825,7 +825,6 @@ final class ChatViewModel {
         }
 
         // Finalize
-        assistantMessage.isStreaming = false
         if currentAssistantMessage?.id == assistantMessage.id {
             currentAssistantMessage = nil
         }
@@ -912,7 +911,6 @@ final class ChatViewModel {
                 logger.error("Claude result error: \(resultEvent.result ?? "unknown", privacy: .public)")
             }
             receivedResultEvent = true
-            currentAssistantMessage?.isStreaming = false
             sessionId = resultEvent.sessionId
             saveSession(modelContext: modelContext)
 
