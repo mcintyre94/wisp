@@ -208,7 +208,7 @@ Each message is a separate `sprite exec` call. This is simpler than maintaining 
 Snapshot and rollback the full Sprite environment.
 
 **Endpoints:**
-- `POST /v1/sprites/{name}/checkpoints` — create checkpoint (with optional comment)
+- `POST /v1/sprites/{name}/checkpoint` — create checkpoint (with optional comment). Note: singular "checkpoint", not "checkpoints"
 - `GET /v1/sprites/{name}/checkpoints` — list all checkpoints
 - `GET /v1/sprites/{name}/checkpoints/{id}` — get checkpoint details
 - `POST /v1/sprites/{name}/checkpoints/{id}/restore` — restore to checkpoint
@@ -306,22 +306,24 @@ A strip above the iOS keyboard with keys optimised for Claude Code / shell use:
 **Session Lifecycle**
 
 Wisp doesn't try to keep terminal sessions alive across app closures — the default is clean shutdown to save on Sprite billing:
-- **Close terminal** → explicitly kill the session via `DELETE /v1/sprites/{name}/exec/{session_id}`
+- **Close terminal** → explicitly kill the session via `POST /v1/sprites/{name}/exec/{session_id}/kill`
 - **App backgrounded** → schedule a local notification after 10 minutes: *"Your Sprite is still running — tap to return or end the session."*
 - **Optionally auto-kill** after a configurable timeout (default: 30 minutes)
 
 #### 3g. Files Tab
 Browse and manage the Sprite's filesystem.
 
+**Reference:** [Filesystem API docs](https://docs.sprites.dev/api/v001-rc30/filesystem/) · [Go SDK source](https://github.com/superfly/sprites-go)
+
 **Endpoints:**
-- `GET /v1/sprites/{name}/fs/list?path=/` — directory listing
-- `GET /v1/sprites/{name}/fs/read?path=/file.txt` — read file contents
-- `PUT /v1/sprites/{name}/fs/write` — write file (body = raw bytes, query params for path, mode, mkdir)
-- `DELETE /v1/sprites/{name}/fs/delete?path=/file.txt` — delete
+- `GET /v1/sprites/{name}/fs/list?path=/` — directory listing (also supports `workingDir` param)
+- `GET /v1/sprites/{name}/fs/read?path=/file.txt` — read file contents (returns raw bytes)
+- `PUT /v1/sprites/{name}/fs/write?path=...&mode=0644&mkdirParents=true` — write file (body = raw bytes)
+- `DELETE /v1/sprites/{name}/fs/delete?path=/file.txt&recursive=bool` — delete file/directory
 - `POST /v1/sprites/{name}/fs/rename` — rename/move (`{ "source", "dest" }`)
-- `POST /v1/sprites/{name}/fs/copy` — copy
-- `PUT /v1/sprites/{name}/fs/chmod` — change permissions
-- `PUT /v1/sprites/{name}/fs/chown` — change owner
+- `POST /v1/sprites/{name}/fs/copy` — copy (`{ "source", "dest" }`, supports `recursive`, `preserveAttrs`)
+- `POST /v1/sprites/{name}/fs/chmod` — change permissions (`{ "path", "mode" }`)
+- `POST /v1/sprites/{name}/fs/chown` — change owner (`{ "path", "uid", "gid" }`)
 
 **UI:**
 - Hierarchical file browser with back navigation (breadcrumb trail)
@@ -337,11 +339,12 @@ Manage persistent background services.
 
 **Endpoints:**
 - `GET /v1/sprites/{name}/services` — list services
-- `POST /v1/sprites/{name}/services` — create service
-- `GET /v1/sprites/{name}/services/{id}` — get service details
-- `POST /v1/sprites/{name}/services/{id}/start` — start
-- `POST /v1/sprites/{name}/services/{id}/stop` — stop
-- `GET /v1/sprites/{name}/services/{id}/logs` — service logs
+- `PUT /v1/sprites/{name}/services/{service_name}` — create/update service (`{ "cmd", "args", "needs", "http_port" }`)
+- `GET /v1/sprites/{name}/services/{service_name}` — get service details
+- `DELETE /v1/sprites/{name}/services/{service_name}` — delete service
+- `POST /v1/sprites/{name}/services/{service_name}/start` — start (streams NDJSON events)
+- `POST /v1/sprites/{name}/services/{service_name}/stop` — stop (streams NDJSON events)
+- `GET /v1/sprites/{name}/services/{service_name}/logs` — stream service logs
 
 **UI:**
 - List of services with status (running/stopped)
@@ -353,13 +356,13 @@ Manage persistent background services.
 Control outbound network access.
 
 **Endpoints:**
-- `GET /v1/sprites/{name}/policy` — get current policy
-- `POST /v1/sprites/{name}/policy` — update policy
+- `GET /v1/sprites/{name}/policy/network` — get current network policy
+- `POST /v1/sprites/{name}/policy/network` — update network policy
 
 **UI:**
-- Current policy display (allowed domains list)
-- Add/remove domains
-- Toggle presets: "Allow all", "LLM-friendly defaults", "Custom"
+- Current policy display (rules list with domain patterns and allow/deny actions)
+- Add/remove rules
+- Toggle presets: "Allow all", "LLM-friendly defaults", "Custom" (using `include` preset bundles)
 - Changes applied immediately via API
 
 ---
@@ -422,14 +425,31 @@ struct FileEntry: Codable {
 }
 
 struct NetworkPolicy: Codable {
-    let allowedDomains: [String]
+    let rules: [NetworkPolicyRule]
+}
+
+struct NetworkPolicyRule: Codable {
+    let domain: String?      // exact domain or wildcard (e.g. "*.npmjs.org")
+    let action: String?      // "allow" or "deny"
+    let include: String?     // preset rule bundle name
 }
 
 struct Service: Codable, Identifiable {
-    let id: String
+    var id: String { name }
     let name: String
-    let status: String  // "running" | "stopped"
-    let command: String
+    let cmd: String
+    let args: [String]?
+    let needs: [String]?       // service dependencies
+    let httpPort: Int?
+    let state: ServiceState?
+}
+
+struct ServiceState: Codable {
+    let status: String  // "stopped" | "starting" | "running" | "stopping" | "failed"
+    let pid: Int?
+    let startedAt: Date?
+    let error: String?
+    let restartCount: Int?
 }
 
 struct GitHubLink: Codable {
@@ -599,32 +619,35 @@ Main (NavigationStack)
 | Get sprite | GET | `/v1/sprites/{name}` |
 | Update sprite | PUT | `/v1/sprites/{name}` |
 | Delete sprite | DELETE | `/v1/sprites/{name}` |
+| Upgrade sprite | POST | `/v1/sprites/{name}/upgrade` |
 | Exec (WebSocket) | WSS | `/v1/sprites/{name}/exec?cmd=...` |
-| Exec (REST) | POST | `/v1/sprites/{name}/exec?cmd=...` |
 | List exec sessions | GET | `/v1/sprites/{name}/exec` |
-| Kill exec session | DELETE | `/v1/sprites/{name}/exec/{session_id}` |
+| Attach to session | WSS | `/v1/sprites/{name}/exec/{session_id}` |
+| Kill exec session | POST | `/v1/sprites/{name}/exec/{session_id}/kill` |
+| Create checkpoint | POST | `/v1/sprites/{name}/checkpoint` |
 | List checkpoints | GET | `/v1/sprites/{name}/checkpoints` |
-| Create checkpoint | POST | `/v1/sprites/{name}/checkpoints` |
 | Get checkpoint | GET | `/v1/sprites/{name}/checkpoints/{id}` |
 | Restore checkpoint | POST | `/v1/sprites/{name}/checkpoints/{id}/restore` |
+| List directory | GET | `/v1/sprites/{name}/fs/list?path=...` |
 | Read file | GET | `/v1/sprites/{name}/fs/read?path=...` |
 | Write file | PUT | `/v1/sprites/{name}/fs/write?path=...` |
-| List directory | GET | `/v1/sprites/{name}/fs/list?path=...` |
 | Delete file | DELETE | `/v1/sprites/{name}/fs/delete?path=...` |
 | Rename/move | POST | `/v1/sprites/{name}/fs/rename` |
 | Copy | POST | `/v1/sprites/{name}/fs/copy` |
-| Chmod | PUT | `/v1/sprites/{name}/fs/chmod` |
-| Chown | PUT | `/v1/sprites/{name}/fs/chown` |
+| Chmod | POST | `/v1/sprites/{name}/fs/chmod` |
+| Chown | POST | `/v1/sprites/{name}/fs/chown` |
 | Watch filesystem | WSS | `/v1/sprites/{name}/fs/watch` |
-| Get network policy | GET | `/v1/sprites/{name}/policy` |
-| Set network policy | POST | `/v1/sprites/{name}/policy` |
-| TCP proxy | WSS | `/v1/sprites/{name}/proxy?port=...` |
+| Get network policy | GET | `/v1/sprites/{name}/policy/network` |
+| Set network policy | POST | `/v1/sprites/{name}/policy/network` |
+| TCP proxy | WSS | `/v1/sprites/{name}/proxy` |
 | List services | GET | `/v1/sprites/{name}/services` |
-| Create service | POST | `/v1/sprites/{name}/services` |
-| Get service | GET | `/v1/sprites/{name}/services/{id}` |
-| Start service | POST | `/v1/sprites/{name}/services/{id}/start` |
-| Stop service | POST | `/v1/sprites/{name}/services/{id}/stop` |
-| Service logs | GET | `/v1/sprites/{name}/services/{id}/logs` |
+| Create/update service | PUT | `/v1/sprites/{name}/services/{service_name}` |
+| Get service | GET | `/v1/sprites/{name}/services/{service_name}` |
+| Delete service | DELETE | `/v1/sprites/{name}/services/{service_name}` |
+| Start service | POST | `/v1/sprites/{name}/services/{service_name}/start` |
+| Stop service | POST | `/v1/sprites/{name}/services/{service_name}/stop` |
+| Service logs | GET | `/v1/sprites/{name}/services/{service_name}/logs` |
+| Signal service | POST | `/v1/sprites/{name}/services/signal` |
 
 ---
 
