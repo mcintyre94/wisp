@@ -20,7 +20,8 @@ struct AssistantMessageView: View {
                     switch message.content[index] {
                     case .text(let text):
                         Markdown(text)
-                            .markdownTheme(.basic)
+                            .markdownTheme(.wisp)
+                            .markdownCodeSyntaxHighlighter(WispCodeHighlighter())
                             .textSelection(.enabled)
                             .padding(.horizontal, 14)
                             .padding(.vertical, 10)
