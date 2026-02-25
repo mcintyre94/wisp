@@ -54,6 +54,7 @@
 		FE589FC5A8086E6958A363E1 /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15F643DCF84E0352A9F8D649 /* KeychainService.swift */; };
 		AA22BB33CC44DD55EE66FF01 /* ClaudeQuestionTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA22BB33CC44DD55EE66FF02 /* ClaudeQuestionTool.swift */; };
 		FFB48F025123550446943E29 /* SpriteDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54C849AF5732774C39968056 /* SpriteDetailView.swift */; };
+		C3D82F1A7E4B9A0561FED234 /* SpriteNavigationPanel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1E74C3B8D2F0C9547B6A891 /* SpriteNavigationPanel.swift */; };
 		AABB0011223344556677F002 /* ClaudeStreamParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABB0011223344556677F001 /* ClaudeStreamParserTests.swift */; };
 		AABB0011223344556677F004 /* JSONValueTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABB0011223344556677F003 /* JSONValueTests.swift */; };
 		AABB0011223344556677F006 /* ClaudeStreamEventTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABB0011223344556677F005 /* ClaudeStreamEventTests.swift */; };
@@ -150,6 +151,7 @@
 		4FB02E9F26B9003B6E1DBE7C /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
 		540685D9D567596E24E4EF82 /* ChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModel.swift; sourceTree = "<group>"; };
 		54C849AF5732774C39968056 /* SpriteDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpriteDetailView.swift; sourceTree = "<group>"; };
+		A1E74C3B8D2F0C9547B6A891 /* SpriteNavigationPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpriteNavigationPanel.swift; sourceTree = "<group>"; };
 		616F53154EEA09CE101C7703 /* AppError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppError.swift; sourceTree = "<group>"; };
 		7C308D530B9DAC21AD2A843B /* ChatInputBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatInputBar.swift; sourceTree = "<group>"; };
 		7EE32C593901CBCD7DE899D3 /* ExecMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExecMessage.swift; sourceTree = "<group>"; };
@@ -375,6 +377,7 @@
 			isa = PBXGroup;
 			children = (
 				54C849AF5732774C39968056 /* SpriteDetailView.swift */,
+				A1E74C3B8D2F0C9547B6A891 /* SpriteNavigationPanel.swift */,
 				D4A7E1B29C3F508A1E6B7D43 /* SpriteTabPicker.swift */,
 				B22C752D93810C377FF981DD /* Chat */,
 				13541EF56061CE5B4A38DDFA /* Checkpoints */,
@@ -673,6 +676,7 @@
 				F4D30A7E8C9BADB526E70819 /* SettingsView.swift in Sources */,
 				F3F898AC4565D9C9C6C7BE10 /* Sprite.swift in Sources */,
 				FFB48F025123550446943E29 /* SpriteDetailView.swift in Sources */,
+				C3D82F1A7E4B9A0561FED234 /* SpriteNavigationPanel.swift in Sources */,
 				7B3C91E5A8D2F06473E1CA59 /* SpriteTabPicker.swift in Sources */,
 				C77F2C1E11DECAE31E0F5ECC /* SpriteOverviewView.swift in Sources */,
 				974996B0FB4D30828E89DD21 /* SpriteOverviewViewModel.swift in Sources */,

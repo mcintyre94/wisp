@@ -8,8 +8,9 @@ enum SpriteSortOrder: String, CaseIterable {
 struct DashboardView: View {
     @Environment(SpritesAPIClient.self) private var apiClient
     @State private var viewModel = DashboardViewModel()
-    @State private var navigationPath = NavigationPath()
+    @State private var selectedSprite: Sprite?
     @State private var sortOrder: SpriteSortOrder = .newest
+    @State private var showSettings = false
 
     private var sortedSprites: [Sprite] {
         switch sortOrder {
@@ -21,7 +22,7 @@ struct DashboardView: View {
     }
 
     var body: some View {
-        NavigationStack(path: $navigationPath) {
+        NavigationSplitView {
             Group {
                 if viewModel.sprites.isEmpty && !viewModel.isLoading {
                     ContentUnavailableView(
@@ -30,40 +31,36 @@ struct DashboardView: View {
                         description: Text("Create a Sprite to get started")
                     )
                 } else {
-                    List {
+                    List(selection: $selectedSprite) {
                         ForEach(sortedSprites) { sprite in
-                            Button {
-                                navigationPath.append(sprite)
-                            } label: {
-                                SpriteRowView(sprite: sprite)
-                            }
-                            .buttonStyle(.plain)
-                            .swipeActions(edge: .trailing) {
-                                Button("Delete") {
-                                    viewModel.spriteToDelete = sprite
+                            SpriteRowView(sprite: sprite)
+                                .tag(sprite)
+                                .swipeActions(edge: .trailing) {
+                                    Button("Delete") {
+                                        viewModel.spriteToDelete = sprite
+                                    }
+                                    .tint(.red)
                                 }
-                                .tint(.red)
-                            }
-                            .contextMenu {
-                                Button(role: .destructive) {
-                                    viewModel.spriteToDelete = sprite
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
+                                .contextMenu {
+                                    Button(role: .destructive) {
+                                        viewModel.spriteToDelete = sprite
+                                    } label: {
+                                        Label("Delete", systemImage: "trash")
+                                    }
                                 }
-                            }
-                            .confirmationDialog("Delete Sprite?", isPresented: .init(
-                                get: { viewModel.spriteToDelete?.id == sprite.id },
-                                set: { if !$0 { viewModel.spriteToDelete = nil } }
-                            )) {
-                                Button("Delete", role: .destructive) {
-                                    Task { await viewModel.deleteSprite(sprite, apiClient: apiClient) }
+                                .confirmationDialog("Delete Sprite?", isPresented: .init(
+                                    get: { viewModel.spriteToDelete?.id == sprite.id },
+                                    set: { if !$0 { viewModel.spriteToDelete = nil } }
+                                )) {
+                                    Button("Delete", role: .destructive) {
+                                        Task { await viewModel.deleteSprite(sprite, apiClient: apiClient) }
+                                    }
+                                } message: {
+                                    Text("This will permanently delete \"\(sprite.name)\". This action cannot be undone.")
                                 }
-                            } message: {
-                                Text("This will permanently delete \"\(sprite.name)\". This action cannot be undone.")
-                            }
-                            .listRowSeparator(.hidden)
-                            .listRowBackground(Color.clear)
-                            .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+                                .listRowSeparator(.hidden)
+                                .listRowBackground(Color.clear)
+                                .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                         }
                     }
                     .listStyle(.plain)
@@ -82,12 +79,11 @@ struct DashboardView: View {
                 .ignoresSafeArea()
             )
             .navigationTitle("Sprites")
-            .navigationBarTitleDisplayMode(.inline)
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
                     HStack(spacing: 12) {
-                        NavigationLink {
-                            SettingsView()
+                        Button {
+                            showSettings = true
                         } label: {
                             Image(systemName: "gearshape")
                         }
@@ -110,27 +106,49 @@ struct DashboardView: View {
                     }
                 }
             }
-            .navigationDestination(for: Sprite.self) { sprite in
-                SpriteDetailView(sprite: sprite)
+        } detail: {
+            if let selectedSprite {
+                SpriteDetailView(sprite: selectedSprite)
+            } else {
+                ContentUnavailableView(
+                    "Select a Sprite",
+                    systemImage: "sparkles",
+                    description: Text("Choose a Sprite from the list to get started")
+                )
             }
-            .task {
-                await viewModel.loadSprites(apiClient: apiClient)
+        }
+        .onChange(of: sortedSprites) { _, newSprites in
+            if let selected = selectedSprite, !newSprites.contains(selected) {
+                selectedSprite = nil
             }
-            .sheet(isPresented: $viewModel.showCreateSheet) {
-                CreateSpriteSheet()
-                    .onDisappear {
-                        Task { await viewModel.loadSprites(apiClient: apiClient) }
+        }
+        .task {
+            await viewModel.loadSprites(apiClient: apiClient)
+        }
+        .sheet(isPresented: $viewModel.showCreateSheet) {
+            CreateSpriteSheet()
+                .onDisappear {
+                    Task { await viewModel.loadSprites(apiClient: apiClient) }
+                }
+        }
+        .sheet(isPresented: $showSettings) {
+            NavigationStack {
+                SettingsView()
+                    .toolbar {
+                        ToolbarItem(placement: .cancellationAction) {
+                            Button("Done") { showSettings = false }
+                        }
                     }
             }
-            .alert("Error", isPresented: .init(
-                get: { viewModel.errorMessage != nil },
-                set: { if !$0 { viewModel.errorMessage = nil } }
-            )) {
-                Button("OK") {}
-            } message: {
-                if let error = viewModel.errorMessage {
-                    Text(error)
-                }
+        }
+        .alert("Error", isPresented: .init(
+            get: { viewModel.errorMessage != nil },
+            set: { if !$0 { viewModel.errorMessage = nil } }
+        )) {
+            Button("OK") {}
+        } message: {
+            if let error = viewModel.errorMessage {
+                Text(error)
             }
         }
     }
