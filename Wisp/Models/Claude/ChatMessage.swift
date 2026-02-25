@@ -174,4 +174,15 @@ final class ToolResultCard: Identifiable {
             return content.prettyString
         }
     }
+
+    var previewContent: String? {
+        let text = displayContent
+        guard !text.isEmpty, text.count <= 500 else { return nil }
+        let lines = text.components(separatedBy: "\n").prefix(2)
+        let preview = lines.joined(separator: "\n")
+        if preview.count > 120 {
+            return String(preview.prefix(120)) + "..."
+        }
+        return preview
+    }
 }
