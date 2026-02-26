@@ -57,7 +57,11 @@ struct ChatView: View {
         .safeAreaInset(edge: .top, spacing: 0) {
             VStack(spacing: 0) {
                 if let topAccessory { topAccessory }
-                ChatStatusBar(status: viewModel.status, modelName: viewModel.modelName)
+                ChatStatusBar(
+                    status: viewModel.status,
+                    modelName: viewModel.modelName,
+                    hasPendingWispAsk: viewModel.pendingWispAskCard != nil
+                )
             }
         }
         .onAppear {

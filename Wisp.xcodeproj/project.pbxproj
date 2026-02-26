@@ -51,6 +51,7 @@
 		F550E4D5C8AA29B02E3BC9D9 /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 241DA350F74EECF3A998A903 /* AuthViewModel.swift */; };
 		FC78F202B420DB2A1052C561 /* RootView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A64C131D52B17EA7B36B1BE6 /* RootView.swift */; };
 		FE589FC5A8086E6958A363E1 /* KeychainService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 15F643DCF84E0352A9F8D649 /* KeychainService.swift */; };
+		AA22BB33CC44DD55EE66FF01 /* ClaudeQuestionTool.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA22BB33CC44DD55EE66FF02 /* ClaudeQuestionTool.swift */; };
 		FFB48F025123550446943E29 /* SpriteDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54C849AF5732774C39968056 /* SpriteDetailView.swift */; };
 		AABB0011223344556677F002 /* ClaudeStreamParserTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABB0011223344556677F001 /* ClaudeStreamParserTests.swift */; };
 		AABB0011223344556677F004 /* JSONValueTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AABB0011223344556677F003 /* JSONValueTests.swift */; };
@@ -130,6 +131,7 @@
 		099181E9B8BFE6F3475C5D36 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		0B99AA33329D50DEDB7343B7 /* DashboardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardView.swift; sourceTree = "<group>"; };
 		15F643DCF84E0352A9F8D649 /* KeychainService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainService.swift; sourceTree = "<group>"; };
+		AA22BB33CC44DD55EE66FF02 /* ClaudeQuestionTool.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeQuestionTool.swift; sourceTree = "<group>"; };
 		22353867496BED816814F410 /* SpriteOverviewView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpriteOverviewView.swift; sourceTree = "<group>"; };
 		241DA350F74EECF3A998A903 /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
 		2554BB4DE8EC315CA48767BF /* ExecSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExecSession.swift; sourceTree = "<group>"; };
@@ -268,6 +270,7 @@
 		15C2FAC5548A60D0E61A37BA /* Services */ = {
 			isa = PBXGroup;
 			children = (
+				AA22BB33CC44DD55EE66FF02 /* ClaudeQuestionTool.swift */,
 				C8F1378232DC7FA71A8B5444 /* ClaudeStreamParser.swift */,
 				2554BB4DE8EC315CA48767BF /* ExecSession.swift */,
 				BB11CC22DD33EE44FF660A01 /* GitHubAPIClient.swift */,
@@ -653,6 +656,7 @@
 				D4E5F6A7B8C9D0E1F2A3B4C5 /* InAppBrowserCoordinator.swift in Sources */,
 				F6A7B8C9D0E1F2A3B4C5D6E7 /* InAppBrowserSheet.swift in Sources */,
 				6445AB5A4723D213CFDF0460 /* JSONValue.swift in Sources */,
+				AA22BB33CC44DD55EE66FF01 /* ClaudeQuestionTool.swift in Sources */,
 				FE589FC5A8086E6958A363E1 /* KeychainService.swift in Sources */,
 				A1B2C3D4E5F60718293A4B5C /* PersistedChatMessage.swift in Sources */,
 				BB11CC22DD33EE44FF660B02 /* RepoPickerView.swift in Sources */,

@@ -47,6 +47,7 @@ final class ChatViewModel {
     private var turnHasMutations = false
     private var pendingForkContext: String?
     private var apiClient: SpritesAPIClient?
+    private var mcpSetupTask: Task<Void, Never>?
     /// UUIDs of Claude NDJSON events already processed.
     /// Used by reconnect to skip already-handled events instead of clearing content.
     private var processedEventUUIDs: Set<String> = []
@@ -84,6 +85,12 @@ final class ChatViewModel {
 
     func loadSession(apiClient: SpritesAPIClient, modelContext: ModelContext) {
         self.apiClient = apiClient
+        if UserDefaults.standard.bool(forKey: "claudeQuestionTool") {
+            mcpSetupTask = Task { [weak self] in
+                guard let self else { return }
+                await self.installClaudeQuestionToolIfNeeded(apiClient: apiClient)
+            }
+        }
         guard let chat = fetchChat(modelContext: modelContext) else { return }
 
         sessionId = chat.claudeSessionId
@@ -423,6 +430,11 @@ final class ChatViewModel {
     ) async {
         status = .connecting
 
+        // Wait for MCP setup to finish (no-op if setup task not running or already done)
+        if UserDefaults.standard.bool(forKey: "claudeQuestionTool") {
+            await mcpSetupTask?.value
+        }
+
         // Delete old service, then use a fresh name so logs start clean
         let oldServiceName = serviceName
         serviceName = "wisp-claude-\(UUID().uuidString.prefix(8).lowercased())"
@@ -467,11 +479,11 @@ final class ChatViewModel {
             commandParts.append("git config --global user.email '\(escapedEmail)'")
         }
 
-//        commandParts.append(Self.mcpSetupCommand)
-
         var claudeCmd = "claude -p --verbose --output-format stream-json --dangerously-skip-permissions"
-        claudeCmd += " --disallowedTools AskUserQuestion"
-        claudeCmd += " --mcp-config ~/.wisp/mcp_config.json"
+        if UserDefaults.standard.bool(forKey: "claudeQuestionTool") {
+            claudeCmd += " --disallowedTools AskUserQuestion"
+            claudeCmd += " --mcp-config ~/.wisp/claude-question/mcp_config.json"
+        }
 
         let modelId = UserDefaults.standard.string(forKey: "claudeModel") ?? ClaudeModel.sonnet.rawValue
         claudeCmd += " --model \(modelId)"
@@ -1139,19 +1151,38 @@ final class ChatViewModel {
     }
     #endif
 
-    // MARK: - MCP Setup
-
-    /// Base64-encoded content of ~/.wisp/ask_user_mcp.py.
-    /// Provides the WispAsk MCP tool for Claude Code headless sessions.
-    /// Uses newline-delimited JSON transport (Claude Code 2.1.47+ protocol).
-    /// TODO: rethink this
-    private static let mcpServerScriptBase64 =
-        "IyEvdXNyL2Jpbi9lbnYgcHl0aG9uMwoiIiJXaXNwIE1DUCBzZXJ2ZXIgcHJvdmlkaW5nIFdpc3BBc2sgZm9yIENsYXVkZSBDb2RlIGhlYWRsZXNzIHNlc3Npb25zLiIiIgoKaW1wb3J0IGpzb24KaW1wb3J0IG9zCmltcG9ydCBzeXMKaW1wb3J0IHRpbWUKClFVRVNUSU9OX0ZJTEUgPSAiL3RtcC8ud2lzcF9hc2tfcGVuZGluZy5qc29uIgpSRVNQT05TRV9GSUxFID0gIi90bXAvLndpc3BfYXNrX3Jlc3BvbnNlLmpzb24iCgpUSU1FT1VUID0gMzAwICAjIDUgbWludXRlcwoKCmRlZiByZWFkX21lc3NhZ2UoKToKICAgIGxpbmUgPSBzeXMuc3RkaW4ucmVhZGxpbmUoKQogICAgaWYgbm90IGxpbmU6CiAgICAgICAgcmV0dXJuIE5vbmUKICAgIGxpbmUgPSBsaW5lLnN0cmlwKCkKICAgIGlmIG5vdCBsaW5lOgogICAgICAgIHJldHVybiBOb25lCiAgICByZXR1cm4ganNvbi5sb2FkcyhsaW5lKQoKCmRlZiBzZW5kX21lc3NhZ2Uob2JqKToKICAgIGRhdGEgPSBqc29uLmR1bXBzKG9iaikKICAgIHN5cy5zdGRvdXQud3JpdGUoZGF0YSArIGNocigxMCkpCiAgICBzeXMuc3Rkb3V0LmZsdXNoKCkKCgpUT09MX0RFRiA9IHsKICAgICJuYW1lIjogIldpc3BBc2siLAogICAgImRlc2NyaXB0aW9uIjogKAogICAgICAgICJBc2sgdGhlIFdpc3AgYXBwIHVzZXIgYSBjbGFyaWZ5aW5nIHF1ZXN0aW9uIGFuZCB3YWl0IGZvciB0aGVpciByZXNwb25zZSBiZWZvcmUgIgogICAgICAgICJwcm9jZWVkaW5nLiBVc2Ugd2hlbiB5b3UgbmVlZCBhIGRlY2lzaW9uIG9yIHByZWZlcmVuY2UgZnJvbSB0aGUgdXNlci4gIgogICAgICAgICJQcmVmZXIgdGhpcyBvdmVyIG1ha2luZyBhc3N1bXB0aW9ucy4iCiAgICApLAogICAgImlucHV0U2NoZW1hIjogewogICAgICAgICJ0eXBlIjogIm9iamVjdCIsCiAgICAgICAgInByb3BlcnRpZXMiOiB7CiAgICAgICAgICAgICJxdWVzdGlvbiI6IHsKICAgICAgICAgICAgICAgICJ0eXBlIjogInN0cmluZyIsCiAgICAgICAgICAgICAgICAiZGVzY3JpcHRpb24iOiAiVGhlIHF1ZXN0aW9uIHRvIGFzayB0aGUgdXNlciIsCiAgICAgICAgICAgIH0sCiAgICAgICAgICAgICJvcHRpb25zIjogewogICAgICAgICAgICAgICAgInR5cGUiOiAiYXJyYXkiLAogICAgICAgICAgICAgICAgImRlc2NyaXB0aW9uIjogIk9wdGlvbmFsIGxpc3Qgb2YgY2hvaWNlcyBmb3IgdGhlIHVzZXIgdG8gc2VsZWN0IGZyb20iLAogICAgICAgICAgICAgICAgIml0ZW1zIjogewogICAgICAgICAgICAgICAgICAgICJ0eXBlIjogIm9iamVjdCIsCiAgICAgICAgICAgICAgICAgICAgInByb3BlcnRpZXMiOiB7CiAgICAgICAgICAgICAgICAgICAgICAgICJsYWJlbCI6IHsidHlwZSI6ICJzdHJpbmcifSwKICAgICAgICAgICAgICAgICAgICAgICAgImRlc2NyaXB0aW9uIjogeyJ0eXBlIjogInN0cmluZyJ9LAogICAgICAgICAgICAgICAgICAgIH0sCiAgICAgICAgICAgICAgICAgICAgInJlcXVpcmVkIjogWyJsYWJlbCJdLAogICAgICAgICAgICAgICAgfSwKICAgICAgICAgICAgfSwKICAgICAgICB9LAogICAgICAgICJyZXF1aXJlZCI6IFsicXVlc3Rpb24iXSwKICAgIH0sCn0KCgpkZWYgaGFuZGxlX2Fza191c2VyX3F1ZXN0aW9uKGFyZ3MsIG1zZ19pZCk6CiAgICAjIENsZWFuIHVwIHN0YWxlIHJlc3BvbnNlIGZpbGUKICAgIHRyeToKICAgICAgICBvcy5yZW1vdmUoUkVTUE9OU0VfRklMRSkKICAgIGV4Y2VwdCBPU0Vycm9yOgogICAgICAgIHBhc3MKCiAgICAjIFdyaXRlIHF1ZXN0aW9uIGZvciB0aGUgYXBwIHRvIHBpY2sgdXAKICAgIHdpdGggb3BlbihRVUVTVElPTl9GSUxFLCAidyIpIGFzIGY6CiAgICAgICAganNvbi5kdW1wKGFyZ3MsIGYpCgogICAgIyBQb2xsIGZvciByZXNwb25zZQogICAgZGVhZGxpbmUgPSB0aW1lLnRpbWUoKSArIFRJTUVPVVQKICAgIGFuc3dlciA9ICJVc2VyIGRpZCBub3QgcmVzcG9uZC4gVXNlIHlvdXIgYmVzdCBqdWRnbWVudCBhbmQgcHJvY2VlZC4iCiAgICB3aGlsZSB0aW1lLnRpbWUoKSA8IGRlYWRsaW5lOgogICAgICAgIGlmIG9zLnBhdGguZXhpc3RzKFJFU1BPTlNFX0ZJTEUpOgogICAgICAgICAgICB0cnk6CiAgICAgICAgICAgICAgICB3aXRoIG9wZW4oUkVTUE9OU0VfRklMRSkgYXMgZjoKICAgICAgICAgICAgICAgICAgICByZXNwID0ganNvbi5sb2FkKGYpCiAgICAgICAgICAgICAgICBhbnN3ZXIgPSByZXNwLmdldCgiYW5zd2VyIiwgYW5zd2VyKQogICAgICAgICAgICAgICAgb3MucmVtb3ZlKFJFU1BPTlNFX0ZJTEUpCiAgICAgICAgICAgIGV4Y2VwdCAoT1NFcnJvciwganNvbi5KU09ORGVjb2RlRXJyb3IpOgogICAgICAgICAgICAgICAgcGFzcwogICAgICAgICAgICBicmVhawogICAgICAgIHRpbWUuc2xlZXAoMC4yKQoKICAgICMgQ2xlYW4gdXAgcXVlc3Rpb24gZmlsZQogICAgdHJ5OgogICAgICAgIG9zLnJlbW92ZShRVUVTVElPTl9GSUxFKQogICAgZXhjZXB0IE9TRXJyb3I6CiAgICAgICAgcGFzcwoKICAgIHNlbmRfbWVzc2FnZSh7CiAgICAgICAgImpzb25ycGMiOiAiMi4wIiwKICAgICAgICAiaWQiOiBtc2dfaWQsCiAgICAgICAgInJlc3VsdCI6IHsiY29udGVudCI6IFt7InR5cGUiOiAidGV4dCIsICJ0ZXh0IjogYW5zd2VyfV19LAogICAgfSkKCgpkZWYgbWFpbigpOgogICAgd2hpbGUgVHJ1ZToKICAgICAgICBtc2cgPSByZWFkX21lc3NhZ2UoKQogICAgICAgIGlmIG1zZyBpcyBOb25lOgogICAgICAgICAgICBicmVhawoKICAgICAgICBtZXRob2QgPSBtc2cuZ2V0KCJtZXRob2QiLCAiIikKICAgICAgICBtc2dfaWQgPSBtc2cuZ2V0KCJpZCIpCgogICAgICAgIGlmIG1ldGhvZCA9PSAiaW5pdGlhbGl6ZSI6CiAgICAgICAgICAgIHNlbmRfbWVzc2FnZSh7CiAgICAgICAgICAgICAgICAianNvbnJwYyI6ICIyLjAiLAogICAgICAgICAgICAgICAgImlkIjogbXNnX2lkLAogICAgICAgICAgICAgICAgInJlc3VsdCI6IHsKICAgICAgICAgICAgICAgICAgICAicHJvdG9jb2xWZXJzaW9uIjogIjIwMjUtMTEtMjUiLAogICAgICAgICAgICAgICAgICAgICJjYXBhYmlsaXRpZXMiOiB7InRvb2xzIjoge319LAogICAgICAgICAgICAgICAgICAgICJzZXJ2ZXJJbmZvIjogeyJuYW1lIjogIndpc3AtYXNrLXVzZXIiLCAidmVyc2lvbiI6ICIxLjAuMCJ9LAogICAgICAgICAgICAgICAgfSwKICAgICAgICAgICAgfSkKICAgICAgICBlbGlmIG1ldGhvZCA9PSAibm90aWZpY2F0aW9ucy9pbml0aWFsaXplZCI6CiAgICAgICAgICAgIHBhc3MgICMgTm8gcmVzcG9uc2UgbmVlZGVkCiAgICAgICAgZWxpZiBtZXRob2QgPT0gInRvb2xzL2xpc3QiOgogICAgICAgICAgICBzZW5kX21lc3NhZ2UoewogICAgICAgICAgICAgICAgImpzb25ycGMiOiAiMi4wIiwKICAgICAgICAgICAgICAgICJpZCI6IG1zZ19pZCwKICAgICAgICAgICAgICAgICJyZXN1bHQiOiB7InRvb2xzIjogW1RPT0xfREVGXX0sCiAgICAgICAgICAgIH0pCiAgICAgICAgZWxpZiBtZXRob2QgPT0gInRvb2xzL2NhbGwiOgogICAgICAgICAgICBwYXJhbXMgPSBtc2cuZ2V0KCJwYXJhbXMiLCB7fSkKICAgICAgICAgICAgaWYgcGFyYW1zLmdldCgibmFtZSIpID09ICJXaXNwQXNrIjoKICAgICAgICAgICAgICAgIGhhbmRsZV9hc2tfdXNlcl9xdWVzdGlvbihwYXJhbXMuZ2V0KCJhcmd1bWVudHMiLCB7fSksIG1zZ19pZCkKICAgICAgICAjIElnbm9yZSBub3RpZmljYXRpb25zIChubyBpZCkgYW5kIHVua25vd24gbWV0aG9kcwoKCmlmIF9fbmFtZV9fID09ICJfX21haW5fXyI6CiAgICBtYWluKCkK"
-
-    /// Shell command that installs the Wisp MCP server on the Sprite if not already present.
-    private static var mcpSetupCommand: String {
-        let configJSON = #"{"mcpServers":{"askUser":{"command":"python3","args":["/home/sprite/.wisp/ask_user_mcp.py"]}}}"#
-        return "[ -f ~/.wisp/ask_user_mcp.py ] || { mkdir -p ~/.wisp && printf '\(mcpServerScriptBase64)' | base64 -d > ~/.wisp/ask_user_mcp.py && chmod +x ~/.wisp/ask_user_mcp.py && printf '\(configJSON)' > ~/.wisp/mcp_config.json; }"
+    private func installClaudeQuestionToolIfNeeded(apiClient: SpritesAPIClient) async {
+        let (output, _) = await apiClient.runExec(
+            spriteName: spriteName,
+            command: ClaudeQuestionTool.checkVersionCommand,
+            timeout: 10
+        )
+        guard output.trimmingCharacters(in: .whitespacesAndNewlines) != ClaudeQuestionTool.version else {
+            return  // already up to date
+        }
+        logger.info("Installing Claude question tool (version \(ClaudeQuestionTool.version))...")
+        // Write files directly via the REST filesystem API to avoid shell command length limits
+        try? await apiClient.uploadFile(
+            spriteName: spriteName,
+            remotePath: ClaudeQuestionTool.serverPyPath,
+            data: Data(ClaudeQuestionTool.serverScript.utf8)
+        )
+        try? await apiClient.uploadFile(
+            spriteName: spriteName,
+            remotePath: ClaudeQuestionTool.mcpConfigPath,
+            data: Data(ClaudeQuestionTool.mcpConfig.utf8)
+        )
+        try? await apiClient.uploadFile(
+            spriteName: spriteName,
+            remotePath: ClaudeQuestionTool.versionPath,
+            data: Data(ClaudeQuestionTool.version.utf8)
+        )
+        // Make server.py executable
+        _ = await apiClient.runExec(
+            spriteName: spriteName,
+            command: ClaudeQuestionTool.chmodCommand,
+            timeout: 10
+        )
     }
 }
 
