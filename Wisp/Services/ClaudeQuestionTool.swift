@@ -1,7 +1,7 @@
 import Foundation
 
 enum ClaudeQuestionTool {
-    static let version = "1"
+    static let version = "2"
 
     // Full Python MCP server source — human-readable
     static let serverScript = """
@@ -13,8 +13,9 @@ enum ClaudeQuestionTool {
     import sys
     import time
 
-    QUESTION_FILE = "/tmp/.wisp_ask_pending.json"
-    RESPONSE_FILE = "/tmp/.wisp_ask_response.json"
+    SESSION_ID = os.environ.get("WISP_SESSION_ID", "default")
+    QUESTION_FILE = f"/tmp/.wisp_ask_pending_{SESSION_ID}.json"
+    RESPONSE_FILE = f"/tmp/.wisp_ask_response_{SESSION_ID}.json"
 
     TIMEOUT = 300  # 5 minutes
 
@@ -144,10 +145,6 @@ enum ClaudeQuestionTool {
         main()
     """
 
-    // MCP config JSON pointing to the deployed server path
-    static let mcpConfig =
-        #"{"mcpServers":{"askUser":{"command":"python3","args":["/home/sprite/.wisp/claude-question/server.py"]}}}"#
-
     // Shell command to read current installed version (empty string if not installed)
     static let checkVersionCommand = "cat ~/.wisp/claude-question/version 2>/dev/null || echo ''"
 
@@ -156,6 +153,18 @@ enum ClaudeQuestionTool {
 
     // File paths on the Sprite (absolute)
     static let serverPyPath = "/home/sprite/.wisp/claude-question/server.py"
-    static let mcpConfigPath = "/home/sprite/.wisp/claude-question/mcp_config.json"
     static let versionPath = "/home/sprite/.wisp/claude-question/version"
+
+    // Per-session helpers — each chat uses its own files so concurrent sessions don't conflict
+    static func mcpConfigJSON(for sessionId: String) -> String {
+        #"{"mcpServers":{"askUser":{"command":"python3","args":["/home/sprite/.wisp/claude-question/server.py"],"env":{"WISP_SESSION_ID":""# + sessionId + #""}}}}"#
+    }
+
+    static func mcpConfigFilePath(for sessionId: String) -> String {
+        "/tmp/.wisp_mcp_\(sessionId).json"
+    }
+
+    static func responseFilePath(for sessionId: String) -> String {
+        "/tmp/.wisp_ask_response_\(sessionId).json"
+    }
 }

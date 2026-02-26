@@ -481,8 +481,12 @@ final class ChatViewModel {
 
         var claudeCmd = "claude -p --verbose --output-format stream-json --dangerously-skip-permissions"
         if UserDefaults.standard.bool(forKey: "claudeQuestionTool") {
+            let sessionId = chatId.uuidString.lowercased()
+            let configPath = ClaudeQuestionTool.mcpConfigFilePath(for: sessionId)
+            // Write per-session MCP config (inlined in the command chain so no extra round-trip)
+            commandParts.append("echo '\(ClaudeQuestionTool.mcpConfigJSON(for: sessionId))' > \(configPath)")
             claudeCmd += " --disallowedTools AskUserQuestion"
-            claudeCmd += " --mcp-config ~/.wisp/claude-question/mcp_config.json"
+            claudeCmd += " --mcp-config \(configPath)"
         }
 
         let modelId = UserDefaults.standard.string(forKey: "claudeModel") ?? ClaudeModel.sonnet.rawValue
@@ -995,12 +999,12 @@ final class ChatViewModel {
     func submitWispAskAnswer(_ answer: String) {
         guard let apiClient else { return }
         let sprite = spriteName
+        let sessionId = chatId.uuidString.lowercased()
         Task {
             let jsonObject = ["answer": answer]
             guard let jsonData = try? JSONSerialization.data(withJSONObject: jsonObject) else { return }
-            let b64 = jsonData.base64EncodedString()
-            let cmd = "echo '\(b64)' | base64 -d > /tmp/.wisp_ask_response.json"
-            _ = await apiClient.runExec(spriteName: sprite, command: cmd)
+            let path = ClaudeQuestionTool.responseFilePath(for: sessionId)
+            _ = try? await apiClient.uploadFile(spriteName: sprite, remotePath: path, data: jsonData)
         }
     }
 
@@ -1166,11 +1170,6 @@ final class ChatViewModel {
             spriteName: spriteName,
             remotePath: ClaudeQuestionTool.serverPyPath,
             data: Data(ClaudeQuestionTool.serverScript.utf8)
-        )
-        try? await apiClient.uploadFile(
-            spriteName: spriteName,
-            remotePath: ClaudeQuestionTool.mcpConfigPath,
-            data: Data(ClaudeQuestionTool.mcpConfig.utf8)
         )
         try? await apiClient.uploadFile(
             spriteName: spriteName,
