@@ -967,6 +967,31 @@ final class ChatViewModel {
         }
     }
 
+    var pendingWispAskCard: ToolUseCard? {
+        for message in messages.reversed() {
+            for item in message.content {
+                if case .toolUse(let card) = item,
+                   card.toolName == "mcp__askUser__WispAsk",
+                   card.result == nil {
+                    return card
+                }
+            }
+        }
+        return nil
+    }
+
+    func submitWispAskAnswer(_ answer: String) {
+        guard let apiClient else { return }
+        let sprite = spriteName
+        Task {
+            let jsonObject = ["answer": answer]
+            guard let jsonData = try? JSONSerialization.data(withJSONObject: jsonObject) else { return }
+            let b64 = jsonData.base64EncodedString()
+            let cmd = "echo '\(b64)' | base64 -d > /tmp/.wisp_ask_response.json"
+            _ = await apiClient.runExec(spriteName: sprite, command: cmd)
+        }
+    }
+
     var isCheckpointing = false
 
     func createCheckpoint(for message: ChatMessage, modelContext: ModelContext) {

@@ -28,7 +28,7 @@ struct ChatView: View {
                     ForEach(viewModel.messages) { message in
                         messageView(message)
                     }
-                    if viewModel.isStreaming {
+                    if viewModel.isStreaming && viewModel.pendingWispAskCard == nil {
                         ThinkingShimmerView(label: viewModel.activeToolLabel ?? "Thinking...")
                             .transition(.opacity.combined(with: .move(edge: .bottom)))
                             .id("shimmer")
@@ -125,7 +125,10 @@ struct ChatView: View {
             onCreateCheckpoint: isLastAssistant ? {
                 viewModel.createCheckpoint(for: message, modelContext: modelContext)
             } : nil,
-            isCheckpointDisabled: viewModel.isCheckpointing
+            isCheckpointDisabled: viewModel.isCheckpointing,
+            onAnswerWispAsk: { answer in
+                viewModel.submitWispAskAnswer(answer)
+            }
         )
         .id(message.id)
 

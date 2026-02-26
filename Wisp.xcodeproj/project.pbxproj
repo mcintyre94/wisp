@@ -22,6 +22,7 @@
 		6F12D7D1F6C0AAFE6C28AB4C /* ClaudeEventTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B299898C61EA80D1A91AF37 /* ClaudeEventTypes.swift */; };
 		735DA590AAB4728F7A8B5037 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8C4C3A1F2B2D57313431E50 /* Extensions.swift */; };
 		760347D84B9D49623B0A5BC5 /* AssistantMessageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39E3CEEE606D9AFF4265AB76 /* AssistantMessageView.swift */; };
+		AA00BB11CC22DD3300000001 /* WispAskCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00BB11CC22DD3300000002 /* WispAskCard.swift */; };
 		7F8737574DF6D523DE958341 /* CheckpointsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 9EFC5211F749D2051DC28E77 /* CheckpointsView.swift */; };
 		A1A2A3A4B5B6C7C800000001 /* ThinkingShimmerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A2A3A4B5B6C7C800000002 /* ThinkingShimmerView.swift */; };
 		A1A2A3A4B5B6C7C800000003 /* ToolStepRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A2A3A4B5B6C7C800000004 /* ToolStepRow.swift */; };
@@ -136,6 +137,7 @@
 		2DDF8D1F423CF62E04FDBA07 /* CreateCheckpointSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateCheckpointSheet.swift; sourceTree = "<group>"; };
 		3893EEF3ADDA05DF7A9C0909 /* JSONValue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JSONValue.swift; sourceTree = "<group>"; };
 		39E3CEEE606D9AFF4265AB76 /* AssistantMessageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AssistantMessageView.swift; sourceTree = "<group>"; };
+		AA00BB11CC22DD3300000002 /* WispAskCard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WispAskCard.swift; sourceTree = "<group>"; };
 		3B8BD6A5D86571BFF9ECB5B2 /* ToolResultCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolResultCardView.swift; sourceTree = "<group>"; };
 		42C4A8D129C538233C34B2A6 /* ChatStatusBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatStatusBar.swift; sourceTree = "<group>"; };
 		45BC8CB419377B55A1D1F896 /* UserBubbleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserBubbleView.swift; sourceTree = "<group>"; };
@@ -435,6 +437,7 @@
 				8A278B4716095105A7024CF8 /* ToolUseCardView.swift */,
 				E1F2A3B4C5D6E7F800000003 /* UnifiedDiffView.swift */,
 				45BC8CB419377B55A1D1F896 /* UserBubbleView.swift */,
+				AA00BB11CC22DD3300000002 /* WispAskCard.swift */,
 				E1F2A3B4C5D6E7F800000001 /* WispCodeHighlighter.swift */,
 				E1F2A3B4C5D6E7F800000002 /* WispMarkdownTheme.swift */,
 			);
@@ -619,6 +622,7 @@
 				AA11BB22CC33DD44EE55FF0A /* AppConfig.swift in Sources */,
 				6D0E6C856F514B6E4F81313C /* AppError.swift in Sources */,
 				760347D84B9D49623B0A5BC5 /* AssistantMessageView.swift in Sources */,
+				AA00BB11CC22DD3300000001 /* WispAskCard.swift in Sources */,
 				C28D2088D3562DF23E1FEF57 /* AuthView.swift in Sources */,
 				F550E4D5C8AA29B02E3BC9D9 /* AuthViewModel.swift in Sources */,
 				994D6CD07165B1FDF9AE7300 /* ChatInputBar.swift in Sources */,
