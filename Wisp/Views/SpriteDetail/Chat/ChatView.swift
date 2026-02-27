@@ -28,6 +28,9 @@ struct ChatView: View {
                     ForEach(viewModel.messages) { message in
                         messageView(message)
                     }
+                    if let pendingText = viewModel.queuedPrompt {
+                        PendingUserBubbleView(text: pendingText)
+                    }
                     Color.clear.frame(height: 1).id("bottom")
                 }
                 .opacity(contentOpacity)
@@ -42,6 +45,9 @@ struct ChatView: View {
                 if viewModel.messages.last?.isStreaming == true {
                     proxy.scrollTo("bottom")
                 }
+            }
+            .onChange(of: viewModel.queuedPrompt) {
+                proxy.scrollTo("bottom")
             }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
