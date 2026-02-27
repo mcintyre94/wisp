@@ -7,6 +7,10 @@ struct WispApp: App {
     @State private var browserCoordinator = InAppBrowserCoordinator()
     @AppStorage("theme") private var theme: String = "system"
 
+    init() {
+        UserDefaults.standard.register(defaults: ["claudeQuestionTool": true])
+    }
+
     private var preferredColorScheme: ColorScheme? {
         switch theme {
         case "light": .light

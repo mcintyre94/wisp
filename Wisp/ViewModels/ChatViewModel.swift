@@ -47,6 +47,7 @@ final class ChatViewModel {
     private var turnHasMutations = false
     private var pendingForkContext: String?
     private var apiClient: SpritesAPIClient?
+    private var mcpSetupTask: Task<Bool, Never>?
     /// UUIDs of Claude NDJSON events already processed.
     /// Used by reconnect to skip already-handled events instead of clearing content.
     private var processedEventUUIDs: Set<String> = []
@@ -84,6 +85,12 @@ final class ChatViewModel {
 
     func loadSession(apiClient: SpritesAPIClient, modelContext: ModelContext) {
         self.apiClient = apiClient
+        if UserDefaults.standard.bool(forKey: "claudeQuestionTool") {
+            mcpSetupTask = Task { [weak self] in
+                guard let self else { return false }
+                return await self.installClaudeQuestionToolIfNeeded(apiClient: apiClient)
+            }
+        }
         guard let chat = fetchChat(modelContext: modelContext) else { return }
 
         sessionId = chat.claudeSessionId
@@ -423,6 +430,15 @@ final class ChatViewModel {
     ) async {
         status = .connecting
 
+        // Wait for MCP setup to finish (no-op if setup task not running or already done)
+        if UserDefaults.standard.bool(forKey: "claudeQuestionTool") {
+            let toolReady = await mcpSetupTask?.value ?? false
+            if !toolReady {
+                status = .error("Claude question tool failed to install — disable it in Settings or try again")
+                return
+            }
+        }
+
         // Delete old service, then use a fresh name so logs start clean
         let oldServiceName = serviceName
         serviceName = "wisp-claude-\(UUID().uuidString.prefix(8).lowercased())"
@@ -468,6 +484,14 @@ final class ChatViewModel {
         }
 
         var claudeCmd = "claude -p --verbose --output-format stream-json --dangerously-skip-permissions"
+        if UserDefaults.standard.bool(forKey: "claudeQuestionTool") {
+            let sessionId = chatId.uuidString.lowercased()
+            let configPath = ClaudeQuestionTool.mcpConfigFilePath(for: sessionId)
+            // Write per-session MCP config (inlined in the command chain so no extra round-trip)
+            commandParts.append("echo '\(ClaudeQuestionTool.mcpConfigJSON(for: sessionId))' > \(configPath)")
+            claudeCmd += " --disallowedTools AskUserQuestion"
+            claudeCmd += " --mcp-config \(configPath)"
+        }
 
         let modelId = UserDefaults.standard.string(forKey: "claudeModel") ?? ClaudeModel.sonnet.rawValue
         claudeCmd += " --model \(modelId)"
@@ -847,6 +871,7 @@ final class ChatViewModel {
             receivedSystemEvent = true
             sessionId = systemEvent.sessionId
             modelName = systemEvent.model
+            logger.info("System event tools: \(systemEvent.tools ?? [], privacy: .public)")
             saveSession(modelContext: modelContext)
 
         case .assistant(let assistantEvent):
@@ -872,6 +897,7 @@ final class ChatViewModel {
                         input: toolUse.input
                     )
                     message.content.append(.toolUse(card))
+                    logger.info("Tool use: \(toolUse.name, privacy: .public) id=\(toolUse.id, privacy: .public)")
                     toolUseIndex[toolUse.id] = (
                         messageIndex: messages.count - 1,
                         toolName: toolUse.name
@@ -958,6 +984,35 @@ final class ChatViewModel {
             }
         } catch {
             logger.error("Auto-checkpoint failed: \(error.localizedDescription)")
+        }
+    }
+
+    var pendingWispAskCard: ToolUseCard? {
+        for message in messages.reversed() {
+            for item in message.content {
+                if case .toolUse(let card) = item,
+                   card.toolName == "mcp__askUser__WispAsk",
+                   card.result == nil {
+                    return card
+                }
+            }
+        }
+        return nil
+    }
+
+    func submitWispAskAnswer(_ answer: String) {
+        guard let apiClient else { return }
+        let sprite = spriteName
+        let sessionId = chatId.uuidString.lowercased()
+        Task {
+            let jsonObject = ["answer": answer]
+            guard let jsonData = try? JSONSerialization.data(withJSONObject: jsonObject) else { return }
+            let path = ClaudeQuestionTool.responseFilePath(for: sessionId)
+            do {
+                _ = try await apiClient.uploadFile(spriteName: sprite, remotePath: path, data: jsonData)
+            } catch {
+                status = .error("Failed to send answer — try again")
+            }
         }
     }
 
@@ -1107,4 +1162,40 @@ final class ChatViewModel {
         currentAssistantMessage = message
     }
     #endif
+
+    private func installClaudeQuestionToolIfNeeded(apiClient: SpritesAPIClient) async -> Bool {
+        let (output, _) = await apiClient.runExec(
+            spriteName: spriteName,
+            command: ClaudeQuestionTool.checkVersionCommand,
+            timeout: 10
+        )
+        guard output.trimmingCharacters(in: .whitespacesAndNewlines) != ClaudeQuestionTool.version else {
+            return true  // already up to date
+        }
+        logger.info("Installing Claude question tool (version \(ClaudeQuestionTool.version))...")
+        do {
+            // Write files directly via the REST filesystem API to avoid shell command length limits
+            try await apiClient.uploadFile(
+                spriteName: spriteName,
+                remotePath: ClaudeQuestionTool.serverPyPath,
+                data: Data(ClaudeQuestionTool.serverScript.utf8)
+            )
+            try await apiClient.uploadFile(
+                spriteName: spriteName,
+                remotePath: ClaudeQuestionTool.versionPath,
+                data: Data(ClaudeQuestionTool.version.utf8)
+            )
+        } catch {
+            logger.error("Claude question tool installation failed: \(error)")
+            return false
+        }
+        // Make server.py executable
+        _ = await apiClient.runExec(
+            spriteName: spriteName,
+            command: ClaudeQuestionTool.chmodCommand,
+            timeout: 10
+        )
+        return true
+    }
 }
+

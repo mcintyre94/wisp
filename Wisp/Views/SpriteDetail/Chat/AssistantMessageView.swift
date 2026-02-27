@@ -6,6 +6,7 @@ struct AssistantMessageView: View {
     var isStreaming: Bool = false
     var onCreateCheckpoint: (() -> Void)? = nil
     var isCheckpointDisabled: Bool = false
+    var onAnswerWispAsk: ((String) -> Void)? = nil
     @State private var selectedToolCard: ToolUseCard?
 
     private var canCheckpoint: Bool {
@@ -47,6 +48,11 @@ struct AssistantMessageView: View {
                             // Completed tool -- compact step row
                             ToolStepRow(card: card) {
                                 selectedToolCard = card
+                            }
+                        } else if card.toolName == "mcp__askUser__WispAsk" {
+                            // Pending question -- interactive card
+                            WispAskCard(card: card) { answer in
+                                onAnswerWispAsk?(answer)
                             }
                         } else if !isStreaming {
                             // Cancelled/incomplete tool (not streaming) -- muted row

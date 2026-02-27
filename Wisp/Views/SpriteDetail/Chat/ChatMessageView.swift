@@ -5,6 +5,7 @@ struct ChatMessageView: View {
     var isStreaming: Bool = false
     var onCreateCheckpoint: (() -> Void)? = nil
     var isCheckpointDisabled: Bool = false
+    var onAnswerWispAsk: ((String) -> Void)? = nil
 
     var body: some View {
         switch message.role {
@@ -15,7 +16,8 @@ struct ChatMessageView: View {
                 message: message,
                 isStreaming: isStreaming,
                 onCreateCheckpoint: onCreateCheckpoint,
-                isCheckpointDisabled: isCheckpointDisabled
+                isCheckpointDisabled: isCheckpointDisabled,
+                onAnswerWispAsk: onAnswerWispAsk
             )
         case .system:
             systemMessage

@@ -83,6 +83,8 @@ final class ToolUseCard: Identifiable {
             return input["pattern"]?.stringValue ?? "glob search"
         case "Grep":
             return input["pattern"]?.stringValue ?? "grep search"
+        case "mcp__askUser__WispAsk":
+            return input["question"]?.stringValue ?? "asking user"
         default:
             return toolName
         }
@@ -96,6 +98,7 @@ final class ToolUseCard: Identifiable {
         case "Edit": return "pencil.line"
         case "Glob": return "magnifyingglass"
         case "Grep": return "text.magnifyingglass"
+        case "mcp__askUser__WispAsk": return "questionmark.bubble"
         default: return "wrench"
         }
     }
@@ -118,6 +121,9 @@ final class ToolUseCard: Identifiable {
         case "Grep":
             let pattern = input["pattern"]?.stringValue ?? "code"
             return "Searching \(pattern)..."
+        case "mcp__askUser__WispAsk":
+            let question = input["question"]?.stringValue ?? "user"
+            return "Asking: \(question.prefix(60))..."
         default:
             return "Running \(toolName)..."
         }
@@ -167,7 +173,13 @@ final class ToolResultCard: Identifiable {
         case .string(let text):
             return text
         case .array(let items):
-            return items.compactMap(\.stringValue).joined(separator: "\n")
+            // Built-in tool results: array of strings
+            let strings = items.compactMap(\.stringValue)
+            if !strings.isEmpty { return strings.joined(separator: "\n") }
+            // MCP tool results: array of content blocks [{type, text}]
+            let texts = items.compactMap { $0["text"]?.stringValue }
+            if !texts.isEmpty { return texts.joined(separator: "\n") }
+            return content.prettyString
         default:
             return content.prettyString
         }
