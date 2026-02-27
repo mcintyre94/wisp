@@ -3,8 +3,10 @@ import SwiftUI
 
 @main
 struct WispApp: App {
+    @UIApplicationDelegateAdaptor(AppDelegate.self) var appDelegate
     @State private var apiClient = SpritesAPIClient()
     @State private var browserCoordinator = InAppBrowserCoordinator()
+    @State private var notificationRouter = NotificationRouter()
     @AppStorage("theme") private var theme: String = "system"
 
     private var preferredColorScheme: ColorScheme? {
@@ -20,6 +22,7 @@ struct WispApp: App {
             RootView()
                 .environment(apiClient)
                 .environment(browserCoordinator)
+                .environment(notificationRouter)
                 .preferredColorScheme(preferredColorScheme)
                 .onChange(of: apiClient.isAuthenticated, initial: true) {
                     browserCoordinator.authToken = apiClient.spritesToken

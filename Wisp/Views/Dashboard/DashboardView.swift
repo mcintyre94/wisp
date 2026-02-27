@@ -7,6 +7,7 @@ enum SpriteSortOrder: String, CaseIterable {
 
 struct DashboardView: View {
     @Environment(SpritesAPIClient.self) private var apiClient
+    @Environment(NotificationRouter.self) private var notificationRouter
     @State private var viewModel = DashboardViewModel()
     @State private var navigationPath = NavigationPath()
     @State private var sortOrder: SpriteSortOrder = .newest
@@ -92,6 +93,10 @@ struct DashboardView: View {
             }
             .task {
                 await viewModel.loadSprites(apiClient: apiClient)
+                navigateToPendingDeepLink()
+            }
+            .onChange(of: notificationRouter.pendingNavigation) { _, _ in
+                navigateToPendingDeepLink()
             }
             .sheet(isPresented: $viewModel.showCreateSheet) {
                 CreateSpriteSheet()
@@ -110,5 +115,13 @@ struct DashboardView: View {
                 }
             }
         }
+    }
+
+    private func navigateToPendingDeepLink() {
+        guard let link = notificationRouter.pendingNavigation,
+              let sprite = viewModel.sprites.first(where: { $0.name == link.spriteName })
+        else { return }
+        navigationPath = NavigationPath([sprite])
+        // pendingNavigation is left set so SpriteDetailView can consume it
     }
 }

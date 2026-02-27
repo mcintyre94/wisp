@@ -14,6 +14,7 @@ struct SpriteDetailView: View {
     @State private var pendingFork: (checkpointId: String, messageId: UUID)? = nil
     @State private var isForking = false
     @Environment(SpritesAPIClient.self) private var apiClient
+    @Environment(NotificationRouter.self) private var notificationRouter
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
 
@@ -129,10 +130,20 @@ struct SpriteDetailView: View {
                 chatListViewModel.createChat(modelContext: modelContext)
             }
 
-            // Initialize chat VM for active chat
-            if let active = chatListViewModel.activeChat {
+            // Navigate to notification-linked chat if one is pending; otherwise open active chat
+            if let link = notificationRouter.consume(), link.spriteName == sprite.name,
+               let chat = chatListViewModel.chats.first(where: { $0.id == link.chatId }) {
+                switchToChat(chat)
+            } else if let active = chatListViewModel.activeChat {
                 switchToChat(active)
             }
+        }
+        .onChange(of: notificationRouter.pendingNavigation) { _, link in
+            guard let link, link.spriteName == sprite.name,
+                  let chat = chatListViewModel.chats.first(where: { $0.id == link.chatId })
+            else { return }
+            _ = notificationRouter.consume()
+            switchToChat(chat)
         }
         .onChange(of: chatListViewModel.activeChatId) { oldId, newId in
             guard newId != oldId, let newId,

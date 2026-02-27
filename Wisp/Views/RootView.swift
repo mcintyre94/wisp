@@ -1,9 +1,12 @@
 import SwiftUI
+import UserNotifications
 
 struct RootView: View {
     @Environment(SpritesAPIClient.self) private var apiClient
     @Environment(InAppBrowserCoordinator.self) private var browserCoordinator
+    @Environment(NotificationRouter.self) private var notificationRouter
     @Environment(\.modelContext) private var modelContext
+    @State private var notificationHandler: NotificationHandler?
 
     var body: some View {
         @Bindable var browser = browserCoordinator
@@ -29,6 +32,18 @@ struct RootView: View {
         }
         .task {
             migrateSpriteSessionsIfNeeded(modelContext: modelContext)
+            setupNotifications()
         }
+    }
+
+    private func setupNotifications() {
+        guard notificationHandler == nil else { return }
+        let handler = NotificationHandler(
+            modelContainer: modelContext.container,
+            router: notificationRouter
+        )
+        UNUserNotificationCenter.current().delegate = handler
+        notificationHandler = handler
+        handler.requestPermission()
     }
 }
