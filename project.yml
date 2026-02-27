@@ -27,5 +27,9 @@ targets:
       CURRENT_PROJECT_VERSION: "1"
       INFOPLIST_KEY_CFBundleDisplayName: Wisp
       INFOPLIST_KEY_UIBackgroundModes: remote-notification
+    entitlements:
+      path: Wisp/Wisp.entitlements
+      properties:
+        aps-environment: development
     dependencies:
       - package: MarkdownUI
