@@ -33,6 +33,9 @@ struct ChatView: View {
                             .transition(.opacity.combined(with: .move(edge: .bottom)))
                             .id("shimmer")
                     }
+                    if let pendingText = viewModel.queuedPrompt {
+                        PendingUserBubbleView(text: pendingText)
+                    }
                     Color.clear.frame(height: 1).id("bottom")
                 }
                 .opacity(contentOpacity)
@@ -52,6 +55,9 @@ struct ChatView: View {
                 if viewModel.isStreaming {
                     proxy.scrollTo("bottom")
                 }
+            }
+            .onChange(of: viewModel.queuedPrompt) {
+                proxy.scrollTo("bottom")
             }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
