@@ -66,6 +66,49 @@ final class NotificationHandler: NSObject, UNUserNotificationCenterDelegate {
         completionHandler()
     }
 
+    // MARK: - Background push
+
+    /// Called by AppDelegate when a silent push (`content-available: 1`) arrives.
+    /// Posts a local notification if the session belongs to a Wisp chat; otherwise suppresses.
+    ///
+    /// Expected payload keys alongside `aps`:
+    ///   - `session_id`: the Claude session ID
+    ///   - `title`: notification title (optional, falls back to "Claude finished")
+    ///   - `body`: notification body (optional, falls back to "Tap to view your session")
+    func handleBackgroundPush(
+        userInfo: [AnyHashable: Any],
+        fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
+    ) {
+        guard let sessionId = userInfo["session_id"] as? String,
+              findChat(forSessionId: sessionId) != nil
+        else {
+            completionHandler(.noData)
+            return
+        }
+
+        let content = UNMutableNotificationContent()
+        content.title = userInfo["title"] as? String ?? "Claude finished"
+        content.body = userInfo["body"] as? String ?? "Tap to view your session"
+        content.sound = .default
+        content.userInfo = ["session_id": sessionId]
+
+        let request = UNNotificationRequest(
+            identifier: sessionId,
+            content: content,
+            trigger: nil
+        )
+
+        Task {
+            do {
+                try await UNUserNotificationCenter.current().add(request)
+                completionHandler(.newData)
+            } catch {
+                logger.error("Failed to post local notification: \(error)")
+                completionHandler(.failed)
+            }
+        }
+    }
+
     // MARK: - Private
 
     private func findChat(forSessionId sessionId: String) -> (spriteName: String, chatId: UUID)? {

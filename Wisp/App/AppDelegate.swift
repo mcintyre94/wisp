@@ -3,7 +3,11 @@ import os
 
 private let logger = Logger(subsystem: "com.wisp.app", category: "Notifications")
 
+@MainActor
 class AppDelegate: NSObject, UIApplicationDelegate {
+    /// Set by RootView once the model container is available.
+    var notificationHandler: NotificationHandler?
+
     func application(
         _ application: UIApplication,
         didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data
@@ -18,5 +22,17 @@ class AppDelegate: NSObject, UIApplicationDelegate {
         didFailToRegisterForRemoteNotificationsWithError error: Error
     ) {
         logger.error("Failed to register for remote notifications: \(error)")
+    }
+
+    func application(
+        _ application: UIApplication,
+        didReceiveRemoteNotification userInfo: [AnyHashable: Any],
+        fetchCompletionHandler completionHandler: @escaping (UIBackgroundFetchResult) -> Void
+    ) {
+        guard let handler = notificationHandler else {
+            completionHandler(.noData)
+            return
+        }
+        handler.handleBackgroundPush(userInfo: userInfo, fetchCompletionHandler: completionHandler)
     }
 }

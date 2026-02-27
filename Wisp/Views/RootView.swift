@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 import UserNotifications
 
 struct RootView: View {
@@ -44,6 +45,10 @@ struct RootView: View {
         )
         UNUserNotificationCenter.current().delegate = handler
         notificationHandler = handler
+        // Give AppDelegate a reference so it can forward background pushes
+        if let appDelegate = UIApplication.shared.delegate as? AppDelegate {
+            appDelegate.notificationHandler = handler
+        }
         handler.requestPermission()
     }
 }

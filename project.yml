@@ -26,5 +26,6 @@ targets:
       MARKETING_VERSION: "1.0.0"
       CURRENT_PROJECT_VERSION: "1"
       INFOPLIST_KEY_CFBundleDisplayName: Wisp
+      INFOPLIST_KEY_UIBackgroundModes: remote-notification
     dependencies:
       - package: MarkdownUI
