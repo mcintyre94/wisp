@@ -19,6 +19,8 @@ struct ToolInputDetailView: View {
                 patternInput("Pattern")
             case "Grep":
                 patternInput("Search")
+            case "mcp__askUser__WispAsk":
+                wispAskInput
             default:
                 genericInput
             }
@@ -92,6 +94,14 @@ struct ToolInputDetailView: View {
                 .foregroundStyle(.secondary)
             Text(input["pattern"]?.stringValue ?? "")
                 .font(.system(.caption, design: .monospaced))
+                .textSelection(.enabled)
+        }
+    }
+
+    private var wispAskInput: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(input["question"]?.stringValue ?? "")
+                .font(.caption)
                 .textSelection(.enabled)
         }
     }

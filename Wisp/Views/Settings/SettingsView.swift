@@ -4,6 +4,7 @@ struct SettingsView: View {
     @Environment(SpritesAPIClient.self) private var apiClient
     @AppStorage("claudeModel") private var claudeModel: String = ClaudeModel.sonnet.rawValue
     @AppStorage("maxTurns") private var maxTurns: Int = 0
+    @AppStorage("claudeQuestionTool") private var claudeQuestionTool: Bool = true
     @AppStorage("gitName") private var gitName: String = ""
     @AppStorage("gitEmail") private var gitEmail: String = ""
     @AppStorage("customInstructions") private var customInstructions: String = ""
@@ -140,6 +141,13 @@ struct SettingsView: View {
             VStack(alignment: .leading, spacing: 8) {
                 Toggle("Auto-Checkpoint", isOn: $autoCheckpoint)
                 Text("Automatically take a checkpoint after Claude has written files.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Toggle("Claude Question Tool", isOn: $claudeQuestionTool)
+                Text("Allows Claude to ask you clarifying questions. Installs a small helper on your Sprite the first time you chat.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }

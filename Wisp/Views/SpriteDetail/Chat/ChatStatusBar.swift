@@ -3,12 +3,13 @@ import SwiftUI
 struct ChatStatusBar: View {
     let status: ChatStatus
     let modelName: String?
+    var hasPendingWispAsk: Bool = false
 
     private var statusKey: String {
         switch status {
         case .idle: return "idle-\(modelName ?? "")"
         case .connecting: return "connecting"
-        case .streaming: return "streaming"
+        case .streaming: return hasPendingWispAsk ? "waiting" : "streaming"
         case .reconnecting: return "reconnecting"
         case .error(let message): return "error-\(message)"
         }
@@ -52,7 +53,7 @@ struct ChatStatusBar: View {
                 case .streaming:
                     ProgressView()
                         .controlSize(.mini)
-                    Text("Streaming...")
+                    Text(hasPendingWispAsk ? "Waiting for answer..." : "Streaming...")
                         .font(.caption2)
                         .foregroundStyle(.secondary)
                 case .reconnecting:

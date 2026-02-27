@@ -32,7 +32,9 @@ struct DashboardView: View {
                 } else {
                     List {
                         ForEach(sortedSprites) { sprite in
-                            NavigationLink(value: sprite) {
+                            Button {
+                                navigationPath.append(sprite)
+                            } label: {
                                 SpriteRowView(sprite: sprite)
                             }
                             .buttonStyle(.plain)
