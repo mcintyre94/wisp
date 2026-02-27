@@ -79,6 +79,7 @@
 		EE22FF334455AA66BB770002 /* ExecSessionURLTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE22FF334455AA66BB770001 /* ExecSessionURLTests.swift */; };
 		FF11AA22BB33CC44DD55EE02 /* ChatViewModelHelpersTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF11AA22BB33CC44DD55EE01 /* ChatViewModelHelpersTests.swift */; };
 		FF11AA22BB33CC44DD55EE04 /* ChatViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF11AA22BB33CC44DD55EE03 /* ChatViewModelTests.swift */; };
+		BB33CC44DD55EE66FF770001 /* WispAskTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB33CC44DD55EE66FF770002 /* WispAskTests.swift */; };
 		A1B2C3D4E5F60718293A4B5E /* SpriteChat.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5D /* SpriteChat.swift */; };
 		B2C3D4E5F6A70819304B5C6E /* SpriteChatMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F6A70819304B5C6D /* SpriteChatMigration.swift */; };
 		C3D4E5F6A7B80920415C6D7F /* SpriteChatListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3D4E5F6A7B80920415C6D7E /* SpriteChatListViewModel.swift */; };
@@ -200,6 +201,7 @@
 		DD11EE22FF334455AA66BB03 /* ServiceTypesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceTypesTests.swift; sourceTree = "<group>"; };
 		EE22FF334455AA66BB770001 /* ExecSessionURLTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExecSessionURLTests.swift; sourceTree = "<group>"; };
 		FF11AA22BB33CC44DD55EE01 /* ChatViewModelHelpersTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModelHelpersTests.swift; sourceTree = "<group>"; };
+		BB33CC44DD55EE66FF770002 /* WispAskTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WispAskTests.swift; sourceTree = "<group>"; };
 		FF11AA22BB33CC44DD55EE03 /* ChatViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModelTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718293A4B5D /* SpriteChat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpriteChat.swift; sourceTree = "<group>"; };
 		B2C3D4E5F6A70819304B5C6D /* SpriteChatMigration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpriteChatMigration.swift; sourceTree = "<group>"; };
@@ -496,6 +498,7 @@
 				D5E6F7A8B9C00B52748FA0B1 /* AutoCheckpointTests.swift */,
 				FF11AA22BB33CC44DD55EE01 /* ChatViewModelHelpersTests.swift */,
 				FF11AA22BB33CC44DD55EE03 /* ChatViewModelTests.swift */,
+				BB33CC44DD55EE66FF770002 /* WispAskTests.swift */,
 				B5C3D17E8A9FABC001D2E3F4 /* ClaudeModelTests.swift */,
 				AABB0011223344556677F005 /* ClaudeStreamEventTests.swift */,
 				AABB0011223344556677F001 /* ClaudeStreamParserTests.swift */,
@@ -701,6 +704,7 @@
 				AABB0011223344556677F00A /* AppErrorTests.swift in Sources */,
 				FF11AA22BB33CC44DD55EE02 /* ChatViewModelHelpersTests.swift in Sources */,
 				FF11AA22BB33CC44DD55EE04 /* ChatViewModelTests.swift in Sources */,
+				BB33CC44DD55EE66FF770001 /* WispAskTests.swift in Sources */,
 				C6D4E28F9B0ABCD112E3F405 /* ClaudeModelTests.swift in Sources */,
 				AABB0011223344556677F006 /* ClaudeStreamEventTests.swift in Sources */,
 				AABB0011223344556677F002 /* ClaudeStreamParserTests.swift in Sources */,

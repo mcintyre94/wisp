@@ -88,3 +88,29 @@ struct WispAskCard: View {
         onSubmit(answer)
     }
 }
+
+#Preview("With Options") {
+    let card = ToolUseCard(
+        toolUseId: "preview-1",
+        toolName: "mcp__askUser__WispAsk",
+        input: .object([
+            "question": .string("Which approach should I take?"),
+            "options": .array([
+                .object(["label": .string("Option A"), "description": .string("Faster but less thorough")]),
+                .object(["label": .string("Option B"), "description": .string("Slower but more robust")]),
+            ]),
+        ])
+    )
+    WispAskCard(card: card) { _ in }
+        .padding()
+}
+
+#Preview("Free Text Only") {
+    let card = ToolUseCard(
+        toolUseId: "preview-2",
+        toolName: "mcp__askUser__WispAsk",
+        input: .object(["question": .string("What should I name the output file?")])
+    )
+    WispAskCard(card: card) { _ in }
+        .padding()
+}
