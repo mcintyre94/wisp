@@ -19,6 +19,12 @@ enum ChatStatus: Sendable {
     }
 }
 
+struct AttachedFile: Identifiable {
+    let id = UUID()
+    let name: String   // "main.py" or "photo_20260228.jpg"
+    let path: String   // "/home/sprite/project/main.py"
+}
+
 @Observable
 @MainActor
 final class ChatViewModel {
@@ -61,6 +67,68 @@ final class ChatViewModel {
         self.chatId = chatId
         self.serviceName = currentServiceName ?? "wisp-claude-\(UUID().uuidString.prefix(8).lowercased())"
         self.workingDirectory = workingDirectory
+    }
+
+    // MARK: - Attachment State
+
+    var attachedFiles: [AttachedFile] = []
+    var isUploadingAttachment = false
+    var uploadAttachmentError: String?
+    var lastUploadedFileName: String?
+    private var uploadFeedbackTask: Task<Void, Never>?
+
+    var currentWorkingDirectory: String { workingDirectory }
+
+    func uploadFileFromDevice(apiClient: SpritesAPIClient, fileURL: URL) async -> String? {
+        let accessing = fileURL.startAccessingSecurityScopedResource()
+        let data: Data
+        do {
+            data = try Data(contentsOf: fileURL)
+        } catch {
+            if accessing { fileURL.stopAccessingSecurityScopedResource() }
+            uploadAttachmentError = "Failed to read file: \(error.localizedDescription)"
+            return nil
+        }
+        if accessing { fileURL.stopAccessingSecurityScopedResource() }
+
+        return await uploadAttachmentData(apiClient: apiClient, data: data, filename: fileURL.lastPathComponent)
+    }
+
+    func uploadPhotoData(apiClient: SpritesAPIClient, data: Data, fileExtension: String) async -> String? {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyyMMdd_HHmmss"
+        let filename = "photo_\(formatter.string(from: Date())).\(fileExtension)"
+        return await uploadAttachmentData(apiClient: apiClient, data: data, filename: filename)
+    }
+
+    private func uploadAttachmentData(apiClient: SpritesAPIClient, data: Data, filename: String) async -> String? {
+        let remotePath = workingDirectory.hasSuffix("/")
+            ? workingDirectory + filename
+            : workingDirectory + "/" + filename
+
+        isUploadingAttachment = true
+        uploadAttachmentError = nil
+        defer { isUploadingAttachment = false }
+
+        do {
+            let _ = try await apiClient.uploadFile(
+                spriteName: spriteName,
+                remotePath: remotePath,
+                data: data
+            )
+            lastUploadedFileName = filename
+            uploadFeedbackTask?.cancel()
+            uploadFeedbackTask = Task {
+                try? await Task.sleep(for: .seconds(2))
+                if !Task.isCancelled {
+                    lastUploadedFileName = nil
+                }
+            }
+            return remotePath
+        } catch {
+            uploadAttachmentError = "Upload failed: \(error.localizedDescription)"
+            return nil
+        }
     }
 
     var isStreaming: Bool {
@@ -357,25 +425,36 @@ final class ChatViewModel {
 
     func sendMessage(apiClient: SpritesAPIClient, modelContext: ModelContext) {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !text.isEmpty else { return }
+        guard !text.isEmpty || !attachedFiles.isEmpty else { return }
 
         inputText = ""
+
+        // Build prompt with attached file paths prepended
+        var prompt = text
+        if !attachedFiles.isEmpty {
+            let paths = attachedFiles.map(\.path).joined(separator: "\n")
+            prompt = attachedFiles.count == 1 && text.isEmpty
+                ? paths
+                : text.isEmpty ? paths : paths + "\n\n" + text
+            attachedFiles = []
+        }
+
         saveDraft(modelContext: modelContext)
         retriedAfterTimeout = false
 
         if isStreaming {
             // Queue for later — don't add to messages yet; PendingUserBubbleView shows it
-            queuedPrompt = text
+            queuedPrompt = prompt
             return
         }
 
         let isFirstMessage = messages.isEmpty
-        let userMessage = ChatMessage(role: .user, content: [.text(text)])
+        let userMessage = ChatMessage(role: .user, content: [.text(prompt)])
         messages.append(userMessage)
         persistMessages(modelContext: modelContext)
 
         if isFirstMessage {
-            namingTask = Task { await autoNameChat(firstMessage: text, modelContext: modelContext) }
+            namingTask = Task { await autoNameChat(firstMessage: prompt, modelContext: modelContext) }
         }
 
         let worktreeEnabled = UserDefaults.standard.bool(forKey: "worktreePerChat")
@@ -388,7 +467,7 @@ final class ChatViewModel {
                 let branch = Self.branchName(from: chatName)
                 await self.setupWorktree(branchName: branch, apiClient: apiClient, modelContext: modelContext)
             }
-            await executeClaudeCommand(prompt: text, apiClient: apiClient, modelContext: modelContext)
+            await executeClaudeCommand(prompt: prompt, apiClient: apiClient, modelContext: modelContext)
         }
     }
 

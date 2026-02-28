@@ -31,7 +31,10 @@
 		F7A8B9C0D1E2F30415263748 /* PlanCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7A8B9C0D1E2F30415263749 /* PlanCardView.swift */; };
 		8F72503BCFF96CEF02334CA8 /* ChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 540685D9D567596E24E4EF82 /* ChatViewModel.swift */; };
 		974996B0FB4D30828E89DD21 /* SpriteOverviewViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC9BFD0F0AC39C136C9E828A /* SpriteOverviewViewModel.swift */; };
+		CC11DD22EE33FF4400110001 /* ChatAttachmentButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC11DD22EE33FF4400110002 /* ChatAttachmentButton.swift */; };
+		DD22EE33FF4400110007AA01 /* AttachmentChipsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD22EE33FF4400110007AA02 /* AttachmentChipsView.swift */; };
 		994D6CD07165B1FDF9AE7300 /* ChatInputBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C308D530B9DAC21AD2A843B /* ChatInputBar.swift */; };
+		CC11DD22EE33FF4400110003 /* SpriteFileBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC11DD22EE33FF4400110004 /* SpriteFileBrowserView.swift */; };
 		99BA5812AF56D1C7501D1F0C /* CreateCheckpointSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DDF8D1F423CF62E04FDBA07 /* CreateCheckpointSheet.swift */; };
 		9CAC809156C87B9CBD77F706 /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 6F228BF923FFA9401FFC29C5 /* MarkdownUI */; };
 		A1B2C3D4E5F60718293A4B5C /* PersistedChatMessage.swift in Sources */ = {isa = PBXBuildFile; fileRef = F1E2D3C4B5A60798192A3B4C /* PersistedChatMessage.swift */; };
@@ -79,6 +82,7 @@
 		DD11EE22FF334455AA66BB02 /* ServiceTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD11EE22FF334455AA66BB01 /* ServiceTypes.swift */; };
 		DD11EE22FF334455AA66BB04 /* ServiceTypesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD11EE22FF334455AA66BB03 /* ServiceTypesTests.swift */; };
 		EE22FF334455AA66BB770002 /* ExecSessionURLTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE22FF334455AA66BB770001 /* ExecSessionURLTests.swift */; };
+		CC11DD22EE33FF4400110006 /* FileEntryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC11DD22EE33FF4400110005 /* FileEntryTests.swift */; };
 		FF11AA22BB33CC44DD55EE02 /* ChatViewModelHelpersTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF11AA22BB33CC44DD55EE01 /* ChatViewModelHelpersTests.swift */; };
 		FF11AA22BB33CC44DD55EE04 /* ChatViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF11AA22BB33CC44DD55EE03 /* ChatViewModelTests.swift */; };
 		BB33CC44DD55EE66FF770001 /* WispAskTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB33CC44DD55EE66FF770002 /* WispAskTests.swift */; };
@@ -152,7 +156,10 @@
 		54C849AF5732774C39968056 /* SpriteDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpriteDetailView.swift; sourceTree = "<group>"; };
 		A1E74C3B8D2F0C9547B6A891 /* SpriteNavigationPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpriteNavigationPanel.swift; sourceTree = "<group>"; };
 		616F53154EEA09CE101C7703 /* AppError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppError.swift; sourceTree = "<group>"; };
+		CC11DD22EE33FF4400110002 /* ChatAttachmentButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatAttachmentButton.swift; sourceTree = "<group>"; };
+		DD22EE33FF4400110007AA02 /* AttachmentChipsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttachmentChipsView.swift; sourceTree = "<group>"; };
 		7C308D530B9DAC21AD2A843B /* ChatInputBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatInputBar.swift; sourceTree = "<group>"; };
+		CC11DD22EE33FF4400110004 /* SpriteFileBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpriteFileBrowserView.swift; sourceTree = "<group>"; };
 		7EE32C593901CBCD7DE899D3 /* ExecMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExecMessage.swift; sourceTree = "<group>"; };
 		82F0818DD437A77B57594574 /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
 		8A278B4716095105A7024CF8 /* ToolUseCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolUseCardView.swift; sourceTree = "<group>"; };
@@ -205,6 +212,7 @@
 		DD11EE22FF334455AA66BB01 /* ServiceTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceTypes.swift; sourceTree = "<group>"; };
 		DD11EE22FF334455AA66BB03 /* ServiceTypesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceTypesTests.swift; sourceTree = "<group>"; };
 		EE22FF334455AA66BB770001 /* ExecSessionURLTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExecSessionURLTests.swift; sourceTree = "<group>"; };
+		CC11DD22EE33FF4400110005 /* FileEntryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileEntryTests.swift; sourceTree = "<group>"; };
 		FF11AA22BB33CC44DD55EE01 /* ChatViewModelHelpersTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModelHelpersTests.swift; sourceTree = "<group>"; };
 		BB33CC44DD55EE66FF770002 /* WispAskTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WispAskTests.swift; sourceTree = "<group>"; };
 		FF11AA22BB33CC44DD55EE03 /* ChatViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModelTests.swift; sourceTree = "<group>"; };
@@ -434,6 +442,8 @@
 			isa = PBXGroup;
 			children = (
 				39E3CEEE606D9AFF4265AB76 /* AssistantMessageView.swift */,
+				DD22EE33FF4400110007AA02 /* AttachmentChipsView.swift */,
+				CC11DD22EE33FF4400110002 /* ChatAttachmentButton.swift */,
 				C4D5E6F7A8B90A41637E8FA1 /* CheckpointMarkerView.swift */,
 				7C308D530B9DAC21AD2A843B /* ChatInputBar.swift */,
 				D9BC746AE628458445D34FCE /* ChatMessageView.swift */,
@@ -442,6 +452,7 @@
 				4FB02E9F26B9003B6E1DBE7C /* ChatView.swift */,
 				F7A8B9C0D1E2F30415263749 /* PlanCardView.swift */,
 				B2C3D4E5F6A7081930DBFF01 /* SessionSuggestionsView.swift */,
+				CC11DD22EE33FF4400110004 /* SpriteFileBrowserView.swift */,
 				A1A2A3A4B5B6C7C800000002 /* ThinkingShimmerView.swift */,
 				BB00CC11DD22EE3300000002 /* PendingUserBubbleView.swift */,
 				A1A2A3A4B5B6C7C800000006 /* ToolDetailSheet.swift */,
@@ -518,6 +529,7 @@
 				F6A7B8C9D0E10C53748F9001 /* SpriteChatMigrationTests.swift */,
 				DD11EE22FF334455AA66BB03 /* ServiceTypesTests.swift */,
 				EE22FF334455AA66BB770001 /* ExecSessionURLTests.swift */,
+				CC11DD22EE33FF4400110005 /* FileEntryTests.swift */,
 			);
 			path = WispTests;
 			sourceTree = "<group>";
@@ -640,6 +652,8 @@
 				AA00BB11CC22DD3300000001 /* WispAskCard.swift in Sources */,
 				C28D2088D3562DF23E1FEF57 /* AuthView.swift in Sources */,
 				F550E4D5C8AA29B02E3BC9D9 /* AuthViewModel.swift in Sources */,
+				DD22EE33FF4400110007AA01 /* AttachmentChipsView.swift in Sources */,
+				CC11DD22EE33FF4400110001 /* ChatAttachmentButton.swift in Sources */,
 				994D6CD07165B1FDF9AE7300 /* ChatInputBar.swift in Sources */,
 				252341DD690F4B3DA4E378BE /* ChatMessage.swift in Sources */,
 				0DCFEEB6A976CC63316F4535 /* ChatMessageView.swift in Sources */,
@@ -699,6 +713,7 @@
 				DD11EE22FF334455AA66BB02 /* ServiceTypes.swift in Sources */,
 				A1B2C3D4E5F6071829CAFE02 /* ClaudeSessionEntry.swift in Sources */,
 				B2C3D4E5F6A7081930DBFF02 /* SessionSuggestionsView.swift in Sources */,
+				CC11DD22EE33FF4400110003 /* SpriteFileBrowserView.swift in Sources */,
 				C4D5E6F7A8B90A41637E8FA2 /* CheckpointMarkerView.swift in Sources */,
 				E1F2A3B4C5D6E7F800000014 /* UnifiedDiffView.swift in Sources */,
 				C575C7232C5FCA1A3F18A9D8 /* WispApp.swift in Sources */,
@@ -728,6 +743,7 @@
 				F6A7B8C9D0E10C53748F9002 /* SpriteChatMigrationTests.swift in Sources */,
 				D5E6F7A8B9C00B52748FA0B2 /* AutoCheckpointTests.swift in Sources */,
 				E7F8A9B0C1D2E3F405A6B7C2 /* ChatNameTests.swift in Sources */,
+				CC11DD22EE33FF4400110006 /* FileEntryTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
