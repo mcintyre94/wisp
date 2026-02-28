@@ -133,7 +133,7 @@ struct DashboardView: View {
         .task {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(5))
-                await viewModel.loadSprites(apiClient: apiClient)
+                await viewModel.refreshSprites(apiClient: apiClient)
             }
         }
         .sheet(isPresented: $viewModel.showCreateSheet) {
