@@ -33,6 +33,15 @@ struct ChatView: View {
                             .transition(.opacity.combined(with: .move(edge: .bottom)))
                             .id("shimmer")
                     }
+                    if let pendingText = viewModel.queuedPrompt {
+                        PendingUserBubbleView(text: pendingText) {
+                            viewModel.inputText = pendingText
+                            viewModel.queuedPrompt = nil
+                            isInputFocused = true
+                        } onCancel: {
+                            viewModel.cancelQueuedPrompt()
+                        }
+                    }
                     Color.clear.frame(height: 1).id("bottom")
                 }
                 .opacity(contentOpacity)
@@ -52,6 +61,9 @@ struct ChatView: View {
                 if viewModel.isStreaming {
                     proxy.scrollTo("bottom")
                 }
+            }
+            .onChange(of: viewModel.queuedPrompt) {
+                proxy.scrollTo("bottom")
             }
         }
         .safeAreaInset(edge: .top, spacing: 0) {
@@ -106,6 +118,7 @@ struct ChatView: View {
                 ChatInputBar(
                     text: $viewModel.inputText,
                     isStreaming: viewModel.isStreaming,
+                    hasQueuedMessage: viewModel.queuedPrompt != nil,
                     onSend: {
                         isInputFocused = false
                         viewModel.sendMessage(apiClient: apiClient, modelContext: modelContext)
