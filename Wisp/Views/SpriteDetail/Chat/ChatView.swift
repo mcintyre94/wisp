@@ -19,6 +19,7 @@ struct ChatView: View {
                     if viewModel.messages.isEmpty && !isReadOnly {
                         SessionSuggestionsView(
                             sessions: viewModel.remoteSessions,
+                            hasAnySessions: viewModel.hasAnyRemoteSessions,
                             isLoading: viewModel.isLoadingRemoteSessions || viewModel.isLoadingHistory
                         ) { entry in
                             contentOpacity = 0

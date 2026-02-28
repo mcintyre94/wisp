@@ -29,6 +29,7 @@ final class ChatViewModel {
     var status: ChatStatus = .idle
     var modelName: String?
     var remoteSessions: [ClaudeSessionEntry] = []
+    var hasAnyRemoteSessions = false
     var isLoadingRemoteSessions = false
     var isLoadingHistory = false
 
@@ -173,6 +174,7 @@ final class ChatViewModel {
                 .sorted { a, b in
                     (a.modifiedDate ?? .distantPast) > (b.modifiedDate ?? .distantPast)
                 }
+            hasAnyRemoteSessions = !entries.isEmpty
             remoteSessions = Array(filtered.prefix(5))
             logger.info("Found \(entries.count) remote sessions, \(self.remoteSessions.count) available to resume")
         }

@@ -2,6 +2,7 @@ import SwiftUI
 
 struct SessionSuggestionsView: View {
     let sessions: [ClaudeSessionEntry]
+    let hasAnySessions: Bool
     let isLoading: Bool
     let onSelect: (ClaudeSessionEntry) -> Void
 
@@ -18,7 +19,7 @@ struct SessionSuggestionsView: View {
                 .frame(maxWidth: .infinity)
                 .padding(.top, 40)
             } else if sessions.isEmpty {
-                Text("No other previous Claude sessions")
+                Text(hasAnySessions ? "All Claude sessions are already open in chats" : "No Claude sessions available to resume")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
                     .frame(maxWidth: .infinity)
