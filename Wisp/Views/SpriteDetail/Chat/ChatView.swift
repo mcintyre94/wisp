@@ -34,7 +34,13 @@ struct ChatView: View {
                             .id("shimmer")
                     }
                     if let pendingText = viewModel.queuedPrompt {
-                        PendingUserBubbleView(text: pendingText)
+                        PendingUserBubbleView(text: pendingText) {
+                            viewModel.inputText = pendingText
+                            viewModel.queuedPrompt = nil
+                            isInputFocused = true
+                        } onCancel: {
+                            viewModel.cancelQueuedPrompt()
+                        }
                     }
                     Color.clear.frame(height: 1).id("bottom")
                 }
@@ -112,6 +118,7 @@ struct ChatView: View {
                 ChatInputBar(
                     text: $viewModel.inputText,
                     isStreaming: viewModel.isStreaming,
+                    hasQueuedMessage: viewModel.queuedPrompt != nil,
                     onSend: {
                         isInputFocused = false
                         viewModel.sendMessage(apiClient: apiClient, modelContext: modelContext)

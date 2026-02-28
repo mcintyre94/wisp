@@ -346,6 +346,10 @@ final class ChatViewModel {
         }
     }
 
+    func cancelQueuedPrompt() {
+        queuedPrompt = nil
+    }
+
     func sendMessage(apiClient: SpritesAPIClient, modelContext: ModelContext) {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }

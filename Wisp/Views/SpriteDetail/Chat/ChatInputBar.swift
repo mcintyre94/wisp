@@ -3,6 +3,7 @@ import SwiftUI
 struct ChatInputBar: View {
     @Binding var text: String
     let isStreaming: Bool
+    var hasQueuedMessage: Bool = false
     let onSend: () -> Void
     let onInterrupt: () -> Void
     var isFocused: FocusState<Bool>.Binding
@@ -20,6 +21,7 @@ struct ChatInputBar: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
                 .glassEffect(in: .rect(cornerRadius: 20))
+                .disabled(hasQueuedMessage)
 
             if isStreaming {
                 Button(action: onInterrupt) {
@@ -37,8 +39,8 @@ struct ChatInputBar: View {
                 Image(systemName: "arrow.up.circle.fill")
                     .font(.title2)
             }
-            .tint(isEmpty ? .gray : .blue)
-            .disabled(isEmpty)
+            .tint(isEmpty || hasQueuedMessage ? .gray : .blue)
+            .disabled(isEmpty || hasQueuedMessage)
             .buttonStyle(.glass)
         }
         .padding(.horizontal)
