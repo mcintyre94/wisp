@@ -110,7 +110,7 @@ The app runs on iPhone, iPad, and Mac (Designed for iPad). Keep all three in min
 
 - **Navigation**: `DashboardView` uses `NavigationSplitView`; `List(selection:)` + `.tag()` drives sidebar selection and push navigation on iPhone. Do not remove the `selection` binding — iPhone relies on it for implicit navigation links.
 - **Size class**: Use `@Environment(\.horizontalSizeClass)` to branch between compact (iPhone) and regular (iPad/Mac) layouts where needed.
-- **Mac detection at runtime**: Use `ProcessInfo.processInfo.isiOSAppOnMac` for runtime checks. `#if targetEnvironment(macCatalyst)` is `false` for this app (runs as "Designed for iPad", not Catalyst).
+- **Mac detection**: The app may run on Mac as a Catalyst build or as a "Designed for iPad" app — handle both. `#if targetEnvironment(macCatalyst)` is true for Catalyst; `ProcessInfo.processInfo.isiOSAppOnMac` is true for "Designed for iPad" on Mac. A safe `isRunningOnMac` helper should return `true` in either case by combining the compile-time and runtime checks.
 - **Content width**: Wide screens benefit from a max-width cap on content-heavy views (Overview, Checkpoints, Auth). Use `HStack` spacers + `.frame(maxWidth:)` — do **not** use `containerRelativeFrame` inside `NavigationSplitView` detail columns, as it measures the wrong container and compresses the sidebar.
 - **Swipe actions and context menus**: Always implement both. Swipe actions are the primary interaction on iPhone/iPad; context menus (long-press on iOS, right-click on Mac) must cover the same set of actions so nothing is inaccessible on Mac. The two should be kept in sync whenever actions are added or removed.
 - Tokens are org-scoped; org slug is embedded in the token string (e.g. `my-org/1290577/...`)
