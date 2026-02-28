@@ -1,3 +1,4 @@
+import PhotosUI
 import SwiftUI
 
 struct ChatView: View {
@@ -11,6 +12,12 @@ struct ChatView: View {
     var onFork: ((String, UUID) -> Void)? = nil
     @FocusState private var isInputFocused: Bool
     @State private var contentOpacity: Double = 0
+
+    // Attachment state
+    @State private var showFileBrowser = false
+    @State private var showPhotoPicker = false
+    @State private var showFilePicker = false
+    @State private var selectedPhotos: [PhotosPickerItem] = []
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -127,8 +134,67 @@ struct ChatView: View {
                     onInterrupt: {
                         viewModel.interrupt(apiClient: apiClient, modelContext: modelContext)
                     },
+                    onBrowseSpriteFiles: { showFileBrowser = true },
+                    onPickPhoto: { showPhotoPicker = true },
+                    onPickFile: { showFilePicker = true },
+                    isUploading: viewModel.isUploadingAttachment,
+                    attachedFiles: viewModel.attachedFiles,
+                    onRemoveAttachment: { file in
+                        viewModel.attachedFiles.removeAll { $0.id == file.id }
+                    },
+                    lastUploadedFileName: viewModel.lastUploadedFileName,
                     isFocused: $isInputFocused
                 )
+            }
+        }
+        .sheet(isPresented: $showFileBrowser) {
+            SpriteFileBrowserView(
+                spriteName: viewModel.spriteName,
+                startingDirectory: viewModel.currentWorkingDirectory,
+                apiClient: apiClient,
+                onFileSelected: { path in
+                    let name = (path as NSString).lastPathComponent
+                    viewModel.attachedFiles.append(AttachedFile(name: name, path: path))
+                }
+            )
+        }
+        .photosPicker(isPresented: $showPhotoPicker, selection: $selectedPhotos, maxSelectionCount: 1, matching: .images)
+        .fileImporter(isPresented: $showFilePicker, allowedContentTypes: [.item]) { result in
+            switch result {
+            case .success(let url):
+                Task {
+                    if let remotePath = await viewModel.uploadFileFromDevice(apiClient: apiClient, fileURL: url) {
+                        let name = (remotePath as NSString).lastPathComponent
+                        viewModel.attachedFiles.append(AttachedFile(name: name, path: remotePath))
+                    }
+                }
+            case .failure(let error):
+                viewModel.uploadAttachmentError = "Failed to pick file: \(error.localizedDescription)"
+            }
+        }
+        .alert("Upload Error", isPresented: .init(
+            get: { viewModel.uploadAttachmentError != nil },
+            set: { if !$0 { viewModel.uploadAttachmentError = nil } }
+        )) {
+            Button("OK") { viewModel.uploadAttachmentError = nil }
+        } message: {
+            if let error = viewModel.uploadAttachmentError {
+                Text(error)
+            }
+        }
+        .onChange(of: selectedPhotos) {
+            guard let item = selectedPhotos.first else { return }
+            selectedPhotos = []
+            Task {
+                guard let data = try? await item.loadTransferable(type: Data.self) else {
+                    viewModel.uploadAttachmentError = "Failed to load photo data"
+                    return
+                }
+                let ext = item.supportedContentTypes.first?.preferredFilenameExtension ?? "jpg"
+                if let remotePath = await viewModel.uploadPhotoData(apiClient: apiClient, data: data, fileExtension: ext) {
+                    let name = (remotePath as NSString).lastPathComponent
+                    viewModel.attachedFiles.append(AttachedFile(name: name, path: remotePath))
+                }
             }
         }
     }
