@@ -85,6 +85,11 @@ final class ToolUseCard: Identifiable {
             return input["pattern"]?.stringValue ?? "grep search"
         case "mcp__askUser__WispAsk":
             return input["question"]?.stringValue ?? "asking user"
+        case "TodoWrite":
+            guard case .array(let todos) = input["todos"] else { return "update plan" }
+            let total = todos.count
+            let done = todos.filter { $0["status"]?.stringValue == "completed" }.count
+            return "\(done)/\(total) tasks"
         default:
             return toolName
         }
@@ -99,6 +104,7 @@ final class ToolUseCard: Identifiable {
         case "Glob": return "magnifyingglass"
         case "Grep": return "text.magnifyingglass"
         case "mcp__askUser__WispAsk": return "questionmark.bubble"
+        case "TodoWrite": return "list.bullet.clipboard"
         default: return "wrench"
         }
     }
@@ -124,6 +130,8 @@ final class ToolUseCard: Identifiable {
         case "mcp__askUser__WispAsk":
             let question = input["question"]?.stringValue ?? "user"
             return "Asking: \(question.prefix(60))..."
+        case "TodoWrite":
+            return "Updating plan..."
         default:
             return "Running \(toolName)..."
         }

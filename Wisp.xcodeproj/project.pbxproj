@@ -28,6 +28,7 @@
 		BB00CC11DD22EE3300000001 /* PendingUserBubbleView.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB00CC11DD22EE3300000002 /* PendingUserBubbleView.swift */; };
 		A1A2A3A4B5B6C7C800000003 /* ToolStepRow.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A2A3A4B5B6C7C800000004 /* ToolStepRow.swift */; };
 		A1A2A3A4B5B6C7C800000005 /* ToolDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A2A3A4B5B6C7C800000006 /* ToolDetailSheet.swift */; };
+		F7A8B9C0D1E2F30415263748 /* PlanCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7A8B9C0D1E2F30415263749 /* PlanCardView.swift */; };
 		8F72503BCFF96CEF02334CA8 /* ChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 540685D9D567596E24E4EF82 /* ChatViewModel.swift */; };
 		974996B0FB4D30828E89DD21 /* SpriteOverviewViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC9BFD0F0AC39C136C9E828A /* SpriteOverviewViewModel.swift */; };
 		994D6CD07165B1FDF9AE7300 /* ChatInputBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C308D530B9DAC21AD2A843B /* ChatInputBar.swift */; };
@@ -177,6 +178,7 @@
 		A1A2A3A4B5B6C7C800000002 /* ThinkingShimmerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ThinkingShimmerView.swift; sourceTree = "<group>"; };
 		A1A2A3A4B5B6C7C800000004 /* ToolStepRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolStepRow.swift; sourceTree = "<group>"; };
 		A1A2A3A4B5B6C7C800000006 /* ToolDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolDetailSheet.swift; sourceTree = "<group>"; };
+		F7A8B9C0D1E2F30415263749 /* PlanCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanCardView.swift; sourceTree = "<group>"; };
 		EA1634863D8543868BA11B02 /* CreateSpriteSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateSpriteSheet.swift; sourceTree = "<group>"; };
 		EF49F7E0F4AC02FDF496D379 /* DashboardViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DashboardViewModel.swift; sourceTree = "<group>"; };
 		F1E2D3C4B5A60798192A3B4C /* PersistedChatMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PersistedChatMessage.swift; sourceTree = "<group>"; };
@@ -440,6 +442,7 @@
 				42C4A8D129C538233C34B2A6 /* ChatStatusBar.swift */,
 				D4E5F6A7B8C90A31526D7E8F /* ChatSwitcherSheet.swift */,
 				4FB02E9F26B9003B6E1DBE7C /* ChatView.swift */,
+				F7A8B9C0D1E2F30415263749 /* PlanCardView.swift */,
 				B2C3D4E5F6A7081930DBFF01 /* SessionSuggestionsView.swift */,
 				A1A2A3A4B5B6C7C800000002 /* ThinkingShimmerView.swift */,
 				BB00CC11DD22EE3300000002 /* PendingUserBubbleView.swift */,
@@ -689,6 +692,7 @@
 				AFD1F0F805631C7AE9679AC7 /* SpritesAPIClient.swift in Sources */,
 				A1A2A3A4B5B6C7C800000001 /* ThinkingShimmerView.swift in Sources */,
 				BB00CC11DD22EE3300000001 /* PendingUserBubbleView.swift in Sources */,
+				F7A8B9C0D1E2F30415263748 /* PlanCardView.swift in Sources */,
 				A1A2A3A4B5B6C7C800000005 /* ToolDetailSheet.swift in Sources */,
 				3A36571818CB2EBA1ED78500 /* ToolInputDetailView.swift in Sources */,
 				A1A2A3A4B5B6C7C800000003 /* ToolStepRow.swift in Sources */,

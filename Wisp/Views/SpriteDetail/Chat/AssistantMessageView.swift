@@ -44,7 +44,9 @@ struct AssistantMessageView: View {
                                 }
                             }
                     case .toolUse(let card):
-                        if card.result != nil {
+                        if card.toolName == "TodoWrite" {
+                            PlanCardView(card: card)
+                        } else if card.result != nil {
                             // Completed tool -- compact step row
                             ToolStepRow(card: card) {
                                 selectedToolCard = card
