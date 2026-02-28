@@ -37,6 +37,7 @@ final class ChatViewModel {
     private var sessionId: String?
     private var workingDirectory: String
     private var streamTask: Task<Void, Never>?
+    var namingTask: Task<Void, Never>?
     private let parser = ClaudeStreamParser()
     private var currentAssistantMessage: ChatMessage?
     private var toolUseIndex: [String: (messageIndex: Int, toolName: String)] = [:]
@@ -372,7 +373,7 @@ final class ChatViewModel {
         persistMessages(modelContext: modelContext)
 
         if isFirstMessage {
-            Task { await autoNameChat(firstMessage: text, modelContext: modelContext) }
+            namingTask = Task { await autoNameChat(firstMessage: text, modelContext: modelContext) }
         }
 
         streamTask = Task {
