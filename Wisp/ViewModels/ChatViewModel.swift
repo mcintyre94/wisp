@@ -378,6 +378,10 @@ final class ChatViewModel {
         }
     }
 
+    func cancelQueuedPrompt() {
+        queuedPrompt = nil
+    }
+
     func resumeAfterBackground(apiClient: SpritesAPIClient, modelContext: ModelContext) {
         guard isStreaming else { return }
         // Cancel the stale stream and reconnect via service logs
