@@ -34,7 +34,9 @@ struct ChatView: View {
                             .id("shimmer")
                     }
                     if let pendingText = viewModel.queuedPrompt {
-                        PendingUserBubbleView(text: pendingText)
+                        PendingUserBubbleView(text: pendingText) {
+                            viewModel.cancelQueuedPrompt()
+                        }
                     }
                     Color.clear.frame(height: 1).id("bottom")
                 }
