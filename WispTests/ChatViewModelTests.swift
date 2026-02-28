@@ -412,6 +412,56 @@ struct ChatViewModelTests {
         }
     }
 
+    // MARK: - Queued prompt
+
+    @Test func sendMessage_whileStreaming_queuesPrompt() throws {
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+        vm.status = .streaming
+
+        vm.inputText = "make the tests pass"
+        vm.sendMessage(apiClient: SpritesAPIClient(), modelContext: ctx)
+
+        #expect(vm.queuedPrompt == "make the tests pass")
+        #expect(vm.inputText == "")
+    }
+
+    @Test func sendMessage_whileStreaming_replacesExistingQueuedPrompt() throws {
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+        vm.status = .streaming
+        vm.queuedPrompt = "old message"
+
+        vm.inputText = "new message"
+        vm.sendMessage(apiClient: SpritesAPIClient(), modelContext: ctx)
+
+        #expect(vm.queuedPrompt == "new message")
+    }
+
+    @Test func cancelQueuedPrompt_clearsQueuedPrompt() throws {
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+        vm.queuedPrompt = "some queued message"
+
+        vm.cancelQueuedPrompt()
+
+        #expect(vm.queuedPrompt == nil)
+    }
+
+    @Test func detach_clearsQueuedPrompt() throws {
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+        vm.status = .streaming
+        vm.queuedPrompt = "queued while streaming"
+
+        vm.detach(modelContext: ctx)
+
+        #expect(vm.queuedPrompt == nil)
+        guard case .idle = vm.status else {
+            Issue.record("Expected idle status after detach"); return
+        }
+    }
+
     // MARK: - Streaming state (single source of truth)
 
     @Test func currentAssistantMessageId_tracksCurrentMessage() throws {

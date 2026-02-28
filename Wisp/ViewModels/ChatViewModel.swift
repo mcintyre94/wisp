@@ -392,6 +392,7 @@ final class ChatViewModel {
         streamTask = nil
 
         currentAssistantMessage = nil
+        queuedPrompt = nil
         status = .idle
 
         if let modelContext {
