@@ -160,22 +160,25 @@ struct SpriteChatListViewModelTests {
         #expect(chat.spriteCreatedAt == date)
     }
 
-    @Test func createChat_usesWorkingDirectoryFromSpriteSession() throws {
+    @Test func createChat_usesWorkingDirectoryFromUserDefaults() throws {
         let ctx = try makeModelContext()
-        let session = SpriteSession(spriteName: "test-sprite", workingDirectory: "/home/sprite/my-repo")
-        ctx.insert(session)
-        try ctx.save()
+        let spriteName = "wd-test-sprite-\(UUID().uuidString)"
+        let key = "workingDirectory_\(spriteName)"
+        UserDefaults.standard.set("/home/sprite/my-repo", forKey: key)
+        defer { UserDefaults.standard.removeObject(forKey: key) }
 
-        let vm = SpriteChatListViewModel(spriteName: "test-sprite")
+        let vm = SpriteChatListViewModel(spriteName: spriteName)
         let chat = vm.createChat(modelContext: ctx)
 
         #expect(chat.workingDirectory == "/home/sprite/my-repo")
     }
 
-    @Test func createChat_fallsBackToDefaultWithoutSpriteSession() throws {
+    @Test func createChat_fallsBackToDefaultWithoutUserDefaultsEntry() throws {
         let ctx = try makeModelContext()
-        let vm = SpriteChatListViewModel(spriteName: "test-sprite")
+        let spriteName = "wd-fallback-sprite-\(UUID().uuidString)"
+        UserDefaults.standard.removeObject(forKey: "workingDirectory_\(spriteName)")
 
+        let vm = SpriteChatListViewModel(spriteName: spriteName)
         let chat = vm.createChat(modelContext: ctx)
 
         #expect(chat.workingDirectory == "/home/sprite/project")

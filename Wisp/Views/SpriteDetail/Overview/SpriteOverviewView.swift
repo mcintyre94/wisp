@@ -1,12 +1,10 @@
 import SwiftUI
-import SwiftData
 import UniformTypeIdentifiers
 import PhotosUI
 
 struct SpriteOverviewView: View {
     @Environment(SpritesAPIClient.self) private var apiClient
     @Environment(\.openURL) private var openURL
-    @Environment(\.modelContext) private var modelContext
     @State private var viewModel: SpriteOverviewViewModel
     @State private var workingDirectory = "/home/sprite/project"
     @State private var showUploadOptions = false
@@ -325,28 +323,15 @@ struct SpriteOverviewView: View {
     }
 
     private func loadWorkingDirectory() {
-        let name = viewModel.sprite.name
-        let descriptor = FetchDescriptor<SpriteSession>(
-            predicate: #Predicate { $0.spriteName == name }
-        )
-        if let session = try? modelContext.fetch(descriptor).first {
-            workingDirectory = session.workingDirectory
+        let key = "workingDirectory_\(viewModel.sprite.name)"
+        if let saved = UserDefaults.standard.string(forKey: key) {
+            workingDirectory = saved
         }
     }
 
     private func saveWorkingDirectory() {
-        let name = viewModel.sprite.name
-        let descriptor = FetchDescriptor<SpriteSession>(
-            predicate: #Predicate { $0.spriteName == name }
-        )
-        if let session = try? modelContext.fetch(descriptor).first {
-            session.workingDirectory = workingDirectory
-            try? modelContext.save()
-        } else {
-            let session = SpriteSession(spriteName: name, workingDirectory: workingDirectory)
-            modelContext.insert(session)
-            try? modelContext.save()
-        }
+        let key = "workingDirectory_\(viewModel.sprite.name)"
+        UserDefaults.standard.set(workingDirectory, forKey: key)
     }
 
     private var statusColor: Color {

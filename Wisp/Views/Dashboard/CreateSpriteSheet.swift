@@ -163,9 +163,7 @@ struct CreateSpriteSheet: View {
                     command: "git clone --depth 1 '\(info.cloneURL)' '\(clonePath)'",
                     timeout: 60
                 )
-                let session = SpriteSession(spriteName: spriteName, workingDirectory: clonePath)
-                modelContext.insert(session)
-                try? modelContext.save()
+                UserDefaults.standard.set(clonePath, forKey: "workingDirectory_\(spriteName)")
             }
 
             dismiss()

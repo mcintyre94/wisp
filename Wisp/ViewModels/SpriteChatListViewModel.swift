@@ -39,17 +39,12 @@ final class SpriteChatListViewModel {
     func createChat(modelContext: ModelContext) -> SpriteChat {
         let maxNumber = chats.map(\.chatNumber).max() ?? 0
 
-        // Use working directory from SpriteSession if available
-        let name = spriteName
-        let sessionDescriptor = FetchDescriptor<SpriteSession>(
-            predicate: #Predicate { $0.spriteName == name }
-        )
-        let workingDirectory = (try? modelContext.fetch(sessionDescriptor))?.first?.workingDirectory
+        let workingDirectory = UserDefaults.standard.string(forKey: "workingDirectory_\(spriteName)") ?? "/home/sprite/project"
 
         let chat = SpriteChat(
             spriteName: spriteName,
             chatNumber: maxNumber + 1,
-            workingDirectory: workingDirectory ?? "/home/sprite/project",
+            workingDirectory: workingDirectory,
             spriteCreatedAt: spriteCreatedAt
         )
         modelContext.insert(chat)
