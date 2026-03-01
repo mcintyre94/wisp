@@ -5,6 +5,12 @@ struct PendingUserBubbleView: View {
     let onEdit: () -> Void
     let onCancel: () -> Void
 
+    @State private var dragOffset: CGFloat = 0
+
+    private let dismissThreshold: CGFloat = 80
+    private let dismissOffset: CGFloat = 400
+    private let dismissDuration: TimeInterval = 0.2
+
     var body: some View {
         HStack {
             Spacer(minLength: 60)
@@ -29,6 +35,31 @@ struct PendingUserBubbleView: View {
                 .labelStyle(.iconOnly)
             }
         }
+        .offset(x: dragOffset)
+        .opacity(1 - Double(min(abs(dragOffset) / dismissThreshold, 1)) * 0.5)
+        .gesture(
+            DragGesture(minimumDistance: 20)
+                .onChanged { value in
+                    if value.translation.width > 0 {
+                        dragOffset = value.translation.width
+                    }
+                }
+                .onEnded { value in
+                    if value.translation.width > dismissThreshold {
+                        withAnimation(.easeOut(duration: dismissDuration)) {
+                            dragOffset = dismissOffset
+                        }
+                        Task {
+                            try? await Task.sleep(for: .seconds(dismissDuration))
+                            onCancel()
+                        }
+                    } else {
+                        withAnimation(.spring(response: 0.3, dampingFraction: 0.7)) {
+                            dragOffset = 0
+                        }
+                    }
+                }
+        )
     }
 }
 
