@@ -24,6 +24,13 @@ struct ChatSwitcherSheet: View {
                         dismiss()
                     }
                     .contextMenu {
+                        if let sessionId = chat.claudeSessionId {
+                            Button {
+                                UIPasteboard.general.string = "cd \(chat.workingDirectory) && claude --resume \(sessionId)"
+                            } label: {
+                                Label("Copy Resume Command", systemImage: "terminal")
+                            }
+                        }
                         Button {
                             renameText = chat.customName ?? ""
                             chatToRename = chat
@@ -42,6 +49,16 @@ struct ChatSwitcherSheet: View {
                             chatToDelete = chat
                         } label: {
                             Label("Delete", systemImage: "trash")
+                        }
+                    }
+                    .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                        if let sessionId = chat.claudeSessionId {
+                            Button {
+                                UIPasteboard.general.string = "cd \(chat.workingDirectory) && claude --resume \(sessionId)"
+                            } label: {
+                                Label("Copy Resume", systemImage: "terminal")
+                            }
+                            .tint(.blue)
                         }
                     }
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {

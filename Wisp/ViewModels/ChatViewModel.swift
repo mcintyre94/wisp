@@ -1135,7 +1135,7 @@ final class ChatViewModel {
                 instructions: """
                 You write ultra-short chat titles (2-5 words). Imperative or noun phrase. \
                 No filler words. Capture what the user wants to accomplish. \
-                No punctuation at the end. \
+                No punctuation at the end. Return ONLY the title. \
                 Examples: "Debug login redirect", "Add dark mode", "Write unit tests", \
                 "Explain Swift closures", "Set up CI pipeline".
                 """
