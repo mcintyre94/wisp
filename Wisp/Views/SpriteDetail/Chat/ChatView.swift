@@ -30,7 +30,7 @@ struct ChatView: View {
                         messageView(message)
                     }
                     if viewModel.isStreaming && viewModel.pendingWispAskCard == nil {
-                        ThinkingShimmerView(label: viewModel.activeToolLabel ?? "Thinking...")
+                        ThinkingShimmerView(label: viewModel.status.isConnecting ? "Connecting…" : (viewModel.activeToolLabel ?? "Thinking…"))
                             .transition(.opacity.combined(with: .move(edge: .bottom)))
                             .id("shimmer")
                     }
