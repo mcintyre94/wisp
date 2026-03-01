@@ -141,7 +141,7 @@ struct SettingsView: View {
 
             VStack(alignment: .leading, spacing: 8) {
                 Toggle("Git Worktree Per Chat", isOn: $worktreePerChat)
-                Text("Each chat gets its own git branch and worktree, so multiple chats can produce independent PRs without stacking changes.")
+                Text("Each chat gets its own git branch and worktree, so changes are isolated.")
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
             }
