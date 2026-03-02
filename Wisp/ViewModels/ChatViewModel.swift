@@ -52,6 +52,7 @@ final class ChatViewModel {
     private var receivedResultEvent = false
     private var usedResume = false
     var queuedPrompt: String?
+    var queuedAttachments: [AttachedFile] = []
     private var retriedAfterTimeout = false
     private var turnHasMutations = false
     private var pendingForkContext: String?
@@ -421,6 +422,40 @@ final class ChatViewModel {
 
     func cancelQueuedPrompt() {
         queuedPrompt = nil
+        queuedAttachments = []
+    }
+
+    private static let imageExtensions: Set<String> = [
+        "jpg", "jpeg", "png", "gif", "heic", "webp", "tiff", "bmp", "svg",
+    ]
+
+    private static func isImage(_ filename: String) -> Bool {
+        let ext = (filename as NSString).pathExtension.lowercased()
+        return imageExtensions.contains(ext)
+    }
+
+    private func buildPrompt(text: String, attachments: [AttachedFile]) -> String {
+        guard !attachments.isEmpty else { return text }
+        let images = attachments.filter { Self.isImage($0.name) }
+        let files = attachments.filter { !Self.isImage($0.name) }
+
+        var parts: [String] = []
+
+        if !files.isEmpty {
+            parts.append(files.map(\.path).joined(separator: "\n"))
+        }
+
+        if !images.isEmpty {
+            let hint = images.map { "Use the Read tool to view this image: \($0.path)" }
+                .joined(separator: "\n")
+            parts.append(hint)
+        }
+
+        if !text.isEmpty {
+            parts.append(text)
+        }
+
+        return parts.joined(separator: "\n\n")
     }
 
     func sendMessage(apiClient: SpritesAPIClient, modelContext: ModelContext) {
@@ -429,24 +464,21 @@ final class ChatViewModel {
 
         inputText = ""
 
-        // Build prompt with attached file paths prepended
-        var prompt = text
-        if !attachedFiles.isEmpty {
-            let paths = attachedFiles.map(\.path).joined(separator: "\n")
-            prompt = attachedFiles.count == 1 && text.isEmpty
-                ? paths
-                : text.isEmpty ? paths : paths + "\n\n" + text
-            attachedFiles = []
-        }
-
         saveDraft(modelContext: modelContext)
         retriedAfterTimeout = false
 
         if isStreaming {
-            // Queue for later — don't add to messages yet; PendingUserBubbleView shows it
-            queuedPrompt = prompt
+            // Queue for later — store text and attachments separately so the
+            // pending bubble can show nice attachment chips instead of raw paths
+            queuedPrompt = text
+            queuedAttachments = attachedFiles
+            attachedFiles = []
             return
         }
+
+        // Build prompt with attached file paths prepended
+        let prompt = buildPrompt(text: text, attachments: attachedFiles)
+        attachedFiles = []
 
         let isFirstMessage = messages.isEmpty
         let userMessage = ChatMessage(role: .user, content: [.text(prompt)])
@@ -491,6 +523,7 @@ final class ChatViewModel {
 
         currentAssistantMessage = nil
         queuedPrompt = nil
+        queuedAttachments = []
         status = .idle
 
         if let modelContext {
@@ -703,11 +736,13 @@ final class ChatViewModel {
         persistMessages(modelContext: modelContext)
 
         if let queued = queuedPrompt {
+            let prompt = buildPrompt(text: queued, attachments: queuedAttachments)
             queuedPrompt = nil
-            let userMessage = ChatMessage(role: .user, content: [.text(queued)])
+            queuedAttachments = []
+            let userMessage = ChatMessage(role: .user, content: [.text(prompt)])
             messages.append(userMessage)
             persistMessages(modelContext: modelContext)
-            await executeClaudeCommand(prompt: queued, apiClient: apiClient, modelContext: modelContext)
+            await executeClaudeCommand(prompt: prompt, apiClient: apiClient, modelContext: modelContext)
         }
     }
 
@@ -968,11 +1003,13 @@ final class ChatViewModel {
         persistMessages(modelContext: modelContext)
 
         if let queued = queuedPrompt, !Task.isCancelled {
+            let prompt = buildPrompt(text: queued, attachments: queuedAttachments)
             queuedPrompt = nil
-            let userMessage = ChatMessage(role: .user, content: [.text(queued)])
+            queuedAttachments = []
+            let userMessage = ChatMessage(role: .user, content: [.text(prompt)])
             messages.append(userMessage)
             persistMessages(modelContext: modelContext)
-            await executeClaudeCommand(prompt: queued, apiClient: apiClient, modelContext: modelContext)
+            await executeClaudeCommand(prompt: prompt, apiClient: apiClient, modelContext: modelContext)
         }
     }
 
