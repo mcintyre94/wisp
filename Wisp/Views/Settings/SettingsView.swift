@@ -10,6 +10,7 @@ struct SettingsView: View {
     @AppStorage("customInstructions") private var customInstructions: String = ""
     @AppStorage("theme") private var theme: String = "system"
     @AppStorage("autoCheckpoint") private var autoCheckpoint: Bool = false
+    @AppStorage("worktreePerChat") private var worktreePerChat: Bool = true
     @State private var showSignOutConfirmation = false
     @State private var showGitHubConnect = false
     @State private var showGitHubDisconnectConfirmation = false
@@ -136,6 +137,13 @@ struct SettingsView: View {
                 ForEach(1...50, id: \.self) { n in
                     Text("\(n)").tag(n)
                 }
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Toggle("Git Worktree Per Chat", isOn: $worktreePerChat)
+                Text("Each chat gets its own git branch and worktree, so changes are isolated.")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
             }
 
             VStack(alignment: .leading, spacing: 8) {

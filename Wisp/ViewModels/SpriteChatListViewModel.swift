@@ -68,6 +68,12 @@ final class SpriteChatListViewModel {
             }
         }
 
+        // Remove worktree (best-effort, fire-and-forget)
+        if let path = chat.worktreePath {
+            let sName = spriteName
+            Task { await Self.removeWorktree(path: path, spriteName: sName, apiClient: apiClient) }
+        }
+
         // If closing the active chat, select next open chat
         if activeChatId == chat.id {
             selectNextOpenChat()
@@ -83,6 +89,12 @@ final class SpriteChatListViewModel {
             Task {
                 try? await apiClient.deleteService(spriteName: sName, serviceName: serviceName)
             }
+        }
+
+        // Remove worktree (best-effort, fire-and-forget)
+        if let path = chat.worktreePath {
+            let sName = spriteName
+            Task { await Self.removeWorktree(path: path, spriteName: sName, apiClient: apiClient) }
         }
 
         chats.removeAll { $0.id == chat.id }
@@ -111,6 +123,9 @@ final class SpriteChatListViewModel {
                     try? await apiClient.deleteService(spriteName: sName, serviceName: serviceName)
                 }
             }
+            if let path = chat.worktreePath {
+                Task { await Self.removeWorktree(path: path, spriteName: sName, apiClient: apiClient) }
+            }
             modelContext.delete(chat)
         }
         try? modelContext.save()
@@ -125,6 +140,14 @@ final class SpriteChatListViewModel {
             chat.spriteCreatedAt = date
         }
         try? modelContext.save()
+    }
+
+    private static func removeWorktree(path: String, spriteName: String, apiClient: SpritesAPIClient) async {
+        _ = await apiClient.runExec(
+            spriteName: spriteName,
+            command: "git -C '\(path)' worktree remove --force '\(path)' 2>/dev/null || true",
+            timeout: 15
+        )
     }
 
     private func selectNextOpenChat() {

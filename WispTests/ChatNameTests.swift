@@ -62,6 +62,49 @@ struct ChatNameTests {
         #expect(name.count <= 80)
     }
 
+    // MARK: - branchName(from:)
+
+    @Test("Spaces become hyphens and name is lowercased")
+    func branchNameSpacesToHyphens() {
+        #expect(ChatViewModel.branchName(from: "Add dark mode") == "add-dark-mode")
+    }
+
+    @Test("Non-alphanumeric characters are stripped")
+    func branchNameStripsSpecialChars() {
+        #expect(ChatViewModel.branchName(from: "Fix: login bug!") == "fix-login-bug")
+    }
+
+    @Test("Consecutive separators collapse to a single hyphen")
+    func branchNameCollapsesHyphens() {
+        #expect(ChatViewModel.branchName(from: "Fix  double  space") == "fix-double-space")
+    }
+
+    @Test("Leading and trailing hyphens are trimmed")
+    func branchNameTrimsBoundaryHyphens() {
+        #expect(ChatViewModel.branchName(from: "-- fix bug --") == "fix-bug")
+    }
+
+    @Test("Result is capped at 50 characters")
+    func branchNameMaxLength() {
+        let long = String(repeating: "a", count: 100)
+        #expect(ChatViewModel.branchName(from: long).count <= 50)
+    }
+
+    @Test("Empty string returns 'chat'")
+    func branchNameFromEmpty() {
+        #expect(ChatViewModel.branchName(from: "") == "chat")
+    }
+
+    @Test("Already kebab-case passes through unchanged")
+    func branchNameAlreadyKebab() {
+        #expect(ChatViewModel.branchName(from: "add-dark-mode") == "add-dark-mode")
+    }
+
+    @Test("Numbers are preserved")
+    func branchNamePreservesNumbers() {
+        #expect(ChatViewModel.branchName(from: "Fix bug 42") == "fix-bug-42")
+    }
+
     // MARK: - sendMessage auto-naming behaviour
 
     @Test("First message auto-names the chat")

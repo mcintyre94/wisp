@@ -18,6 +18,8 @@ final class SpriteChat {
     var spriteCreatedAt: Date?
     var firstMessagePreview: String?
     var forkContext: String?
+    var worktreePath: String?
+    var worktreeBranch: String?
 
     var displayName: String {
         customName ?? "Chat \(chatNumber)"

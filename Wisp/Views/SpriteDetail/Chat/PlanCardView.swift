@@ -6,10 +6,10 @@ struct PlanCardView: View {
 
     private var todos: [(id: String, content: String, status: String)] {
         guard case .array(let items) = card.input["todos"] else { return [] }
-        return items.compactMap { item -> (id: String, content: String, status: String)? in
-            guard let id = item["id"]?.stringValue,
-                  let content = item["content"]?.stringValue,
+        return items.enumerated().compactMap { (index, item) -> (id: String, content: String, status: String)? in
+            guard let content = item["content"]?.stringValue,
                   let status = item["status"]?.stringValue else { return nil }
+            let id = item["id"]?.stringValue ?? "\(index)"
             return (id, content, status)
         }
     }

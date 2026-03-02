@@ -8,7 +8,10 @@ struct WispApp: App {
     @AppStorage("theme") private var theme: String = "system"
 
     init() {
-        UserDefaults.standard.register(defaults: ["claudeQuestionTool": true])
+        UserDefaults.standard.register(defaults: [
+            "claudeQuestionTool": true,
+            "worktreePerChat": true,
+        ])
     }
 
     private var preferredColorScheme: ColorScheme? {

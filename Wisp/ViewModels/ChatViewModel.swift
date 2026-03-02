@@ -43,8 +43,9 @@ final class ChatViewModel {
     private var serviceName: String
     private var sessionId: String?
     private var workingDirectory: String
+    private var worktreePath: String?
     private var streamTask: Task<Void, Never>?
-    var namingTask: Task<Void, Never>?
+    var namingTask: Task<String, Never>?
     private let parser = ClaudeStreamParser()
     private var currentAssistantMessage: ChatMessage?
     private var toolUseIndex: [String: (messageIndex: Int, toolName: String)] = [:]
@@ -174,6 +175,7 @@ final class ChatViewModel {
 
         sessionId = chat.claudeSessionId
         workingDirectory = chat.workingDirectory
+        worktreePath = chat.worktreePath
         if let svcName = chat.currentServiceName {
             serviceName = svcName
         }
@@ -464,7 +466,16 @@ final class ChatViewModel {
             namingTask = Task { await autoNameChat(firstMessage: prompt, modelContext: modelContext) }
         }
 
+        let worktreeEnabled = UserDefaults.standard.bool(forKey: "worktreePerChat")
+        let needsWorktreeSetup = isFirstMessage && worktreePath == nil && worktreeEnabled
+        status = .connecting
         streamTask = Task {
+            if needsWorktreeSetup {
+                // Wait for chat naming and use the result directly as the branch base
+                let chatName = await self.namingTask?.value ?? text
+                let branch = Self.branchName(from: chatName)
+                await self.setupWorktree(branchName: branch, apiClient: apiClient, modelContext: modelContext)
+            }
             await executeClaudeCommand(prompt: prompt, apiClient: apiClient, modelContext: modelContext)
         }
     }
@@ -1223,11 +1234,14 @@ final class ChatViewModel {
         }
     }
 
-    private func autoNameChat(firstMessage: String, modelContext: ModelContext) async {
-        guard let chat = fetchChat(modelContext: modelContext), chat.customName == nil else { return }
+    @discardableResult
+    private func autoNameChat(firstMessage: String, modelContext: ModelContext) async -> String {
+        guard let chat = fetchChat(modelContext: modelContext) else { return firstMessage }
+        if let existing = chat.customName { return existing }
         let name = await Self.generateChatName(from: firstMessage)
         chat.customName = name
         try? modelContext.save()
+        return name
     }
 
     static func generateChatName(from prompt: String) async -> String {
@@ -1260,6 +1274,61 @@ final class ChatViewModel {
         } catch {
             return fallback
         }
+    }
+
+    // MARK: - Worktrees
+
+    /// Converts a chat name to a kebab-case git branch name.
+    /// e.g. "Add dark mode" → "add-dark-mode"
+    static func branchName(from chatName: String) -> String {
+        let kebab = chatName
+            .lowercased()
+            .components(separatedBy: CharacterSet.alphanumerics.union(CharacterSet(charactersIn: "-")).inverted)
+            .joined(separator: "-")
+            .replacingOccurrences(of: "-+", with: "-", options: .regularExpression)
+            .trimmingCharacters(in: CharacterSet(charactersIn: "-"))
+        return kebab.isEmpty ? "chat" : String(kebab.prefix(50))
+    }
+
+    /// Runs a preliminary exec to set up a git worktree for this chat.
+    /// Updates `workingDirectory` and `worktreePath` if worktree creation succeeds.
+    /// Silently skips if the working directory is not inside a git repo.
+    private func setupWorktree(
+        branchName: String,
+        apiClient: SpritesAPIClient,
+        modelContext: ModelContext
+    ) async {
+        let chatIdPrefix = String(chatId.uuidString.prefix(8).lowercased())
+        let currentWorkDir = workingDirectory
+        let repoName = URL(fileURLWithPath: currentWorkDir).lastPathComponent
+        let uniqueBranchName = "\(branchName)-\(chatIdPrefix)"
+        let worktreeParent = "/home/sprite/.wisp/worktrees/\(repoName)"
+        let worktreeDir = "\(worktreeParent)/\(uniqueBranchName)"
+
+        let command = "mkdir -p '\(worktreeParent)' && if git -C '\(currentWorkDir)' worktree add '\(worktreeDir)' -b '\(uniqueBranchName)' 2>/dev/null; then echo '\(worktreeDir)'; fi"
+
+        let (output, _) = await apiClient.runExec(spriteName: spriteName, command: command, timeout: 30)
+        // git worktree add may print "HEAD is now at..." to stdout before our echo,
+        // so take only the last non-empty line which is always the echo'd path.
+        let path = output
+            .split(separator: "\n", omittingEmptySubsequences: true)
+            .last
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) } ?? ""
+
+        guard !path.isEmpty else {
+            logger.info("[Worktree] Setup skipped — not a git repo or worktree add failed")
+            return
+        }
+
+        workingDirectory = path
+        worktreePath = path
+        if let chat = fetchChat(modelContext: modelContext) {
+            chat.worktreePath = path
+            chat.worktreeBranch = uniqueBranchName
+            chat.workingDirectory = path
+            try? modelContext.save()
+        }
+        logger.info("[Worktree] Created at \(path) on branch \(uniqueBranchName)")
     }
 
     private func fetchChat(modelContext: ModelContext) -> SpriteChat? {
