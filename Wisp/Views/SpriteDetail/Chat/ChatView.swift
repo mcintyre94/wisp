@@ -42,9 +42,14 @@ struct ChatView: View {
                             .id("shimmer")
                     }
                     if let pendingText = viewModel.queuedPrompt {
-                        PendingUserBubbleView(text: pendingText) {
+                        PendingUserBubbleView(
+                            text: pendingText,
+                            files: viewModel.queuedAttachments
+                        ) {
                             viewModel.inputText = pendingText
+                            viewModel.attachedFiles = viewModel.queuedAttachments
                             viewModel.queuedPrompt = nil
+                            viewModel.queuedAttachments = []
                             isInputFocused = true
                         } onCancel: {
                             viewModel.cancelQueuedPrompt()

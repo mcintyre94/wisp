@@ -2,7 +2,7 @@ import SwiftUI
 
 struct AttachmentChipsView: View {
     let files: [AttachedFile]
-    let onRemove: (AttachedFile) -> Void
+    var onRemove: ((AttachedFile) -> Void)? = nil
 
     var body: some View {
         ScrollView(.horizontal, showsIndicators: false) {
@@ -22,14 +22,16 @@ struct AttachmentChipsView: View {
             Text(file.name)
                 .font(.caption)
                 .lineLimit(1)
-            Button {
-                onRemove(file)
-            } label: {
-                Image(systemName: "xmark.circle.fill")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
+            if let onRemove {
+                Button {
+                    onRemove(file)
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
             }
-            .buttonStyle(.plain)
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
