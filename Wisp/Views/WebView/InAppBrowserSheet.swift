@@ -130,6 +130,20 @@ private struct ConsoleLogDrawer: View {
     }
 }
 
+#Preview("Console Drawer - Empty") {
+    ConsoleLogDrawer(logs: []) {}
+}
+
+#Preview("Console Drawer - With Logs") {
+    ConsoleLogDrawer(logs: [
+        ConsoleLogEntry(level: .log, message: "Page loaded"),
+        ConsoleLogEntry(level: .info, message: "User signed in"),
+        ConsoleLogEntry(level: .debug, message: "Cache hit: true"),
+        ConsoleLogEntry(level: .warn, message: "Deprecated API used"),
+        ConsoleLogEntry(level: .error, message: "Failed to fetch: 404 Not Found"),
+    ]) {}
+}
+
 private struct ConsoleLogRow: View {
     let entry: ConsoleLogEntry
 
