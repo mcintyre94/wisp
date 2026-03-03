@@ -633,7 +633,7 @@ final class ChatViewModel {
     }
 
     /// Result of processing a service stream
-    private enum StreamResult: CustomStringConvertible {
+    enum StreamResult: CustomStringConvertible {
         case completed
         case timedOut
         case disconnected
@@ -657,7 +657,7 @@ final class ChatViewModel {
     /// Events whose UUID is in `processedEventUUIDs` are skipped (but system/result
     /// flags are still tracked). New event UUIDs are added to `processedEventUUIDs`
     /// as they are handled, so reconnect replays never duplicate content.
-    private func processServiceStream(
+    func processServiceStream(
         stream: AsyncThrowingStream<ServiceLogEvent, Error>,
         modelContext: ModelContext,
         breakOnComplete: Bool = false
