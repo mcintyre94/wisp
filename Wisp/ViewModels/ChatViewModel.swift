@@ -633,7 +633,7 @@ final class ChatViewModel {
     }
 
     /// Result of processing a service stream
-    private enum StreamResult: CustomStringConvertible {
+    enum StreamResult: CustomStringConvertible {
         case completed
         case timedOut
         case disconnected
@@ -657,7 +657,7 @@ final class ChatViewModel {
     /// Events whose UUID is in `processedEventUUIDs` are skipped (but system/result
     /// flags are still tracked). New event UUIDs are added to `processedEventUUIDs`
     /// as they are handled, so reconnect replays never duplicate content.
-    private func processServiceStream(
+    func processServiceStream(
         stream: AsyncThrowingStream<ServiceLogEvent, Error>,
         modelContext: ModelContext,
         breakOnComplete: Bool = false
@@ -786,8 +786,12 @@ final class ChatViewModel {
             timeoutTask.cancel()
 
             let uuidCount = processedEventUUIDs.count
-            logger.info("Stream ended: events=\(eventCount) receivedData=\(receivedData) skipped=\(skippedCount) uuids=\(uuidCount)")
-            return Task.isCancelled ? .cancelled : (receivedData ? .completed : .timedOut)
+            logger.info("Stream ended: events=\(eventCount) receivedData=\(receivedData) skipped=\(skippedCount) uuids=\(uuidCount) gotResult=\(self.receivedResultEvent)")
+            if Task.isCancelled { return .cancelled }
+            if !receivedData { return .timedOut }
+            // A clean stream close without the result event means Claude is still running —
+            // treat it as a disconnect so the caller reconnects rather than going idle.
+            return receivedResultEvent ? .completed : .disconnected
         } catch {
             timeoutTask.cancel()
             logger.error("Stream error after \(eventCount) events: \(Self.sanitize(error.localizedDescription), privacy: .public)")

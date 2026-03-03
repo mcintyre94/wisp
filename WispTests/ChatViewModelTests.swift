@@ -462,6 +462,127 @@ struct ChatViewModelTests {
         }
     }
 
+    // MARK: - processServiceStream return value
+
+    /// Builds a stream that yields a single stdout ServiceLogEvent then finishes cleanly.
+    private func stdoutStream(_ text: String) -> AsyncThrowingStream<ServiceLogEvent, Error> {
+        AsyncThrowingStream { continuation in
+            continuation.yield(ServiceLogEvent(type: .stdout, data: text, exitCode: nil, timestamp: nil, logFiles: nil))
+            continuation.finish()
+        }
+    }
+
+    @Test func processServiceStream_cleanCloseWithDataButNoResultEvent_returnsDisconnected() async throws {
+        // Core bug fix: a stream that closes cleanly after delivering data but without
+        // a Claude `result` event should return .disconnected (triggering reconnect),
+        // not .completed (which would incorrectly set status to .idle).
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        let assistantMsg = ChatMessage(role: .assistant)
+        vm.messages.append(assistantMsg)
+        vm.setCurrentAssistantMessage(assistantMsg)
+
+        let systemLine = #"{"type":"system","session_id":"s1","model":"claude-sonnet-4-20250514"}"# + "\n"
+        let result = await vm.processServiceStream(stream: stdoutStream(systemLine), modelContext: ctx)
+
+        guard case .disconnected = result else {
+            Issue.record("Expected .disconnected when stream closes cleanly without result event, got \(result)")
+            return
+        }
+    }
+
+    @Test func processServiceStream_cleanCloseWithResultEvent_returnsCompleted() async throws {
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        let assistantMsg = ChatMessage(role: .assistant)
+        vm.messages.append(assistantMsg)
+        vm.setCurrentAssistantMessage(assistantMsg)
+
+        let stream = AsyncThrowingStream<ServiceLogEvent, Error> { continuation in
+            let systemLine = #"{"type":"system","session_id":"s1","model":"claude-sonnet-4-20250514"}"# + "\n"
+            let resultLine = #"{"type":"result","session_id":"s1","subtype":"success"}"# + "\n"
+            continuation.yield(ServiceLogEvent(type: .stdout, data: systemLine, exitCode: nil, timestamp: nil, logFiles: nil))
+            continuation.yield(ServiceLogEvent(type: .stdout, data: resultLine, exitCode: nil, timestamp: nil, logFiles: nil))
+            continuation.finish()
+        }
+
+        let result = await vm.processServiceStream(stream: stream, modelContext: ctx)
+
+        guard case .completed = result else {
+            Issue.record("Expected .completed when result event received, got \(result)")
+            return
+        }
+    }
+
+    @Test func processServiceStream_noDataReceived_returnsTimedOut() async throws {
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        let stream = AsyncThrowingStream<ServiceLogEvent, Error> { continuation in
+            continuation.finish()
+        }
+
+        let result = await vm.processServiceStream(stream: stream, modelContext: ctx)
+
+        guard case .timedOut = result else {
+            Issue.record("Expected .timedOut when no data received, got \(result)")
+            return
+        }
+    }
+
+    @Test func processServiceStream_errorAfterData_returnsDisconnected() async throws {
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        let assistantMsg = ChatMessage(role: .assistant)
+        vm.messages.append(assistantMsg)
+        vm.setCurrentAssistantMessage(assistantMsg)
+
+        let stream = AsyncThrowingStream<ServiceLogEvent, Error> { continuation in
+            let systemLine = #"{"type":"system","session_id":"s1","model":"claude-sonnet-4-20250514"}"# + "\n"
+            continuation.yield(ServiceLogEvent(type: .stdout, data: systemLine, exitCode: nil, timestamp: nil, logFiles: nil))
+            continuation.finish(throwing: URLError(.networkConnectionLost))
+        }
+
+        let result = await vm.processServiceStream(stream: stream, modelContext: ctx)
+
+        guard case .disconnected = result else {
+            Issue.record("Expected .disconnected when stream errors after receiving data, got \(result)")
+            return
+        }
+    }
+
+    // MARK: - stripLogTimestamps
+
+    @Test func stripLogTimestamps_removesStdoutPrefix() {
+        let input = #"2026-02-19T09:13:24.665Z [stdout] {"type":"system"}"#
+        let result = ChatViewModel.stripLogTimestamps(input)
+        #expect(result == #"{"type":"system"}"#)
+    }
+
+    @Test func stripLogTimestamps_removesStderrPrefix() {
+        let input = "2026-02-19T09:13:24.665Z [stderr] error output"
+        let result = ChatViewModel.stripLogTimestamps(input)
+        #expect(result == "error output")
+    }
+
+    @Test func stripLogTimestamps_preservesLinesWithoutPrefix() {
+        let input = #"{"type":"system"}"#
+        let result = ChatViewModel.stripLogTimestamps(input)
+        #expect(result == #"{"type":"system"}"#)
+    }
+
+    @Test func stripLogTimestamps_handlesMultipleLines() {
+        let input = "2026-02-19T09:13:24.665Z [stdout] {\"type\":\"system\"}\n2026-02-19T09:13:25.000Z [stderr] error message\n{\"type\":\"plain\"}"
+        let result = ChatViewModel.stripLogTimestamps(input)
+        let lines = result.components(separatedBy: "\n")
+        #expect(lines[0] == "{\"type\":\"system\"}")
+        #expect(lines[1] == "error message")
+        #expect(lines[2] == "{\"type\":\"plain\"}")
+    }
+
     // MARK: - Streaming state (single source of truth)
 
     @Test func currentAssistantMessageId_tracksCurrentMessage() throws {
