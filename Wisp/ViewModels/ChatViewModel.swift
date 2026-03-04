@@ -35,7 +35,7 @@ final class ChatViewModel {
 
     private var serviceName: String
     private var sessionId: String?
-    private var workingDirectory: String
+    var workingDirectory: String
     private var worktreePath: String?
     private var streamTask: Task<Void, Never>?
     var namingTask: Task<String, Never>?
@@ -903,6 +903,7 @@ final class ChatViewModel {
             receivedSystemEvent = true
             sessionId = systemEvent.sessionId
             modelName = systemEvent.model
+            if let cwd = systemEvent.cwd { workingDirectory = cwd }
             logger.info("System event tools: \(systemEvent.tools ?? [], privacy: .public)")
             saveSession(modelContext: modelContext)
 

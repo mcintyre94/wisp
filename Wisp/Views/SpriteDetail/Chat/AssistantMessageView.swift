@@ -4,6 +4,7 @@ import SwiftUI
 struct AssistantMessageView: View {
     let message: ChatMessage
     var isStreaming: Bool = false
+    var workingDirectory: String = ""
     var onCreateCheckpoint: (() -> Void)? = nil
     var isCheckpointDisabled: Bool = false
     var onAnswerWispAsk: ((String) -> Void)? = nil
@@ -48,7 +49,7 @@ struct AssistantMessageView: View {
                             PlanCardView(card: card)
                         } else if card.result != nil {
                             // Completed tool -- compact step row
-                            ToolStepRow(card: card) {
+                            ToolStepRow(card: card, workingDirectory: workingDirectory) {
                                 selectedToolCard = card
                             }
                         } else if card.toolName == "mcp__askUser__WispAsk" {
@@ -63,7 +64,7 @@ struct AssistantMessageView: View {
                                     .font(.system(size: 12))
                                     .foregroundStyle(.quaternary)
                                     .frame(width: 16)
-                                Text(card.activityLabel)
+                                Text(card.activityLabel.relativeToCwd(workingDirectory))
                                     .font(.caption)
                                     .foregroundStyle(.quaternary)
                                     .strikethrough()
@@ -87,7 +88,7 @@ struct AssistantMessageView: View {
             Spacer(minLength: 60)
         }
         .sheet(item: $selectedToolCard) { card in
-            ToolDetailSheet(card: card)
+            ToolDetailSheet(card: card, workingDirectory: workingDirectory)
         }
     }
 }

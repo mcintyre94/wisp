@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ToolDetailSheet: View {
     let card: ToolUseCard
+    var workingDirectory: String = ""
 
     var body: some View {
         NavigationStack {
@@ -48,7 +49,7 @@ struct ToolDetailSheet: View {
                 .fontWeight(.semibold)
                 .foregroundStyle(.secondary)
 
-            ToolInputDetailView(toolName: card.toolName, input: card.input)
+            ToolInputDetailView(toolName: card.toolName, input: card.input, workingDirectory: workingDirectory)
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .padding(12)
                 .background(Color(.systemGray6), in: RoundedRectangle(cornerRadius: 8))

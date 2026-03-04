@@ -3,6 +3,7 @@ import SwiftUI
 struct ToolInputDetailView: View {
     let toolName: String
     let input: JSONValue
+    var workingDirectory: String = ""
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
@@ -32,7 +33,7 @@ struct ToolInputDetailView: View {
             Text("Command")
                 .font(.caption2)
                 .foregroundStyle(.secondary)
-            Text(input["command"]?.stringValue ?? "")
+            Text((input["command"]?.stringValue ?? "").relativeToCwd(workingDirectory))
                 .font(.system(.caption, design: .monospaced))
                 .textSelection(.enabled)
         }

@@ -3,6 +3,7 @@ import SwiftUI
 struct ChatMessageView: View {
     let message: ChatMessage
     var isStreaming: Bool = false
+    var workingDirectory: String = ""
     var onCreateCheckpoint: (() -> Void)? = nil
     var isCheckpointDisabled: Bool = false
     var onAnswerWispAsk: ((String) -> Void)? = nil
@@ -15,6 +16,7 @@ struct ChatMessageView: View {
             AssistantMessageView(
                 message: message,
                 isStreaming: isStreaming,
+                workingDirectory: workingDirectory,
                 onCreateCheckpoint: onCreateCheckpoint,
                 isCheckpointDisabled: isCheckpointDisabled,
                 onAnswerWispAsk: onAnswerWispAsk
