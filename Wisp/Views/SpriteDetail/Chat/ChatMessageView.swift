@@ -41,3 +41,26 @@ struct ChatMessageView: View {
         }
     }
 }
+
+#Preview("User message") {
+    let message = ChatMessage(role: .user, content: [.text("List the Swift files in the Models directory")])
+    return ChatMessageView(message: message)
+        .padding()
+}
+
+#Preview("Assistant with Bash tool") {
+    let cwd = "/home/sprite/project"
+    let card = ToolUseCard(
+        toolUseId: "bash-1",
+        toolName: "Bash",
+        input: .object(["command": .string("ls /home/sprite/project/Wisp/Models/")])
+    )
+    card.result = ToolResultCard(
+        toolUseId: "bash-1",
+        toolName: "Bash",
+        content: .string("ChatMessage.swift\nSprite.swift")
+    )
+    let message = ChatMessage(role: .assistant, content: [.toolUse(card)])
+    return ChatMessageView(message: message, workingDirectory: cwd)
+        .padding()
+}

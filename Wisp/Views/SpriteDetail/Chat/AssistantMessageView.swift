@@ -92,3 +92,31 @@ struct AssistantMessageView: View {
         }
     }
 }
+
+#Preview("Bash tool with relative paths") {
+    let cwd = "/home/sprite/project"
+    let card = ToolUseCard(
+        toolUseId: "bash-1",
+        toolName: "Bash",
+        input: .object(["command": .string("ls -la /home/sprite/project/Wisp/Models/")])
+    )
+    card.result = ToolResultCard(
+        toolUseId: "bash-1",
+        toolName: "Bash",
+        content: .string("ChatMessage.swift\nClaudeEventTypes.swift\nSprite.swift")
+    )
+    let message = ChatMessage(role: .assistant, content: [
+        .text("Here are the model files:"),
+        .toolUse(card),
+    ])
+    return AssistantMessageView(message: message, workingDirectory: cwd)
+        .padding()
+}
+
+#Preview("Text only") {
+    let message = ChatMessage(role: .assistant, content: [
+        .text("I've reviewed the codebase and here's what I found:\n\n- The models look good\n- Tests are passing"),
+    ])
+    return AssistantMessageView(message: message)
+        .padding()
+}

@@ -46,3 +46,35 @@ struct ExtensionsTests {
 private struct DateWrapper: Decodable {
     let date: Date
 }
+
+@Suite("String.relativeToCwd")
+struct RelativeToCwdTests {
+
+    @Test func emptyCwdReturnsStringUnchanged() {
+        let path = "/home/sprite/project/Wisp/Models/ChatMessage.swift"
+        #expect(path.relativeToCwd("") == path)
+    }
+
+    @Test func pathUnderCwdIsRelativized() {
+        let cwd = "/home/sprite/project"
+        let path = "/home/sprite/project/Wisp/Models/ChatMessage.swift"
+        #expect(path.relativeToCwd(cwd) == "./Wisp/Models/ChatMessage.swift")
+    }
+
+    @Test func commandContainingCwdPathIsRelativized() {
+        let cwd = "/home/sprite/project"
+        let cmd = "ls -la /home/sprite/project/Wisp/Models/"
+        #expect(cmd.relativeToCwd(cwd) == "ls -la ./Wisp/Models/")
+    }
+
+    @Test func pathOutsideCwdIsUnchanged() {
+        let cwd = "/home/sprite/project"
+        let path = "/home/sprite/other/file.swift"
+        #expect(path.relativeToCwd(cwd) == path)
+    }
+
+    @Test func cwdItselfWithoutTrailingSlashIsUnchanged() {
+        let cwd = "/home/sprite/project"
+        #expect(cwd.relativeToCwd(cwd) == cwd)
+    }
+}
