@@ -140,6 +140,7 @@ struct ChatView: View {
         ChatMessageView(
             message: message,
             isStreaming: viewModel.isStreaming && message.id == viewModel.currentAssistantMessageId,
+            workingDirectory: viewModel.workingDirectory,
             onCreateCheckpoint: isLastAssistant ? {
                 viewModel.createCheckpoint(for: message, modelContext: modelContext)
             } : nil,

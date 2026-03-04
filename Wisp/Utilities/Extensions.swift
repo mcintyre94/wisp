@@ -47,3 +47,12 @@ extension Date {
         return formatter.localizedString(for: self, relativeTo: Date())
     }
 }
+
+extension String {
+    /// Replaces occurrences of `cwd/` with `./` so displayed paths are relative.
+    /// No-ops if `cwd` is empty.
+    func relativeToCwd(_ cwd: String) -> String {
+        guard !cwd.isEmpty else { return self }
+        return replacingOccurrences(of: cwd + "/", with: "./")
+    }
+}

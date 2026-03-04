@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ToolStepRow: View {
     let card: ToolUseCard
+    var workingDirectory: String = ""
     var onTap: () -> Void
 
     var body: some View {
@@ -47,7 +48,7 @@ struct ToolStepRow: View {
     }
 
     private var strippedLabel: String {
-        let label = card.activityLabel
+        let label = card.activityLabel.relativeToCwd(workingDirectory)
         if label.hasSuffix("...") {
             return String(label.dropLast(3))
         }
