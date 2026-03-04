@@ -16,7 +16,7 @@ struct AttachmentChipsView: View {
 
     private func chipView(_ file: AttachedFile) -> some View {
         HStack(spacing: 4) {
-            Image(systemName: iconName(for: file.name))
+            Image(systemName: iconName(for: file))
                 .font(.caption2)
                 .foregroundStyle(.secondary)
             Text(file.name)
@@ -38,10 +38,8 @@ struct AttachmentChipsView: View {
         .background(.ultraThinMaterial, in: Capsule())
     }
 
-    private func iconName(for filename: String) -> String {
-        let ext = (filename as NSString).pathExtension.lowercased()
-        let imageExtensions: Set<String> = ["jpg", "jpeg", "png", "gif", "heic", "webp", "tiff"]
-        return imageExtensions.contains(ext) ? "photo" : "doc.fill"
+    private func iconName(for file: AttachedFile) -> String {
+        file.isImage ? "photo" : "doc.fill"
     }
 }
 

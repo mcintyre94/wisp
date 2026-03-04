@@ -23,6 +23,15 @@ struct AttachedFile: Identifiable {
     let id = UUID()
     let name: String   // "main.py" or "photo_20260228.jpg"
     let path: String   // "/home/sprite/project/main.py"
+
+    static let imageExtensions: Set<String> = [
+        "jpg", "jpeg", "png", "gif", "heic", "webp", "tiff", "bmp", "svg",
+    ]
+
+    var isImage: Bool {
+        let ext = (name as NSString).pathExtension.lowercased()
+        return Self.imageExtensions.contains(ext)
+    }
 }
 
 @Observable
@@ -78,19 +87,25 @@ final class ChatViewModel {
     var lastUploadedFileName: String?
     private var uploadFeedbackTask: Task<Void, Never>?
 
-    var currentWorkingDirectory: String { workingDirectory }
+    private static let maxUploadBytes: Int = 10 * 1024 * 1024 // 10 MB
 
     func uploadFileFromDevice(apiClient: SpritesAPIClient, fileURL: URL) async -> String? {
         let accessing = fileURL.startAccessingSecurityScopedResource()
+        defer { if accessing { fileURL.stopAccessingSecurityScopedResource() } }
+
+        if let size = try? fileURL.resourceValues(forKeys: [.fileSizeKey]).fileSize,
+           size > Self.maxUploadBytes {
+            uploadAttachmentError = "File is too large to upload (max 10 MB)"
+            return nil
+        }
+
         let data: Data
         do {
             data = try Data(contentsOf: fileURL)
         } catch {
-            if accessing { fileURL.stopAccessingSecurityScopedResource() }
             uploadAttachmentError = "Failed to read file: \(error.localizedDescription)"
             return nil
         }
-        if accessing { fileURL.stopAccessingSecurityScopedResource() }
 
         return await uploadAttachmentData(apiClient: apiClient, data: data, filename: fileURL.lastPathComponent)
     }
@@ -112,7 +127,7 @@ final class ChatViewModel {
         defer { isUploadingAttachment = false }
 
         do {
-            let _ = try await apiClient.uploadFile(
+            try await apiClient.uploadFile(
                 spriteName: spriteName,
                 remotePath: remotePath,
                 data: data
@@ -425,19 +440,10 @@ final class ChatViewModel {
         queuedAttachments = []
     }
 
-    private static let imageExtensions: Set<String> = [
-        "jpg", "jpeg", "png", "gif", "heic", "webp", "tiff", "bmp", "svg",
-    ]
-
-    private static func isImage(_ filename: String) -> Bool {
-        let ext = (filename as NSString).pathExtension.lowercased()
-        return imageExtensions.contains(ext)
-    }
-
     private func buildPrompt(text: String, attachments: [AttachedFile]) -> String {
         guard !attachments.isEmpty else { return text }
-        let images = attachments.filter { Self.isImage($0.name) }
-        let files = attachments.filter { !Self.isImage($0.name) }
+        let images = attachments.filter { $0.isImage }
+        let files = attachments.filter { !$0.isImage }
 
         var parts: [String] = []
 
