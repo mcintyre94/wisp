@@ -15,6 +15,12 @@ struct SettingsView: View {
     @State private var showGitHubConnect = false
     @State private var showGitHubDisconnectConfirmation = false
     @State private var copiedTokenFlash = false
+    #if DEBUG
+    @State private var copiedDeviceIDFlash = false
+    private var deviceID: String {
+        UIDevice.current.identifierForVendor?.uuidString ?? "Unavailable"
+    }
+    #endif
 
     private var selectedModel: ClaudeModel {
         ClaudeModel(rawValue: claudeModel) ?? .sonnet
@@ -35,6 +41,9 @@ struct SettingsView: View {
             claudeSection
             instructionsSection
             appearanceSection
+            #if DEBUG
+            developerSection
+            #endif
         }
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
@@ -204,6 +213,42 @@ struct SettingsView: View {
             .pickerStyle(.segmented)
         }
     }
+
+    #if DEBUG
+    private var developerSection: some View {
+        Section {
+            HStack {
+                Label("Device ID", systemImage: "iphone")
+                Spacer()
+                Text(deviceID)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
+            }
+            .onTapGesture {
+                UIPasteboard.general.string = deviceID
+                copiedDeviceIDFlash = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    copiedDeviceIDFlash = false
+                }
+            }
+            .overlay(alignment: .trailing) {
+                if copiedDeviceIDFlash {
+                    Text("Copied!")
+                        .font(.caption)
+                        .foregroundStyle(.green)
+                        .transition(.opacity)
+                }
+            }
+            .animation(.default, value: copiedDeviceIDFlash)
+        } header: {
+            Text("Developer")
+        } footer: {
+            Text("Device identifier for push notification targeting. Tap to copy.")
+        }
+    }
+    #endif
 
     // MARK: - Actions
 

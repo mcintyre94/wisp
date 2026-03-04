@@ -101,6 +101,7 @@ struct SpriteDetailView: View {
                 .id(chatViewModel.chatId)
             } else {
                 ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
                     .safeAreaInset(edge: .top, spacing: 0) { if showTabPicker { pickerView } }
             }
         case .checkpoints:
