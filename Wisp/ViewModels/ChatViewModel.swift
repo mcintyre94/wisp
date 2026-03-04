@@ -77,8 +77,6 @@ final class ChatViewModel {
     var lastUploadedFileName: String?
     private var uploadFeedbackTask: Task<Void, Never>?
 
-    var currentWorkingDirectory: String { workingDirectory }
-
     func uploadFileFromDevice(apiClient: SpritesAPIClient, fileURL: URL) async -> String? {
         let accessing = fileURL.startAccessingSecurityScopedResource()
         let data: Data
@@ -111,7 +109,7 @@ final class ChatViewModel {
         defer { isUploadingAttachment = false }
 
         do {
-            let _ = try await apiClient.uploadFile(
+            try await apiClient.uploadFile(
                 spriteName: spriteName,
                 remotePath: remotePath,
                 data: data
@@ -433,9 +431,7 @@ final class ChatViewModel {
         var prompt = text
         if !attachedFiles.isEmpty {
             let paths = attachedFiles.map(\.path).joined(separator: "\n")
-            prompt = attachedFiles.count == 1 && text.isEmpty
-                ? paths
-                : text.isEmpty ? paths : paths + "\n\n" + text
+            prompt = text.isEmpty ? paths : paths + "\n\n" + text
             attachedFiles = []
         }
 

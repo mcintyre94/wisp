@@ -150,7 +150,7 @@ struct ChatView: View {
         .sheet(isPresented: $showFileBrowser) {
             SpriteFileBrowserView(
                 spriteName: viewModel.spriteName,
-                startingDirectory: viewModel.currentWorkingDirectory,
+                startingDirectory: viewModel.workingDirectory,
                 apiClient: apiClient,
                 onFileSelected: { path in
                     let name = (path as NSString).lastPathComponent
