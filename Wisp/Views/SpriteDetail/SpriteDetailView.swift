@@ -204,6 +204,7 @@ struct SpriteDetailView: View {
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
                 chatViewModel?.resumeAfterBackground(apiClient: apiClient, modelContext: modelContext)
+                chatViewModel?.reconnectIfNeeded(apiClient: apiClient, modelContext: modelContext)
             }
         }
         .sheet(isPresented: $showChatSwitcher) {
