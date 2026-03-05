@@ -46,6 +46,14 @@ extension Date {
         formatter.unitsStyle = .abbreviated
         return formatter.localizedString(for: self, relativeTo: Date())
     }
+
+    var chatTimestamp: String {
+        if Calendar.current.isDateInToday(self) {
+            return formatted(date: .omitted, time: .shortened)
+        } else {
+            return formatted(date: .abbreviated, time: .shortened)
+        }
+    }
 }
 
 extension String {

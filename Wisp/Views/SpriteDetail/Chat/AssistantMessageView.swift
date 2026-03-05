@@ -9,6 +9,7 @@ struct AssistantMessageView: View {
     var isCheckpointDisabled: Bool = false
     var onAnswerWispAsk: ((String) -> Void)? = nil
     @State private var selectedToolCard: ToolUseCard?
+    @State private var showTimestamp = false
 
     private var canCheckpoint: Bool {
         onCreateCheckpoint != nil
@@ -83,7 +84,18 @@ struct AssistantMessageView: View {
                             .background(Color.red.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
                     }
                 }
-
+                if showTimestamp {
+                    Text(message.timestamp.chatTimestamp)
+                        .font(.caption2)
+                        .foregroundStyle(.secondary)
+                        .padding(.leading, 4)
+                        .transition(.opacity)
+                }
+            }
+            .onTapGesture {
+                withAnimation(.easeInOut(duration: 0.2)) {
+                    showTimestamp.toggle()
+                }
             }
             Spacer(minLength: 60)
         }
