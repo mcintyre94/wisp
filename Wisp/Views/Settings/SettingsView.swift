@@ -16,9 +16,10 @@ struct SettingsView: View {
     @State private var showGitHubDisconnectConfirmation = false
     @State private var copiedTokenFlash = false
     #if DEBUG
+    @AppStorage("apnsDeviceToken") private var apnsDeviceToken: String = ""
     @State private var copiedDeviceIDFlash = false
-    private var deviceID: String {
-        UIDevice.current.identifierForVendor?.uuidString ?? "Unavailable"
+    private var apnsToken: String {
+        apnsDeviceToken.isEmpty ? "Unavailable" : apnsDeviceToken
     }
     #endif
 
@@ -218,16 +219,16 @@ struct SettingsView: View {
     private var developerSection: some View {
         Section {
             HStack {
-                Label("Device ID", systemImage: "iphone")
+                Label("APNS Token", systemImage: "bell.badge")
                 Spacer()
-                Text(deviceID)
+                Text(apnsToken)
                     .font(.caption)
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
                     .truncationMode(.middle)
             }
             .onTapGesture {
-                UIPasteboard.general.string = deviceID
+                UIPasteboard.general.string = apnsToken
                 copiedDeviceIDFlash = true
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                     copiedDeviceIDFlash = false
@@ -245,7 +246,7 @@ struct SettingsView: View {
         } header: {
             Text("Developer")
         } footer: {
-            Text("Device identifier for push notification targeting. Tap to copy.")
+            Text("APNS device token for push notification targeting. Tap to copy.")
         }
     }
     #endif
