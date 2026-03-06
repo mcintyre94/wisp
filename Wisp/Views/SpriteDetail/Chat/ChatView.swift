@@ -148,6 +148,7 @@ struct ChatView: View {
                         viewModel.attachedFiles.removeAll { $0.id == file.id }
                     },
                     lastUploadedFileName: viewModel.lastUploadedFileName,
+                    onStash: { viewModel.stashDraft() },
                     isFocused: $isInputFocused
                 )
             }
@@ -242,5 +243,19 @@ struct ChatView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
         .background(.bar)
+    }
+}
+
+#Preview {
+    let viewModel = ChatViewModel(
+        spriteName: "my-sprite",
+        chatId: UUID(),
+        currentServiceName: nil,
+        workingDirectory: "/home/sprite/project"
+    )
+    NavigationStack {
+        ChatView(viewModel: viewModel)
+            .environment(SpritesAPIClient())
+            .modelContainer(for: [SpriteChat.self, SpriteSession.self], inMemory: true)
     }
 }

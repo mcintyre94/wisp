@@ -601,4 +601,60 @@ struct ChatViewModelTests {
 
         #expect(vm.currentAssistantMessageId == nil)
     }
+
+    // MARK: - stashDraft
+
+    @Test func stashDraft_movesInputTextToStash() throws {
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        vm.inputText = "my long prompt"
+        vm.stashDraft()
+
+        #expect(vm.stashedDraft == "my long prompt")
+        #expect(vm.inputText == "")
+    }
+
+    @Test func stashDraft_doesNothingWhenEmpty() throws {
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        vm.inputText = "   "
+        vm.stashDraft()
+
+        #expect(vm.stashedDraft == nil)
+        #expect(vm.inputText == "   ")
+    }
+
+    @Test func stashDraft_overwritesPreviousStash() throws {
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        vm.inputText = "first draft"
+        vm.stashDraft()
+        vm.inputText = "second draft"
+        vm.stashDraft()
+
+        #expect(vm.stashedDraft == "second draft")
+        #expect(vm.inputText == "")
+    }
+
+    @Test func stashDraft_leavesInputReadyForNextMessage() throws {
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        vm.inputText = "long prompt I want to come back to"
+        vm.stashDraft()
+
+        // After stashing, the field is clear and stash holds the draft
+        #expect(vm.inputText == "")
+        #expect(vm.stashedDraft == "long prompt I want to come back to")
+
+        // Manually simulate the restore (as sendMessage would do)
+        vm.inputText = vm.stashedDraft!
+        vm.stashedDraft = nil
+
+        #expect(vm.inputText == "long prompt I want to come back to")
+        #expect(vm.stashedDraft == nil)
+    }
 }
