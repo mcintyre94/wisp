@@ -1196,9 +1196,9 @@ final class ChatViewModel {
         let worktreeParent = "/home/sprite/.wisp/worktrees/\(repoName)"
         let worktreeDir = "\(worktreeParent)/\(uniqueBranchName)"
 
-        let command = "mkdir -p '\(worktreeParent)' && if git -C '\(currentWorkDir)' worktree add '\(worktreeDir)' -b '\(uniqueBranchName)' 2>/dev/null; then echo '\(worktreeDir)'; fi"
+        let command = "git -C '\(currentWorkDir)' pull 2>/dev/null || true; mkdir -p '\(worktreeParent)' && if git -C '\(currentWorkDir)' worktree add '\(worktreeDir)' -b '\(uniqueBranchName)' 2>/dev/null; then echo '\(worktreeDir)'; fi"
 
-        let (output, _) = await apiClient.runExec(spriteName: spriteName, command: command, timeout: 30)
+        let (output, _) = await apiClient.runExec(spriteName: spriteName, command: command, timeout: 60)
         // git worktree add may print "HEAD is now at..." to stdout before our echo,
         // so take only the last non-empty line which is always the echo'd path.
         let path = output
