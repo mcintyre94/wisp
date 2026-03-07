@@ -71,6 +71,7 @@ final class SpriteLoop {
     var createdAt: Date
     var expiresAt: Date
     var lastRunAt: Date?
+    var nextRunAt: Date
     var iterationsData: Data?
 
     var interval: LoopInterval {
@@ -122,14 +123,24 @@ final class SpriteLoop {
         interval: LoopInterval,
         duration: LoopDuration = .oneWeek
     ) {
+        let createdAt = Date()
         self.id = UUID()
         self.spriteName = spriteName
         self.workingDirectory = workingDirectory
         self.prompt = prompt
         self.intervalRaw = interval.rawValue
         self.stateRaw = LoopState.active.rawValue
-        self.createdAt = Date()
-        self.expiresAt = Date().addingTimeInterval(duration.timeInterval)
+        self.createdAt = createdAt
+        self.expiresAt = createdAt.addingTimeInterval(duration.timeInterval)
+        self.nextRunAt = createdAt
+    }
+
+    func markDueNow(at date: Date = Date()) {
+        nextRunAt = date
+    }
+
+    func scheduleNextRun(after referenceDate: Date) {
+        nextRunAt = referenceDate.addingTimeInterval(interval.seconds)
     }
 }
 

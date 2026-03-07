@@ -23,12 +23,15 @@ final class LoopManager {
     func register(loop: SpriteLoop, modelContext: ModelContext) {
         if loop.isExpired {
             loop.state = .stopped
+            loop.nextRunAt = loop.expiresAt
             try? modelContext.save()
             logger.info("Loop \(loop.id) is expired, setting to stopped")
             return
         }
 
-        scheduleLoop(loop, modelContext: modelContext, triggerImmediately: true)
+        loop.markDueNow()
+        try? modelContext.save()
+        scheduleLoop(loop, modelContext: modelContext)
     }
 
     func pause(loopId: UUID, modelContext: ModelContext) {
@@ -48,11 +51,15 @@ final class LoopManager {
     func resume(loop: SpriteLoop, modelContext: ModelContext) {
         loop.state = .active
         try? modelContext.save()
-        let shouldRunNow = !runningIterations.contains(loop.id) && nextRunDate(for: loop) <= Date()
+        let shouldRunNow = !runningIterations.contains(loop.id) && loop.nextRunAt <= Date()
         if runningIterations.contains(loop.id) {
             scheduleRepeatingTimer(loopId: loop.id, interval: loop.interval.seconds, modelContext: modelContext)
         } else {
-            scheduleLoop(loop, modelContext: modelContext, triggerImmediately: shouldRunNow)
+            if shouldRunNow {
+                loop.markDueNow()
+                try? modelContext.save()
+            }
+            scheduleLoop(loop, modelContext: modelContext)
         }
         logger.info("Resumed loop \(loop.id)")
     }
@@ -68,6 +75,7 @@ final class LoopManager {
         let descriptor = FetchDescriptor<SpriteLoop>(predicate: #Predicate { $0.id == targetId })
         if let loop = try? modelContext.fetch(descriptor).first {
             loop.state = .stopped
+            loop.nextRunAt = loop.expiresAt
             try? modelContext.save()
         }
 
@@ -92,7 +100,7 @@ final class LoopManager {
 
         for loop in loops {
             guard timers[loop.id] == nil else { continue }
-            scheduleLoop(loop, modelContext: modelContext, triggerImmediately: nextRunDate(for: loop) <= Date())
+            scheduleLoop(loop, modelContext: modelContext)
         }
 
         logger.info("Restored \(loops.count) active loops")
@@ -111,7 +119,7 @@ final class LoopManager {
         }
 
         let request = BGAppRefreshTaskRequest(identifier: Self.bgTaskIdentifier)
-        let earliestNextRun = loops.map(nextRunDate(for:)).min() ?? Date().addingTimeInterval(600)
+        let earliestNextRun = loops.map(\.nextRunAt).min() ?? Date().addingTimeInterval(600)
         let shortestInterval = max(1, earliestNextRun.timeIntervalSinceNow)
 
         request.earliestBeginDate = Date(timeIntervalSinceNow: shortestInterval)
@@ -131,8 +139,8 @@ final class LoopManager {
         }
 
         let dueLoops = activeLoops(modelContext: modelContext)
-            .filter { nextRunDate(for: $0) <= Date() }
-            .sorted { nextRunDate(for: $0) < nextRunDate(for: $1) }
+            .filter { $0.nextRunAt <= Date() }
+            .sorted { $0.nextRunAt < $1.nextRunAt }
 
         for loop in dueLoops {
             guard !Task.isCancelled else { return false }
@@ -233,7 +241,9 @@ final class LoopManager {
         var iterations = loop.iterations
         iterations.append(iteration)
         loop.iterations = iterations
-        loop.lastRunAt = Date()
+        let completedAt = iteration.completedAt ?? Date()
+        loop.lastRunAt = completedAt
+        loop.scheduleNextRun(after: completedAt)
         try? modelContext.save()
 
         logger.info("Completed iteration for loop \(loopId)")
@@ -248,32 +258,20 @@ final class LoopManager {
         return (try? modelContext.fetch(descriptor).filter { !$0.isExpired }) ?? []
     }
 
-    private func nextRunDate(for loop: SpriteLoop) -> Date {
-        let referenceDate = loop.lastRunAt ?? loop.createdAt
-        return referenceDate.addingTimeInterval(loop.interval.seconds)
-    }
-
-    private func scheduleLoop(_ loop: SpriteLoop, modelContext: ModelContext, triggerImmediately: Bool) {
+    private func scheduleLoop(_ loop: SpriteLoop, modelContext: ModelContext) {
         timers[loop.id]?.invalidate()
 
         let loopId = loop.id
         let interval = loop.interval.seconds
 
-        if triggerImmediately {
+        if loop.nextRunAt <= Date() {
             scheduleRepeatingTimer(loopId: loopId, interval: interval, modelContext: modelContext)
             tick(loopId: loopId, modelContext: modelContext)
             logger.info("Registered loop \(loopId) with immediate execution and interval \(interval)s")
             return
         }
 
-        let initialDelay = nextRunDate(for: loop).timeIntervalSinceNow
-        if initialDelay <= 0 {
-            scheduleRepeatingTimer(loopId: loopId, interval: interval, modelContext: modelContext)
-            tick(loopId: loopId, modelContext: modelContext)
-            logger.info("Registered overdue loop \(loopId) with catch-up execution")
-            return
-        }
-
+        let initialDelay = loop.nextRunAt.timeIntervalSinceNow
         let timer = Timer.scheduledTimer(withTimeInterval: initialDelay, repeats: false) { [weak self] _ in
             Task { @MainActor in
                 guard let self else { return }
