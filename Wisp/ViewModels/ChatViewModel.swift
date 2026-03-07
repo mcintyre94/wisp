@@ -1442,12 +1442,32 @@ final class ChatViewModel {
         }
         // Make server.py executable and write version file via exec
         // (the fs/write API corrupts very small payloads to null bytes)
-        _ = await apiClient.runExec(
+        let installCommand = "\(ClaudeQuestionTool.chmodCommand) && mkdir -p ~/.wisp/claude-question && echo -n '\(ClaudeQuestionTool.version)' > \(ClaudeQuestionTool.versionPath)"
+        let (installOutput, installSuccess) = await apiClient.runExec(
             spriteName: spriteName,
-            command: "\(ClaudeQuestionTool.chmodCommand) && mkdir -p ~/.wisp/claude-question && echo -n '\(ClaudeQuestionTool.version)' > \(ClaudeQuestionTool.versionPath)",
+            command: installCommand,
             timeout: 10
         )
+        guard installSuccess else {
+            let trimmedOutput = installOutput.trimmingCharacters(in: .whitespacesAndNewlines)
+            logger.error("Claude question tool install command failed: \(trimmedOutput)")
+            return false
+        }
+
+        let verificationCommand =
+            "if test -x \(ClaudeQuestionTool.serverPyPath) && [ \"$(cat \(ClaudeQuestionTool.versionPath) 2>/dev/null)\" = '\(ClaudeQuestionTool.version)' ]; then printf '\(ClaudeQuestionTool.version)'; else exit 1; fi"
+        let (verificationOutput, verificationSuccess) = await apiClient.runExec(
+            spriteName: spriteName,
+            command: verificationCommand,
+            timeout: 10
+        )
+        guard verificationSuccess,
+            verificationOutput.trimmingCharacters(in: .whitespacesAndNewlines) == ClaudeQuestionTool.version
+        else {
+            logger.error("Claude question tool verification failed: \(verificationOutput)")
+            return false
+        }
+
         return true
     }
 }
-
