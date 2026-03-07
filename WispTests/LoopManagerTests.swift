@@ -102,4 +102,33 @@ struct LoopManagerTests {
         #expect(!manager.activeLoopIds.contains(loop.id))
         #expect(loop.state == .stopped)
     }
+
+    @Test("restoreLoops re-registers persisted active loops only")
+    func restoreLoopsRegistersPersistedActiveLoops() throws {
+        let context = try makeModelContext()
+        let manager = LoopManager()
+
+        let activeLoop = SpriteLoop(
+            spriteName: "active-sprite",
+            workingDirectory: "/home/sprite/project",
+            prompt: "check active",
+            interval: .tenMinutes
+        )
+        let pausedLoop = SpriteLoop(
+            spriteName: "paused-sprite",
+            workingDirectory: "/home/sprite/project",
+            prompt: "check paused",
+            interval: .tenMinutes
+        )
+        pausedLoop.state = .paused
+
+        context.insert(activeLoop)
+        context.insert(pausedLoop)
+        try context.save()
+
+        manager.restoreLoops(modelContext: context)
+
+        #expect(manager.activeLoopIds.contains(activeLoop.id))
+        #expect(!manager.activeLoopIds.contains(pausedLoop.id))
+    }
 }

@@ -10,6 +10,7 @@ final class LoopManager {
 
     private var timers: [UUID: Timer] = [:]
     private var runningIterations: Set<UUID> = []
+    private var iterationTasks: [UUID: Task<Void, Never>] = [:]
 
     var apiClient: SpritesAPIClient?
 
@@ -27,25 +28,7 @@ final class LoopManager {
             return
         }
 
-        // Invalidate existing timer if any
-        timers[loop.id]?.invalidate()
-
-        let loopId = loop.id
-        let interval = loop.interval.seconds
-
-        let timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
-            Task { @MainActor in
-                self?.tick(loopId: loopId, modelContext: modelContext)
-            }
-        }
-        timers[loopId] = timer
-
-        // Run first iteration immediately
-        Task {
-            await runIteration(loopId: loopId, modelContext: modelContext)
-        }
-
-        logger.info("Registered loop \(loopId) with interval \(interval)s")
+        scheduleLoop(loop, modelContext: modelContext, triggerImmediately: true)
     }
 
     func pause(loopId: UUID, modelContext: ModelContext) {
@@ -65,13 +48,21 @@ final class LoopManager {
     func resume(loop: SpriteLoop, modelContext: ModelContext) {
         loop.state = .active
         try? modelContext.save()
-        register(loop: loop, modelContext: modelContext)
+        let shouldRunNow = !runningIterations.contains(loop.id) && nextRunDate(for: loop) <= Date()
+        if runningIterations.contains(loop.id) {
+            scheduleRepeatingTimer(loopId: loop.id, interval: loop.interval.seconds, modelContext: modelContext)
+        } else {
+            scheduleLoop(loop, modelContext: modelContext, triggerImmediately: shouldRunNow)
+        }
         logger.info("Resumed loop \(loop.id)")
     }
 
     func stop(loopId: UUID, modelContext: ModelContext) {
         timers[loopId]?.invalidate()
         timers.removeValue(forKey: loopId)
+        iterationTasks[loopId]?.cancel()
+        iterationTasks.removeValue(forKey: loopId)
+        runningIterations.remove(loopId)
 
         let targetId = loopId
         let descriptor = FetchDescriptor<SpriteLoop>(predicate: #Predicate { $0.id == targetId })
@@ -87,17 +78,21 @@ final class LoopManager {
         for (_, timer) in timers {
             timer.invalidate()
         }
+        for (_, task) in iterationTasks {
+            task.cancel()
+        }
         timers.removeAll()
+        iterationTasks.removeAll()
+        runningIterations.removeAll()
         logger.info("Stopped all loops")
     }
 
     func restoreLoops(modelContext: ModelContext) {
-        let activeState = LoopState.active.rawValue
-        let descriptor = FetchDescriptor<SpriteLoop>(predicate: #Predicate { $0.stateRaw == activeState })
-        guard let loops = try? modelContext.fetch(descriptor) else { return }
+        let loops = activeLoops(modelContext: modelContext)
 
         for loop in loops {
-            register(loop: loop, modelContext: modelContext)
+            guard timers[loop.id] == nil else { continue }
+            scheduleLoop(loop, modelContext: modelContext, triggerImmediately: nextRunDate(for: loop) <= Date())
         }
 
         logger.info("Restored \(loops.count) active loops")
@@ -107,15 +102,22 @@ final class LoopManager {
 
     static let bgTaskIdentifier = "com.wisp.app.loop-refresh"
 
-    func scheduleBackgroundRefresh() {
+    func scheduleBackgroundRefresh(modelContext: ModelContext) {
+        let loops = activeLoops(modelContext: modelContext)
+        guard !loops.isEmpty else {
+            BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: Self.bgTaskIdentifier)
+            logger.info("No active loops to schedule for background refresh")
+            return
+        }
+
         let request = BGAppRefreshTaskRequest(identifier: Self.bgTaskIdentifier)
-        let shortestInterval = timers.isEmpty ? 600.0 : timers.keys.compactMap { _ -> TimeInterval? in
-            return 600
-        }.min() ?? 600
+        let earliestNextRun = loops.map(nextRunDate(for:)).min() ?? Date().addingTimeInterval(600)
+        let shortestInterval = max(1, earliestNextRun.timeIntervalSinceNow)
 
         request.earliestBeginDate = Date(timeIntervalSinceNow: shortestInterval)
 
         do {
+            BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: Self.bgTaskIdentifier)
             try BGTaskScheduler.shared.submit(request)
             logger.info("Scheduled background refresh in \(shortestInterval)s")
         } catch {
@@ -123,24 +125,23 @@ final class LoopManager {
         }
     }
 
-    func handleBackgroundRefresh(task: BGAppRefreshTask, modelContext: ModelContext) {
-        task.expirationHandler = {
-            task.setTaskCompleted(success: false)
+    func handleBackgroundRefresh(modelContext: ModelContext) async -> Bool {
+        defer {
+            scheduleBackgroundRefresh(modelContext: modelContext)
         }
 
-        Task { @MainActor in
-            let activeState = LoopState.active.rawValue
-            let descriptor = FetchDescriptor<SpriteLoop>(
-                predicate: #Predicate { $0.stateRaw == activeState },
-                sortBy: [SortDescriptor(\SpriteLoop.lastRunAt)]
-            )
-            if let loop = try? modelContext.fetch(descriptor).first {
-                await self.runIteration(loopId: loop.id, modelContext: modelContext)
-            }
+        let dueLoops = activeLoops(modelContext: modelContext)
+            .filter { nextRunDate(for: $0) <= Date() }
+            .sorted { nextRunDate(for: $0) < nextRunDate(for: $1) }
 
-            self.scheduleBackgroundRefresh()
-            task.setTaskCompleted(success: true)
+        for loop in dueLoops {
+            guard !Task.isCancelled else { return false }
+            guard !runningIterations.contains(loop.id) else { continue }
+            await runIteration(loopId: loop.id, modelContext: modelContext)
+            guard !Task.isCancelled else { return false }
         }
+
+        return !Task.isCancelled
     }
 
     // MARK: - Private Methods
@@ -151,9 +152,14 @@ final class LoopManager {
             return
         }
 
-        Task {
-            await runIteration(loopId: loopId, modelContext: modelContext)
+        let task = Task { [weak self] in
+            guard let self else { return }
+            await self.runIteration(loopId: loopId, modelContext: modelContext)
+            await MainActor.run {
+                self.iterationTasks.removeValue(forKey: loopId)
+            }
         }
+        iterationTasks[loopId] = task
     }
 
     private func runIteration(loopId: UUID, modelContext: ModelContext) async {
@@ -185,6 +191,21 @@ final class LoopManager {
             workingDirectory: loop.workingDirectory,
             prompt: loop.prompt
         )
+
+        guard !Task.isCancelled else {
+            logger.info("Loop \(loopId) iteration cancelled")
+            return
+        }
+
+        guard let loop = try? modelContext.fetch(descriptor).first else {
+            logger.info("Loop \(loopId) no longer exists after iteration")
+            return
+        }
+
+        guard loop.state != .stopped else {
+            logger.info("Loop \(loopId) was stopped before iteration completed")
+            return
+        }
 
         iteration.completedAt = Date()
 
@@ -218,6 +239,62 @@ final class LoopManager {
         logger.info("Completed iteration for loop \(loopId)")
     }
 
+    private func activeLoops(modelContext: ModelContext) -> [SpriteLoop] {
+        let activeState = LoopState.active.rawValue
+        let descriptor = FetchDescriptor<SpriteLoop>(
+            predicate: #Predicate { $0.stateRaw == activeState },
+            sortBy: [SortDescriptor(\SpriteLoop.createdAt)]
+        )
+        return (try? modelContext.fetch(descriptor).filter { !$0.isExpired }) ?? []
+    }
+
+    private func nextRunDate(for loop: SpriteLoop) -> Date {
+        let referenceDate = loop.lastRunAt ?? loop.createdAt
+        return referenceDate.addingTimeInterval(loop.interval.seconds)
+    }
+
+    private func scheduleLoop(_ loop: SpriteLoop, modelContext: ModelContext, triggerImmediately: Bool) {
+        timers[loop.id]?.invalidate()
+
+        let loopId = loop.id
+        let interval = loop.interval.seconds
+
+        if triggerImmediately {
+            scheduleRepeatingTimer(loopId: loopId, interval: interval, modelContext: modelContext)
+            tick(loopId: loopId, modelContext: modelContext)
+            logger.info("Registered loop \(loopId) with immediate execution and interval \(interval)s")
+            return
+        }
+
+        let initialDelay = nextRunDate(for: loop).timeIntervalSinceNow
+        if initialDelay <= 0 {
+            scheduleRepeatingTimer(loopId: loopId, interval: interval, modelContext: modelContext)
+            tick(loopId: loopId, modelContext: modelContext)
+            logger.info("Registered overdue loop \(loopId) with catch-up execution")
+            return
+        }
+
+        let timer = Timer.scheduledTimer(withTimeInterval: initialDelay, repeats: false) { [weak self] _ in
+            Task { @MainActor in
+                guard let self else { return }
+                self.scheduleRepeatingTimer(loopId: loopId, interval: interval, modelContext: modelContext)
+                self.tick(loopId: loopId, modelContext: modelContext)
+            }
+        }
+        timers[loopId] = timer
+        logger.info("Registered loop \(loopId) to resume in \(initialDelay)s")
+    }
+
+    private func scheduleRepeatingTimer(loopId: UUID, interval: TimeInterval, modelContext: ModelContext) {
+        timers[loopId]?.invalidate()
+        let timer = Timer.scheduledTimer(withTimeInterval: interval, repeats: true) { [weak self] _ in
+            Task { @MainActor in
+                self?.tick(loopId: loopId, modelContext: modelContext)
+            }
+        }
+        timers[loopId] = timer
+    }
+
     private func executeLoopPrompt(spriteName: String, workingDirectory: String, prompt: String) async -> Result<String, Error> {
         guard let apiClient else {
             return .failure(NSError(domain: "LoopManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "No API client configured"]))
@@ -225,10 +302,12 @@ final class LoopManager {
 
         // 1. Wake sprite if needed
         do {
+            try Task.checkCancellation()
             let sprite = try await apiClient.getSprite(name: spriteName)
             if sprite.status != .running {
                 _ = await apiClient.runExec(spriteName: spriteName, command: "true", timeout: 60)
                 for _ in 0..<30 {
+                    try Task.checkCancellation()
                     try await Task.sleep(for: .seconds(2))
                     let updated = try await apiClient.getSprite(name: spriteName)
                     if updated.status == .running { break }
@@ -255,47 +334,61 @@ final class LoopManager {
         let serviceName = "wisp-loop-\(UUID().uuidString.prefix(8).lowercased())"
         let config = ServiceRequest(cmd: "bash", args: ["-c", fullCommand], needs: nil, httpPort: nil)
 
-        // 3. Stream and parse
-        let stream = apiClient.streamService(spriteName: spriteName, serviceName: serviceName, config: config)
-        let parser = ClaudeStreamParser()
-        var responseText = ""
+        return await withTaskCancellationHandler {
+            // 3. Stream and parse
+            let stream = apiClient.streamService(spriteName: spriteName, serviceName: serviceName, config: config)
+            let parser = ClaudeStreamParser()
+            var responseText = ""
 
-        do {
-            for try await event in stream {
-                guard event.type == .stdout, let base64Data = event.data else { continue }
-                guard let rawData = Data(base64Encoded: base64Data) else { continue }
-                let claudeEvents = await parser.parse(data: rawData)
-                for claudeEvent in claudeEvents {
-                    if case .assistant(let assistantEvent) = claudeEvent {
-                        for block in assistantEvent.message.content {
-                            if case .text(let text) = block {
-                                responseText += text
+            do {
+                for try await event in stream {
+                    try Task.checkCancellation()
+                    guard event.type == .stdout, let base64Data = event.data else { continue }
+                    guard let rawData = Data(base64Encoded: base64Data) else { continue }
+                    let claudeEvents = await parser.parse(data: rawData)
+                    for claudeEvent in claudeEvents {
+                        if case .assistant(let assistantEvent) = claudeEvent {
+                            for block in assistantEvent.message.content {
+                                if case .text(let text) = block {
+                                    responseText += text
+                                }
                             }
                         }
                     }
                 }
+            } catch {
+                if error is CancellationError || Task.isCancelled {
+                    try? await apiClient.deleteService(spriteName: spriteName, serviceName: serviceName)
+                    return .failure(CancellationError())
+                }
+                if responseText.isEmpty {
+                    try? await apiClient.deleteService(spriteName: spriteName, serviceName: serviceName)
+                    return .failure(error)
+                }
             }
-        } catch {
-            if responseText.isEmpty {
-                return .failure(error)
-            }
-        }
 
-        // Flush remaining
-        let remaining = await parser.flush()
-        for claudeEvent in remaining {
-            if case .assistant(let assistantEvent) = claudeEvent {
-                for block in assistantEvent.message.content {
-                    if case .text(let text) = block {
-                        responseText += text
+            let remaining = await parser.flush()
+            for claudeEvent in remaining {
+                if case .assistant(let assistantEvent) = claudeEvent {
+                    for block in assistantEvent.message.content {
+                        if case .text(let text) = block {
+                            responseText += text
+                        }
                     }
                 }
             }
+
+            try? await apiClient.deleteService(spriteName: spriteName, serviceName: serviceName)
+
+            if Task.isCancelled {
+                return .failure(CancellationError())
+            }
+
+            return .success(responseText.isEmpty ? "(No response)" : responseText)
+        } onCancel: {
+            Task {
+                try? await apiClient.deleteService(spriteName: spriteName, serviceName: serviceName)
+            }
         }
-
-        // 4. Cleanup
-        try? await apiClient.deleteService(spriteName: spriteName, serviceName: serviceName)
-
-        return .success(responseText.isEmpty ? "(No response)" : responseText)
     }
 }

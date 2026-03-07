@@ -4,19 +4,26 @@ import SwiftUI
 
 @main
 struct WispApp: App {
+    private let sharedModelContainer: ModelContainer
     @State private var apiClient = SpritesAPIClient()
     @State private var browserCoordinator = InAppBrowserCoordinator()
     @State private var chatSessionManager = ChatSessionManager()
     @State private var loopManager = LoopManager()
-    @Environment(\.scenePhase) private var scenePhase
     @AppStorage("theme") private var theme: String = "system"
 
     init() {
+        do {
+            sharedModelContainer = try ModelContainer(for: SpriteChat.self, SpriteSession.self, SpriteLoop.self)
+        } catch {
+            fatalError("Failed to initialize model container: \(error)")
+        }
+
         UserDefaults.standard.register(defaults: [
             "claudeQuestionTool": true,
             "worktreePerChat": true,
         ])
 
+        let modelContainer = sharedModelContainer
         BGTaskScheduler.shared.register(
             forTaskWithIdentifier: LoopManager.bgTaskIdentifier,
             using: nil
@@ -25,7 +32,22 @@ struct WispApp: App {
                 task.setTaskCompleted(success: false)
                 return
             }
-            refreshTask.setTaskCompleted(success: true)
+
+            let workTask = Task { @MainActor in
+                let backgroundLoopManager = LoopManager()
+                backgroundLoopManager.apiClient = SpritesAPIClient()
+                let modelContext = ModelContext(modelContainer)
+                return await backgroundLoopManager.handleBackgroundRefresh(modelContext: modelContext)
+            }
+
+            refreshTask.expirationHandler = {
+                workTask.cancel()
+            }
+
+            Task {
+                let success = await workTask.value
+                refreshTask.setTaskCompleted(success: success)
+            }
         }
     }
 
@@ -53,18 +75,6 @@ struct WispApp: App {
                     await NotificationService.requestPermission()
                 }
         }
-        .modelContainer(for: [SpriteChat.self, SpriteSession.self, SpriteLoop.self])
-        .onChange(of: scenePhase) { _, newPhase in
-            switch newPhase {
-            case .background:
-                if !loopManager.activeLoopIds.isEmpty {
-                    loopManager.scheduleBackgroundRefresh()
-                }
-            case .active:
-                BGTaskScheduler.shared.cancelAllTaskRequests()
-            default:
-                break
-            }
-        }
+        .modelContainer(sharedModelContainer)
     }
 }
