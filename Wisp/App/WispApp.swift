@@ -1,3 +1,4 @@
+import BackgroundTasks
 import SwiftData
 import SwiftUI
 
@@ -7,6 +8,7 @@ struct WispApp: App {
     @State private var browserCoordinator = InAppBrowserCoordinator()
     @State private var chatSessionManager = ChatSessionManager()
     @State private var loopManager = LoopManager()
+    @Environment(\.scenePhase) private var scenePhase
     @AppStorage("theme") private var theme: String = "system"
 
     init() {
@@ -14,6 +16,17 @@ struct WispApp: App {
             "claudeQuestionTool": true,
             "worktreePerChat": true,
         ])
+
+        BGTaskScheduler.shared.register(
+            forTaskWithIdentifier: LoopManager.bgTaskIdentifier,
+            using: nil
+        ) { task in
+            guard let refreshTask = task as? BGAppRefreshTask else {
+                task.setTaskCompleted(success: false)
+                return
+            }
+            refreshTask.setTaskCompleted(success: true)
+        }
     }
 
     private var preferredColorScheme: ColorScheme? {
@@ -41,5 +54,17 @@ struct WispApp: App {
                 }
         }
         .modelContainer(for: [SpriteChat.self, SpriteSession.self, SpriteLoop.self])
+        .onChange(of: scenePhase) { _, newPhase in
+            switch newPhase {
+            case .background:
+                if !loopManager.activeLoopIds.isEmpty {
+                    loopManager.scheduleBackgroundRefresh()
+                }
+            case .active:
+                BGTaskScheduler.shared.cancelAllTaskRequests()
+            default:
+                break
+            }
+        }
     }
 }
