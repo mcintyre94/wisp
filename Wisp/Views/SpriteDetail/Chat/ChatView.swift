@@ -1,8 +1,10 @@
 import PhotosUI
+import SwiftData
 import SwiftUI
 
 struct ChatView: View {
     @Environment(SpritesAPIClient.self) private var apiClient
+    @Environment(LoopManager.self) private var loopManager
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
     @Bindable var viewModel: ChatViewModel
@@ -12,6 +14,7 @@ struct ChatView: View {
     var onFork: ((String, UUID) -> Void)? = nil
     @FocusState private var isInputFocused: Bool
     @State private var contentOpacity: Double = 0
+    @State private var showCreateLoopSheet = false
 
     // Attachment state
     @State private var showFileBrowser = false
@@ -142,6 +145,7 @@ struct ChatView: View {
                     onBrowseSpriteFiles: { showFileBrowser = true },
                     onPickPhoto: { showPhotoPicker = true },
                     onPickFile: { showFilePicker = true },
+                    onLongPressSend: { showCreateLoopSheet = true },
                     isUploading: viewModel.isUploadingAttachment,
                     attachedFiles: viewModel.attachedFiles,
                     onRemoveAttachment: { file in
@@ -186,6 +190,26 @@ struct ChatView: View {
             if let error = viewModel.uploadAttachmentError {
                 Text(error)
             }
+        }
+        .sheet(isPresented: $showCreateLoopSheet) {
+            CreateLoopSheet(
+                spriteName: viewModel.spriteName,
+                workingDirectory: viewModel.workingDirectory,
+                promptText: $viewModel.inputText,
+                onCreateLoop: { prompt, interval, duration in
+                    let loop = SpriteLoop(
+                        spriteName: viewModel.spriteName,
+                        workingDirectory: viewModel.workingDirectory,
+                        prompt: prompt,
+                        interval: interval,
+                        duration: duration
+                    )
+                    modelContext.insert(loop)
+                    try? modelContext.save()
+                    loopManager.register(loop: loop, modelContext: modelContext)
+                    viewModel.inputText = ""
+                }
+            )
         }
         .onChange(of: selectedPhotos) {
             guard let item = selectedPhotos.first else { return }
