@@ -1,3 +1,4 @@
+import SwiftData
 import SwiftUI
 
 enum SpriteSortOrder: String, CaseIterable {
@@ -7,7 +8,10 @@ enum SpriteSortOrder: String, CaseIterable {
 
 struct DashboardView: View {
     @Environment(SpritesAPIClient.self) private var apiClient
+    @Environment(LoopManager.self) private var loopManager
     @Environment(\.horizontalSizeClass) private var sizeClass
+    @Environment(\.modelContext) private var modelContext
+    @Query(sort: \SpriteLoop.createdAt, order: .reverse) private var loops: [SpriteLoop]
     @State private var viewModel = DashboardViewModel()
     @State private var selectedSpriteID: String?
     @State private var selectedTab: SpriteTab = .chat
@@ -47,7 +51,26 @@ struct DashboardView: View {
                                 }
                                 .tint(.red)
                             }
+                            .swipeActions(edge: .leading) {
+                                if sprite.status == .warm || sprite.status == .cold {
+                                    Button {
+                                        Task { await viewModel.wakeSprite(sprite, apiClient: apiClient) }
+                                    } label: {
+                                        Label("Wake", systemImage: "bolt.fill")
+                                    }
+                                    .tint(.orange)
+                                    .disabled(viewModel.wakingSprites.contains(sprite.name))
+                                }
+                            }
                             .contextMenu {
+                                if sprite.status == .warm || sprite.status == .cold {
+                                    Button {
+                                        Task { await viewModel.wakeSprite(sprite, apiClient: apiClient) }
+                                    } label: {
+                                        Label("Wake Sprite", systemImage: "bolt.fill")
+                                    }
+                                    .disabled(viewModel.wakingSprites.contains(sprite.name))
+                                }
                                 Button(role: .destructive) {
                                     viewModel.spriteToDelete = sprite
                                 } label: {
@@ -61,13 +84,65 @@ struct DashboardView: View {
                                 Button("Delete", role: .destructive) {
                                     Task { await viewModel.deleteSprite(sprite, apiClient: apiClient) }
                                 }
-                            } message: {
-                                Text("This will permanently delete \"\(sprite.name)\". This action cannot be undone.")
                             }
                             .listRowSeparator(sizeClass == .regular ? .automatic : .hidden)
                             .listRowBackground(sizeClass == .regular ? nil : Color.clear)
                             .listRowInsets(sizeClass == .regular ? nil : EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
                             .id(sprite.id)
+                        }
+                        .padding(.horizontal)
+                        .padding(.top, 8)
+
+                        if !loops.isEmpty {
+                            Section("Loops") {
+                                ForEach(loops) { loop in
+                                    NavigationLink(destination: LoopDetailView(loop: loop)) {
+                                        LoopRowView(loop: loop)
+                                    }
+                                    .swipeActions(edge: .trailing) {
+                                        Button("Delete", role: .destructive) {
+                                            loopManager.stop(loopId: loop.id, modelContext: modelContext)
+                                            modelContext.delete(loop)
+                                            try? modelContext.save()
+                                        }
+                                    }
+                                    .swipeActions(edge: .leading) {
+                                        if loop.state == .active {
+                                            Button("Pause") {
+                                                loopManager.pause(loopId: loop.id, modelContext: modelContext)
+                                            }
+                                            .tint(.orange)
+                                        } else if loop.state == .paused {
+                                            Button("Resume") {
+                                                loopManager.resume(loop: loop, modelContext: modelContext)
+                                            }
+                                            .tint(.green)
+                                        }
+                                    }
+                                    .contextMenu {
+                                        if loop.state == .active {
+                                            Button {
+                                                loopManager.pause(loopId: loop.id, modelContext: modelContext)
+                                            } label: {
+                                                Label("Pause", systemImage: "pause.circle")
+                                            }
+                                        } else if loop.state == .paused {
+                                            Button {
+                                                loopManager.resume(loop: loop, modelContext: modelContext)
+                                            } label: {
+                                                Label("Resume", systemImage: "play.circle")
+                                            }
+                                        }
+                                        Button(role: .destructive) {
+                                            loopManager.stop(loopId: loop.id, modelContext: modelContext)
+                                            modelContext.delete(loop)
+                                            try? modelContext.save()
+                                        } label: {
+                                            Label("Delete", systemImage: "trash")
+                                        }
+                                    }
+                                }
+                            }
                         }
                     }
                     .listStyle(.plain)
