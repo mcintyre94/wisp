@@ -34,6 +34,7 @@ struct SpriteOverviewView: View {
                         ProgressView()
                     }
                 }
+
             }
 
             Section("Details") {
@@ -240,6 +241,9 @@ struct SpriteOverviewView: View {
             await viewModel.refresh(apiClient: apiClient)
             await viewModel.checkSpritesAuth(apiClient: apiClient)
             await viewModel.checkGitHubAuth(apiClient: apiClient)
+        }
+        .task {
+            await viewModel.pollStatus(apiClient: apiClient)
         }
         .onChange(of: workingDirectory) {
             saveWorkingDirectory()

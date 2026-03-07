@@ -47,7 +47,26 @@ struct DashboardView: View {
                                 }
                                 .tint(.red)
                             }
+                            .swipeActions(edge: .leading) {
+                                if sprite.status == .warm || sprite.status == .cold {
+                                    Button {
+                                        Task { await viewModel.wakeSprite(sprite, apiClient: apiClient) }
+                                    } label: {
+                                        Label("Wake", systemImage: "bolt.fill")
+                                    }
+                                    .tint(.orange)
+                                    .disabled(viewModel.wakingSprites.contains(sprite.name))
+                                }
+                            }
                             .contextMenu {
+                                if sprite.status == .warm || sprite.status == .cold {
+                                    Button {
+                                        Task { await viewModel.wakeSprite(sprite, apiClient: apiClient) }
+                                    } label: {
+                                        Label("Wake Sprite", systemImage: "bolt.fill")
+                                    }
+                                    .disabled(viewModel.wakingSprites.contains(sprite.name))
+                                }
                                 Button(role: .destructive) {
                                     viewModel.spriteToDelete = sprite
                                 } label: {

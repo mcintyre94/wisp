@@ -50,6 +50,25 @@ final class SpriteOverviewViewModel {
         isRefreshing = false
     }
 
+    /// Polls sprite status on a schedule: every 2s while cold, every 10s when warm/running.
+    /// Called as a long-running `.task` from the view.
+    func pollStatus(apiClient: SpritesAPIClient) async {
+        while !Task.isCancelled {
+            let interval: Duration = switch sprite.status {
+            case .cold: .seconds(2)
+            case .warm: .seconds(2)
+            case .running, .unknown: .seconds(10)
+            }
+            try? await Task.sleep(for: interval)
+            guard !Task.isCancelled else { break }
+            do {
+                sprite = try await apiClient.getSprite(name: sprite.name)
+            } catch {
+                // Silently continue polling — transient errors shouldn't stop it
+            }
+        }
+    }
+
     func togglePublicAccess(apiClient: SpritesAPIClient) async {
         let currentAuth = sprite.urlSettings?.auth ?? "sprite"
         let newAuth = currentAuth == "public" ? "sprite" : "public"
