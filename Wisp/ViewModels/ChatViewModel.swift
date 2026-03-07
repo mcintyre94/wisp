@@ -66,7 +66,6 @@ final class ChatViewModel {
     private var turnHasMutations = false
     private var pendingForkContext: String?
     private var apiClient: SpritesAPIClient?
-    private var mcpSetupTask: Task<Bool, Never>?
     /// UUIDs of Claude NDJSON events already processed.
     /// Used by reconnect to skip already-handled events instead of clearing content.
     private var processedEventUUIDs: Set<String> = []
@@ -172,12 +171,6 @@ final class ChatViewModel {
 
     func loadSession(apiClient: SpritesAPIClient, modelContext: ModelContext) {
         self.apiClient = apiClient
-        if UserDefaults.standard.bool(forKey: "claudeQuestionTool") {
-            mcpSetupTask = Task { [weak self] in
-                guard let self else { return false }
-                return await self.installClaudeQuestionToolIfNeeded(apiClient: apiClient)
-            }
-        }
         guard let chat = fetchChat(modelContext: modelContext) else { return }
 
         sessionId = chat.claudeSessionId
@@ -574,19 +567,19 @@ final class ChatViewModel {
     ) async {
         status = .connecting
 
-        // Wait for MCP setup to finish (no-op if setup task not running or already done)
+        // Delete old service, then use a fresh name so logs start clean
+        let oldServiceName = serviceName
+        serviceName = "wisp-claude-\(UUID().uuidString.prefix(8).lowercased())"
+        try? await apiClient.deleteService(spriteName: spriteName, serviceName: oldServiceName)
+
+        // Install question tool after service cleanup (sprite is awake at this point)
         if UserDefaults.standard.bool(forKey: "claudeQuestionTool") {
-            let toolReady = await mcpSetupTask?.value ?? false
+            let toolReady = await installClaudeQuestionToolIfNeeded(apiClient: apiClient)
             if !toolReady {
                 status = .error("Claude question tool failed to install — disable it in Settings or try again")
                 return
             }
         }
-
-        // Delete old service, then use a fresh name so logs start clean
-        let oldServiceName = serviceName
-        serviceName = "wisp-claude-\(UUID().uuidString.prefix(8).lowercased())"
-        try? await apiClient.deleteService(spriteName: spriteName, serviceName: oldServiceName)
 
         // Persist the new service name immediately for reconnect
         saveSession(modelContext: modelContext)
