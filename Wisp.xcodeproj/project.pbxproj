@@ -112,6 +112,11 @@
 		D1A2B3C4E5F60200BB000015 /* WispActivityWidget.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = D1A2B3C4E5F60100AA000006 /* WispActivityWidget.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		C4D5E6F7A8B90A41637E8FA2 /* CheckpointMarkerView.swift in Sources */ = {isa = PBXBuildFile; fileRef = C4D5E6F7A8B90A41637E8FA1 /* CheckpointMarkerView.swift */; };
 		AA00BB11CC22DD33EE44FF10 /* LoopModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00BB11CC22DD33EE44FF0F /* LoopModels.swift */; };
+		AA00BB11CC22DD33EE550001 /* LoopManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00BB11CC22DD33EE550002 /* LoopManager.swift */; };
+		AA00BB11CC22DD33EE550003 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00BB11CC22DD33EE550004 /* NotificationService.swift */; };
+		AA00BB11CC22DD33EE550005 /* CreateLoopSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00BB11CC22DD33EE550006 /* CreateLoopSheet.swift */; };
+		AA00BB11CC22DD33EE550007 /* LoopRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00BB11CC22DD33EE550008 /* LoopRowView.swift */; };
+		AA00BB11CC22DD33EE550009 /* LoopDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00BB11CC22DD33EE55000A /* LoopDetailView.swift */; };
 		AA00BB11CC22DD33EE44FF12 /* LoopModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00BB11CC22DD33EE44FF11 /* LoopModelTests.swift */; };
 		D5E6F7A8B9C00B52748FA0B2 /* AutoCheckpointTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5E6F7A8B9C00B52748FA0B1 /* AutoCheckpointTests.swift */; };
 		E7F8A9B0C1D2E3F405A6B7C2 /* ChatNameTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7F8A9B0C1D2E3F405A6B7C1 /* ChatNameTests.swift */; };		E1F2A3B4C5D6E7F800000012 /* WispCodeHighlighter.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F2A3B4C5D6E7F800000001 /* WispCodeHighlighter.swift */; };
@@ -212,6 +217,11 @@
 		D0AD6D912964E32FC8685EA3 /* CheckpointsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckpointsViewModel.swift; sourceTree = "<group>"; };
 		D6BE6E0D68BBB35DE56600E1 /* SpriteSession.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpriteSession.swift; sourceTree = "<group>"; };
 		AA00BB11CC22DD33EE44FF0F /* LoopModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoopModels.swift; sourceTree = "<group>"; };
+		AA00BB11CC22DD33EE550002 /* LoopManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoopManager.swift; sourceTree = "<group>"; };
+		AA00BB11CC22DD33EE550004 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
+		AA00BB11CC22DD33EE550006 /* CreateLoopSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateLoopSheet.swift; sourceTree = "<group>"; };
+		AA00BB11CC22DD33EE550008 /* LoopRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoopRowView.swift; sourceTree = "<group>"; };
+		AA00BB11CC22DD33EE55000A /* LoopDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoopDetailView.swift; sourceTree = "<group>"; };
 		AA00BB11CC22DD33EE44FF11 /* LoopModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoopModelTests.swift; sourceTree = "<group>"; };
 		D9BC746AE628458445D34FCE /* ChatMessageView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatMessageView.swift; sourceTree = "<group>"; };
 		DD9CB342E72F33408AA0CB63 /* WispApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WispApp.swift; sourceTree = "<group>"; };
@@ -407,6 +417,8 @@
 				AA11BB22CC33DD44EE55FF01 /* GitHubDeviceFlowClient.swift */,
 				15F643DCF84E0352A9F8D649 /* KeychainService.swift */,
 				D1A2B3C4E5F60100AA000007 /* LiveActivityManager.swift */,
+				AA00BB11CC22DD33EE550002 /* LoopManager.swift */,
+				AA00BB11CC22DD33EE550004 /* NotificationService.swift */,
 				E01E14B5D87751457C549C17 /* SpritesAPIClient.swift */,
 			);
 			path = Services;
@@ -580,6 +592,7 @@
 				A64C131D52B17EA7B36B1BE6 /* RootView.swift */,
 				8490ECAE9626FBAD9E65EA49 /* Auth */,
 				902EF50E1CB6723AF748F886 /* Dashboard */,
+				AA00BB11CC22DD33EE55000B /* Loop */,
 				A5E41B8F9DACBEC637F8192A /* Settings */,
 				90D05FE8D8DC0D59A74BAD85 /* SpriteDetail */,
 				AA3600BB00CC00DD00EE0001 /* QuickActions */,
@@ -589,7 +602,16 @@
 			sourceTree = "<group>";
 		};
 		AA3600BB00CC00DD00EE0001 /* QuickActions */ = {
-		A1A2A3A4B5B6C7C800000009 /* Previews */ = {
+		AA00BB11CC22DD33EE55000B /* Loop */ = {
+			isa = PBXGroup;
+			children = (
+				AA00BB11CC22DD33EE550006 /* CreateLoopSheet.swift */,
+				AA00BB11CC22DD33EE55000A /* LoopDetailView.swift */,
+				AA00BB11CC22DD33EE550008 /* LoopRowView.swift */,
+			);
+			path = Loop;
+			sourceTree = "<group>";
+		};		A1A2A3A4B5B6C7C800000009 /* Previews */ = {
 			isa = PBXGroup;
 			children = (
 				A1A2A3A4B5B6C7C800000008 /* ScreenshotPreviews.swift */,
@@ -954,6 +976,11 @@
 				D1A2B3C4E5F60200BB000014 /* LiveActivityManager.swift in Sources */,
 				C4D5E6F7A8B90A41637E8FA2 /* CheckpointMarkerView.swift in Sources */,
 				AA00BB11CC22DD33EE44FF10 /* LoopModels.swift in Sources */,
+				AA00BB11CC22DD33EE550001 /* LoopManager.swift in Sources */,
+				AA00BB11CC22DD33EE550003 /* NotificationService.swift in Sources */,
+				AA00BB11CC22DD33EE550005 /* CreateLoopSheet.swift in Sources */,
+				AA00BB11CC22DD33EE550007 /* LoopRowView.swift in Sources */,
+				AA00BB11CC22DD33EE550009 /* LoopDetailView.swift in Sources */,
 				C575C7232C5FCA1A3F18A9D8 /* WispApp.swift in Sources */,
 				AA3500BB00CC00DD00EE0001 /* BashQuickView.swift in Sources */,
 				AA3200BB00CC00DD00EE0001 /* BashQuickViewModel.swift in Sources */,
