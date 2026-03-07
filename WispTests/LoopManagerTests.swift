@@ -131,4 +131,25 @@ struct LoopManagerTests {
         #expect(manager.activeLoopIds.contains(activeLoop.id))
         #expect(!manager.activeLoopIds.contains(pausedLoop.id))
     }
+
+    @Test("register makes the loop due immediately")
+    func registerMarksLoopDueNow() throws {
+        let context = try makeModelContext()
+        let manager = LoopManager()
+
+        let loop = SpriteLoop(
+            spriteName: "test-sprite",
+            workingDirectory: "/home/sprite/project",
+            prompt: "check status",
+            interval: .tenMinutes
+        )
+        loop.scheduleNextRun(after: Date().addingTimeInterval(3600))
+        context.insert(loop)
+        try context.save()
+
+        manager.register(loop: loop, modelContext: context)
+
+        #expect(loop.nextRunAt <= Date())
+        #expect(manager.activeLoopIds.contains(loop.id))
+    }
 }
