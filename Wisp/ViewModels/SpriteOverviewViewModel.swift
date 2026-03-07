@@ -8,6 +8,15 @@ enum SpritesCLIAuth {
     case unknown, checking, authenticated, notAuthenticated
 }
 
+enum ClaudeCodeVersionStatus: Equatable {
+    case unknown
+    case checking
+    case loaded(version: String)
+    case updating
+    case updateFailed(error: String)
+    case failed
+}
+
 @Observable
 @MainActor
 final class SpriteOverviewViewModel {
@@ -19,6 +28,7 @@ final class SpriteOverviewViewModel {
     var isAuthenticatingGitHub = false
     var spritesCLIAuthStatus: SpritesCLIAuth = .unknown
     var isAuthenticatingSprites = false
+    var claudeCodeVersionStatus: ClaudeCodeVersionStatus = .unknown
     var errorMessage: String?
     var isUploading = false
     var uploadResult: SpritesAPIClient.FileUploadResponse?
@@ -173,6 +183,38 @@ final class SpriteOverviewViewModel {
             if uploadResult?.path == result.path {
                 uploadResult = nil
             }
+        }
+    }
+
+    func checkClaudeCodeVersion(apiClient: SpritesAPIClient) async {
+        claudeCodeVersionStatus = .checking
+        let (output, success) = await apiClient.runExec(
+            spriteName: sprite.name,
+            command: "claude --version 2>/dev/null || echo CLAUDE_NOT_FOUND"
+        )
+        if !success || output.contains("CLAUDE_NOT_FOUND") || output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            claudeCodeVersionStatus = .failed
+        } else {
+            claudeCodeVersionStatus = .loaded(version: output.trimmingCharacters(in: .whitespacesAndNewlines))
+        }
+    }
+
+    func updateClaudeCode(apiClient: SpritesAPIClient) async {
+        claudeCodeVersionStatus = .updating
+        let (output, success) = await apiClient.runExec(
+            spriteName: sprite.name,
+            command: "npm install -g @anthropic-ai/claude-code@latest 2>&1 && claude --version",
+            timeout: 120
+        )
+        if success {
+            let lines = output.trimmingCharacters(in: .whitespacesAndNewlines).split(separator: "\n")
+            if let lastLine = lines.last {
+                claudeCodeVersionStatus = .loaded(version: String(lastLine).trimmingCharacters(in: .whitespacesAndNewlines))
+            } else {
+                claudeCodeVersionStatus = .updateFailed(error: "Update succeeded but could not read version")
+            }
+        } else {
+            claudeCodeVersionStatus = .updateFailed(error: "Update failed")
         }
     }
 
