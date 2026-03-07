@@ -94,6 +94,11 @@ struct ChatInputBar: View {
                             onStash()
                         }
                     }
+                    if let onLongPressSend, !isEmpty {
+                        Button("Create Loop", systemImage: "repeat") {
+                            onLongPressSend()
+                        }
+                    }
                 } label: {
                     Image(systemName: "arrow.up.circle.fill")
                         .font(.title2)
@@ -105,11 +110,6 @@ struct ChatInputBar: View {
                 .tint(isEmpty || hasQueuedMessage ? .gray : Color("AccentColor"))
                 .disabled(isEmpty || hasQueuedMessage)
                 .buttonStyle(.glass)
-                .onLongPressGesture {
-                    if !isEmpty && !hasQueuedMessage {
-                        onLongPressSend?()
-                    }
-                }
             }
         }
         .animation(.easeInOut(duration: 0.2), value: attachedFiles.count)
