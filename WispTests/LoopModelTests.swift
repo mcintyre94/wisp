@@ -19,6 +19,7 @@ struct LoopModelTests {
         #expect(loop.stateRaw == "active")
         #expect(loop.iterations.isEmpty)
         #expect(loop.lastRunAt == nil)
+        #expect(loop.nextRunAt == loop.createdAt)
         #expect(loop.spriteName == "test-sprite")
         #expect(loop.workingDirectory == "/home/sprite/project")
         #expect(loop.prompt == "Check status")
@@ -35,6 +36,18 @@ struct LoopModelTests {
 
         let expectedExpiry = loop.createdAt.addingTimeInterval(LoopDuration.oneWeek.timeInterval)
         let difference = abs(loop.expiresAt.timeIntervalSince(expectedExpiry))
+        #expect(difference < 1.0)
+    }
+
+    @Test func newLoopsAreDueImmediately() {
+        let loop = SpriteLoop(
+            spriteName: "test-sprite",
+            workingDirectory: "/home/sprite/project",
+            prompt: "Check status",
+            interval: .fiveMinutes
+        )
+
+        let difference = abs(loop.nextRunAt.timeIntervalSince(loop.createdAt))
         #expect(difference < 1.0)
     }
 
@@ -131,5 +144,21 @@ struct LoopModelTests {
         #expect(iteration.responseText == nil)
         #expect(iteration.completedAt == nil)
         #expect(iteration.notificationSummary == nil)
+    }
+
+    @Test func scheduleNextRunUpdatesPersistedDueDate() {
+        let loop = SpriteLoop(
+            spriteName: "test-sprite",
+            workingDirectory: "/home/sprite/project",
+            prompt: "Check status",
+            interval: .fifteenMinutes
+        )
+        let referenceDate = Date()
+
+        loop.scheduleNextRun(after: referenceDate)
+
+        let expected = referenceDate.addingTimeInterval(LoopInterval.fifteenMinutes.seconds)
+        let difference = abs(loop.nextRunAt.timeIntervalSince(expected))
+        #expect(difference < 1.0)
     }
 }
