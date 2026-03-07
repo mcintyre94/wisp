@@ -5,6 +5,7 @@ import PhotosUI
 struct SpriteOverviewView: View {
     @Environment(SpritesAPIClient.self) private var apiClient
     @Environment(\.openURL) private var openURL
+    @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var viewModel: SpriteOverviewViewModel
     @State private var workingDirectory = "/home/sprite/project"
     @State private var showUploadOptions = false
@@ -12,9 +13,11 @@ struct SpriteOverviewView: View {
     @State private var showPhotoPicker = false
     @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var showOverwriteConfirmation = false
+    var servicesViewModel: ServicesViewModel?
 
-    init(sprite: Sprite) {
+    init(sprite: Sprite, servicesViewModel: ServicesViewModel? = nil) {
         _viewModel = State(initialValue: SpriteOverviewViewModel(sprite: sprite))
+        self.servicesViewModel = servicesViewModel
     }
 
     var body: some View {
@@ -142,6 +145,33 @@ struct SpriteOverviewView: View {
                     Text(error)
                         .foregroundStyle(.red)
                         .font(.caption)
+                }
+            }
+
+            if sizeClass == .compact, let vm = servicesViewModel {
+                Section("Services") {
+                    if vm.isLoading && vm.services.isEmpty {
+                        HStack {
+                            Text("Services")
+                            Spacer()
+                            ProgressView()
+                        }
+                    } else if vm.services.isEmpty {
+                        Text("No running services")
+                            .foregroundStyle(.secondary)
+                    } else {
+                        ForEach(vm.services) { service in
+                            NavigationLink {
+                                ServiceDetailView(
+                                    spriteName: vm.spriteName,
+                                    service: service,
+                                    displayName: vm.displayName(for: service)
+                                )
+                            } label: {
+                                ServiceRowView(service: service, displayName: vm.displayName(for: service))
+                            }
+                        }
+                    }
                 }
             }
 
