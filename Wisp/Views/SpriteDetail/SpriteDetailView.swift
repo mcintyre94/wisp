@@ -92,7 +92,7 @@ struct SpriteDetailView: View {
                 ChatView(
                     viewModel: chatViewModel,
                     isReadOnly: isReadOnly,
-                    topAccessory: showTabPicker ? AnyView(pickerView) : nil,
+                    selectedTab: showTabPicker ? $selectedTab : nil,
                     existingSessionIds: Set(chatListViewModel.chats.filter { !$0.isClosed }.compactMap(\.claudeSessionId)),
                     onFork: { checkpointId, messageId in
                         pendingFork = (checkpointId, messageId)
@@ -146,7 +146,8 @@ struct SpriteDetailView: View {
                         withAnimation {
                             showCopiedFeedback = true
                         }
-                        DispatchQueue.main.asyncAfter(deadline: .now() + 1) {
+                        Task {
+                            try? await Task.sleep(for: .seconds(1))
                             withAnimation {
                                 showCopiedFeedback = false
                             }

@@ -14,15 +14,17 @@ struct ChatSwitcherSheet: View {
         NavigationStack {
             List {
                 ForEach(viewModel.chats, id: \.id) { chat in
-                    ChatRowView(
-                        chat: chat,
-                        isActive: chat.id == viewModel.activeChatId
-                    )
-                    .contentShape(Rectangle())
-                    .onTapGesture {
+                    Button {
                         viewModel.selectChat(chat)
                         dismiss()
+                    } label: {
+                        ChatRowView(
+                            chat: chat,
+                            isActive: chat.id == viewModel.activeChatId
+                        )
+                        .contentShape(Rectangle())
                     }
+                    .buttonStyle(.plain)
                     .contextMenu {
                         if let sessionId = chat.claudeSessionId {
                             Button {

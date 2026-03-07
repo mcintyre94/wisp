@@ -86,7 +86,8 @@ struct SettingsView: View {
                 if let token = apiClient.githubToken {
                     UIPasteboard.general.string = token
                     copiedTokenFlash = true
-                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    Task {
+                        try? await Task.sleep(for: .milliseconds(1500))
                         copiedTokenFlash = false
                     }
                 }
@@ -99,7 +100,7 @@ struct SettingsView: View {
                         .transition(.opacity)
                 }
             }
-            .animation(.default, value: copiedTokenFlash)
+            .animation(.easeInOut(duration: 0.2), value: copiedTokenFlash)
             #endif
 
             if apiClient.hasGitHubToken {
@@ -229,7 +230,8 @@ struct SettingsView: View {
             .onTapGesture {
                 UIPasteboard.general.string = deviceID
                 copiedDeviceIDFlash = true
-                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                Task {
+                    try? await Task.sleep(for: .milliseconds(1500))
                     copiedDeviceIDFlash = false
                 }
             }
@@ -241,7 +243,7 @@ struct SettingsView: View {
                         .transition(.opacity)
                 }
             }
-            .animation(.default, value: copiedDeviceIDFlash)
+            .animation(.easeInOut(duration: 0.2), value: copiedDeviceIDFlash)
         } header: {
             Text("Developer")
         } footer: {

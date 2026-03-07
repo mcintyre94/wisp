@@ -19,8 +19,8 @@ struct AssistantMessageView: View {
     var body: some View {
         HStack(alignment: .top) {
             VStack(alignment: .leading, spacing: 8) {
-                ForEach(message.content.indices, id: \.self) { index in
-                    switch message.content[index] {
+                ForEach(message.content) { block in
+                    switch block {
                     case .text(let text):
                         AssistantTextBubble(
                             text: text,

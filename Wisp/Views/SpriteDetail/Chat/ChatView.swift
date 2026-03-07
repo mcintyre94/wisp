@@ -9,7 +9,7 @@ struct ChatView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Bindable var viewModel: ChatViewModel
     var isReadOnly: Bool = false
-    var topAccessory: AnyView? = nil
+    var selectedTab: Binding<SpriteTab>? = nil
     var existingSessionIds: Set<String> = []
     var onFork: ((String, UUID) -> Void)? = nil
     @FocusState private var isInputFocused: Bool
@@ -84,7 +84,7 @@ struct ChatView: View {
         }
         .safeAreaInset(edge: .top, spacing: 0) {
             VStack(spacing: 0) {
-                if let topAccessory { topAccessory }
+                if let selectedTab { SpriteTabPicker(selectedTab: selectedTab) }
                 ChatStatusBar(
                     status: viewModel.status,
                     modelName: viewModel.modelName,
@@ -92,16 +92,12 @@ struct ChatView: View {
                 )
             }
         }
-        .onAppear {
-            DispatchQueue.main.asyncAfter(deadline: .now() + 0.1) {
-                withAnimation(.easeOut(duration: 0.3)) {
-                    contentOpacity = 1
-                }
-            }
-        }
         .task {
             // Small delay to let loadSession populate messages first
             try? await Task.sleep(for: .milliseconds(100))
+            withAnimation(.easeOut(duration: 0.3)) {
+                contentOpacity = 1
+            }
             if viewModel.messages.isEmpty && !isReadOnly {
                 viewModel.fetchRemoteSessions(
                     apiClient: apiClient,
