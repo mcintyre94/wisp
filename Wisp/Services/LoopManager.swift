@@ -1,3 +1,4 @@
+import BackgroundTasks
 import Foundation
 import SwiftData
 import os
@@ -100,6 +101,46 @@ final class LoopManager {
         }
 
         logger.info("Restored \(loops.count) active loops")
+    }
+
+    // MARK: - Background Task Support
+
+    static let bgTaskIdentifier = "com.wisp.app.loop-refresh"
+
+    func scheduleBackgroundRefresh() {
+        let request = BGAppRefreshTaskRequest(identifier: Self.bgTaskIdentifier)
+        let shortestInterval = timers.isEmpty ? 600.0 : timers.keys.compactMap { _ -> TimeInterval? in
+            return 600
+        }.min() ?? 600
+
+        request.earliestBeginDate = Date(timeIntervalSinceNow: shortestInterval)
+
+        do {
+            try BGTaskScheduler.shared.submit(request)
+            logger.info("Scheduled background refresh in \(shortestInterval)s")
+        } catch {
+            logger.error("Failed to schedule background refresh: \(error)")
+        }
+    }
+
+    func handleBackgroundRefresh(task: BGAppRefreshTask, modelContext: ModelContext) {
+        task.expirationHandler = {
+            task.setTaskCompleted(success: false)
+        }
+
+        Task { @MainActor in
+            let activeState = LoopState.active.rawValue
+            let descriptor = FetchDescriptor<SpriteLoop>(
+                predicate: #Predicate { $0.stateRaw == activeState },
+                sortBy: [SortDescriptor(\SpriteLoop.lastRunAt)]
+            )
+            if let loop = try? modelContext.fetch(descriptor).first {
+                await self.runIteration(loopId: loop.id, modelContext: modelContext)
+            }
+
+            self.scheduleBackgroundRefresh()
+            task.setTaskCompleted(success: true)
+        }
     }
 
     // MARK: - Private Methods
