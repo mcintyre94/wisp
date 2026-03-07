@@ -178,7 +178,83 @@ final class LoopManager {
     }
 
     private func executeLoopPrompt(spriteName: String, workingDirectory: String, prompt: String) async -> Result<String, Error> {
-        // Stub — will be wired up in Task 5
-        return .failure(NSError(domain: "LoopManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "Not yet implemented"]))
+        guard let apiClient else {
+            return .failure(NSError(domain: "LoopManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "No API client configured"]))
+        }
+
+        // 1. Wake sprite if needed
+        do {
+            let sprite = try await apiClient.getSprite(name: spriteName)
+            if sprite.status != .running {
+                _ = await apiClient.runExec(spriteName: spriteName, command: "true", timeout: 60)
+                for _ in 0..<30 {
+                    try await Task.sleep(for: .seconds(2))
+                    let updated = try await apiClient.getSprite(name: spriteName)
+                    if updated.status == .running { break }
+                }
+            }
+        } catch {
+            return .failure(error)
+        }
+
+        // 2. Build command
+        guard let claudeToken = apiClient.claudeToken else {
+            return .failure(NSError(domain: "LoopManager", code: -2, userInfo: [NSLocalizedDescriptionKey: "No Claude token configured"]))
+        }
+
+        let escapedPrompt = prompt.replacingOccurrences(of: "'", with: "'\\''")
+        let commandParts = [
+            "export CLAUDE_CODE_OAUTH_TOKEN='\(claudeToken)'",
+            "mkdir -p \(workingDirectory)",
+            "cd \(workingDirectory)",
+            "claude -p --verbose --output-format stream-json --dangerously-skip-permissions '\(escapedPrompt)'"
+        ]
+        let fullCommand = commandParts.joined(separator: " && ")
+
+        let serviceName = "wisp-loop-\(UUID().uuidString.prefix(8).lowercased())"
+        let config = ServiceRequest(cmd: "bash", args: ["-c", fullCommand], needs: nil, httpPort: nil)
+
+        // 3. Stream and parse
+        let stream = apiClient.streamService(spriteName: spriteName, serviceName: serviceName, config: config)
+        let parser = ClaudeStreamParser()
+        var responseText = ""
+
+        do {
+            for try await event in stream {
+                guard event.type == .stdout, let base64Data = event.data else { continue }
+                guard let rawData = Data(base64Encoded: base64Data) else { continue }
+                let claudeEvents = await parser.parse(data: rawData)
+                for claudeEvent in claudeEvents {
+                    if case .assistant(let assistantEvent) = claudeEvent {
+                        for block in assistantEvent.message.content {
+                            if case .text(let text) = block {
+                                responseText += text
+                            }
+                        }
+                    }
+                }
+            }
+        } catch {
+            if responseText.isEmpty {
+                return .failure(error)
+            }
+        }
+
+        // Flush remaining
+        let remaining = await parser.flush()
+        for claudeEvent in remaining {
+            if case .assistant(let assistantEvent) = claudeEvent {
+                for block in assistantEvent.message.content {
+                    if case .text(let text) = block {
+                        responseText += text
+                    }
+                }
+            }
+        }
+
+        // 4. Cleanup
+        try? await apiClient.deleteService(spriteName: spriteName, serviceName: serviceName)
+
+        return .success(responseText.isEmpty ? "(No response)" : responseText)
     }
 }
