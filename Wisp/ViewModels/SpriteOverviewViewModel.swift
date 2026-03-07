@@ -30,7 +30,6 @@ final class SpriteOverviewViewModel {
     var isAuthenticatingSprites = false
     var claudeCodeVersionStatus: ClaudeCodeVersionStatus = .unknown
     var errorMessage: String?
-    var isWaking = false
     var isUploading = false
     var uploadResult: SpritesAPIClient.FileUploadResponse?
     var uploadError: String?
@@ -61,33 +60,23 @@ final class SpriteOverviewViewModel {
         isRefreshing = false
     }
 
-    func wakeSprite(apiClient: SpritesAPIClient) async {
-        isWaking = true
-        defer { isWaking = false }
-
-        // Fire a no-op exec to trigger the wake — don't await completion
-        // since the WebSocket may fail on a cold sprite before it finishes waking
-        let execTask = Task {
-            _ = await apiClient.runExec(spriteName: sprite.name, command: "true", timeout: 60)
-        }
-
-        // Poll until running or timeout (~60s, cold starts can take a while)
-        let deadline = Date().addingTimeInterval(60)
-        while Date() < deadline {
-            try? await Task.sleep(for: .seconds(2))
+    /// Polls sprite status on a schedule: every 2s while cold, every 10s when warm/running.
+    /// Called as a long-running `.task` from the view.
+    func pollStatus(apiClient: SpritesAPIClient) async {
+        while !Task.isCancelled {
+            let interval: Duration = switch sprite.status {
+            case .cold: .seconds(2)
+            case .warm: .seconds(2)
+            case .running, .unknown: .seconds(10)
+            }
+            try? await Task.sleep(for: interval)
+            guard !Task.isCancelled else { break }
             do {
                 sprite = try await apiClient.getSprite(name: sprite.name)
-                if sprite.status == .running {
-                    execTask.cancel()
-                    return
-                }
             } catch {
-                errorMessage = error.localizedDescription
-                execTask.cancel()
-                return
+                // Silently continue polling — transient errors shouldn't stop it
             }
         }
-        execTask.cancel()
     }
 
     func togglePublicAccess(apiClient: SpritesAPIClient) async {
