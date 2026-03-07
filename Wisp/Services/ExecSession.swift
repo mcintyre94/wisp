@@ -9,6 +9,8 @@ enum ExecEvent: Sendable {
     case data(Data)
     /// Exec session ID from the session_info control frame
     case sessionInfo(id: String)
+    /// Process exit code from the exec stream
+    case exit(code: Int)
 }
 
 final class ExecSession: Sendable {
@@ -79,6 +81,7 @@ final class ExecSession: Sendable {
                             case 3: // exit
                                 let exitCode = payload.first.map { Int($0) } ?? -1
                                 logger.info("Exit frame received, code=\(exitCode)")
+                                continuation.yield(.exit(code: exitCode))
                                 continuation.finish()
                                 return
                             default:
