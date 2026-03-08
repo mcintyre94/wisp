@@ -304,12 +304,23 @@ final class LoopManager {
             try Task.checkCancellation()
             let sprite = try await apiClient.getSprite(name: spriteName)
             if sprite.status != .running {
-                _ = await apiClient.runExec(spriteName: spriteName, command: "true", timeout: 60)
-                for _ in 0..<30 {
+                // Fire exec to trigger wake — don't await, it may fail for cold sprites
+                Task {
+                    _ = await apiClient.runExec(spriteName: spriteName, command: "true", timeout: 60)
+                }
+                // Poll until running (up to 90s for cold starts)
+                var woke = false
+                for _ in 0..<45 {
                     try Task.checkCancellation()
                     try await Task.sleep(for: .seconds(2))
                     let updated = try await apiClient.getSprite(name: spriteName)
-                    if updated.status == .running { break }
+                    if updated.status == .running {
+                        woke = true
+                        break
+                    }
+                }
+                if !woke {
+                    return .failure(NSError(domain: "LoopManager", code: -3, userInfo: [NSLocalizedDescriptionKey: "Sprite failed to wake after 90s"]))
                 }
             }
         } catch {
