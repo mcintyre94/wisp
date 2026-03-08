@@ -322,8 +322,8 @@ final class LoopManager {
             let maxAttempts = 5
 
             for attempt in 1...maxAttempts {
-                try? await apiClient.deleteService(spriteName: spriteName, serviceName: serviceName)
                 if attempt > 1 {
+                    try? await apiClient.deleteService(spriteName: spriteName, serviceName: serviceName)
                     let backoff = attempt * 10  // 10s, 20s, 30s...
                     logger.info("Retrying service stream for loop (attempt \(attempt)/\(maxAttempts), backoff \(backoff)s)")
                     try? await Task.sleep(for: .seconds(backoff))
@@ -352,12 +352,19 @@ final class LoopManager {
                         guard let rawData = Data(base64Encoded: base64Data) else { continue }
                         let claudeEvents = await parser.parse(data: rawData)
                         for claudeEvent in claudeEvents {
-                            if case .assistant(let assistantEvent) = claudeEvent {
+                            switch claudeEvent {
+                            case .assistant(let assistantEvent):
                                 for block in assistantEvent.message.content {
                                     if case .text(let text) = block {
                                         responseText += text
                                     }
                                 }
+                            case .result(let resultEvent):
+                                if let text = resultEvent.result, !text.isEmpty {
+                                    responseText += text
+                                }
+                            default:
+                                break
                             }
                         }
                     }
@@ -367,9 +374,11 @@ final class LoopManager {
                         return .failure(CancellationError())
                     }
                     // Retry if we got no data (connection failed before streaming started)
+                    let urlError = error as? URLError
+                    let errorCode = urlError?.code.rawValue ?? -1
+                    logger.warning("Service stream error (attempt \(attempt)/\(maxAttempts), gotData=\(gotData), code=\(errorCode)): \(error.localizedDescription)")
                     if !gotData && attempt < maxAttempts {
                         lastError = error
-                        logger.warning("Service stream failed before receiving data: \(error.localizedDescription)")
                         continue
                     }
                     if responseText.isEmpty {
@@ -380,12 +389,19 @@ final class LoopManager {
 
                 let remaining = await parser.flush()
                 for claudeEvent in remaining {
-                    if case .assistant(let assistantEvent) = claudeEvent {
+                    switch claudeEvent {
+                    case .assistant(let assistantEvent):
                         for block in assistantEvent.message.content {
                             if case .text(let text) = block {
                                 responseText += text
                             }
                         }
+                    case .result(let resultEvent):
+                        if let text = resultEvent.result, !text.isEmpty {
+                            responseText += text
+                        }
+                    default:
+                        break
                     }
                 }
 
@@ -400,7 +416,8 @@ final class LoopManager {
 
             // All retries exhausted
             try? await apiClient.deleteService(spriteName: spriteName, serviceName: serviceName)
-            return .failure(lastError ?? NSError(domain: "LoopManager", code: -4, userInfo: [NSLocalizedDescriptionKey: "Service stream failed after \(maxAttempts) attempts"]))
+            let underlying = lastError?.localizedDescription ?? "unknown"
+            return .failure(NSError(domain: "LoopManager", code: -4, userInfo: [NSLocalizedDescriptionKey: "Failed after \(maxAttempts) retries: \(underlying)"]))
         } onCancel: {
             Task {
                 try? await apiClient.deleteService(spriteName: spriteName, serviceName: serviceName)
