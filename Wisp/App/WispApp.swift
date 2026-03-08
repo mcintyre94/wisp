@@ -26,7 +26,7 @@ struct WispApp: App {
         let modelContainer = sharedModelContainer
         BGTaskScheduler.shared.register(
             forTaskWithIdentifier: LoopManager.bgTaskIdentifier,
-            using: nil
+            using: .main
         ) { task in
             guard let refreshTask = task as? BGAppRefreshTask else {
                 task.setTaskCompleted(success: false)
@@ -34,19 +34,15 @@ struct WispApp: App {
             }
 
             let workTask = Task { @MainActor in
-                let backgroundLoopManager = LoopManager()
-                backgroundLoopManager.apiClient = SpritesAPIClient()
+                let bgLoopManager = LoopManager()
+                bgLoopManager.apiClient = SpritesAPIClient()
                 let modelContext = ModelContext(modelContainer)
-                return await backgroundLoopManager.handleBackgroundRefresh(modelContext: modelContext)
+                let success = await bgLoopManager.handleBackgroundRefresh(modelContext: modelContext)
+                refreshTask.setTaskCompleted(success: success)
             }
 
             refreshTask.expirationHandler = {
                 workTask.cancel()
-            }
-
-            Task {
-                let success = await workTask.value
-                refreshTask.setTaskCompleted(success: success)
             }
         }
     }
