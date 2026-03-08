@@ -152,4 +152,17 @@ struct LoopManagerTests {
         #expect(loop.nextRunAt <= Date())
         #expect(manager.activeLoopIds.contains(loop.id))
     }
+
+    @Test("handleBackgroundRefresh succeeds on MainActor with no due loops")
+    func handleBackgroundRefreshOnMainActor() async throws {
+        // This test documents that handleBackgroundRefresh must be called from
+        // MainActor context. The BGTaskScheduler handler must dispatch to main
+        // queue (using: .main) to avoid @MainActor isolation crashes at runtime.
+        let context = try makeModelContext()
+        let manager = LoopManager()
+        manager.apiClient = SpritesAPIClient()
+
+        let success = await manager.handleBackgroundRefresh(modelContext: context)
+        #expect(success)
+    }
 }
