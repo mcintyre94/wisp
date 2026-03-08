@@ -691,12 +691,12 @@ final class ChatViewModel {
         serviceName = "wisp-claude-\(UUID().uuidString.prefix(8).lowercased())"
         try? await apiClient.deleteService(spriteName: spriteName, serviceName: oldServiceName)
 
-        // Install question tool after service cleanup (sprite is awake at this point)
+        // Install question tool (best-effort — don't block chat if it fails)
+        var questionToolInstalled = false
         if UserDefaults.standard.bool(forKey: "claudeQuestionTool") {
-            let toolReady = await installClaudeQuestionToolIfNeeded(apiClient: apiClient)
-            if !toolReady {
-                status = .error("Claude question tool failed to install — disable it in Settings or try again")
-                return
+            questionToolInstalled = await installClaudeQuestionToolIfNeeded(apiClient: apiClient)
+            if !questionToolInstalled {
+                logger.warning("Question tool install failed — proceeding without it")
             }
         }
 
@@ -741,7 +741,7 @@ final class ChatViewModel {
         }
 
         var claudeCmd = "claude -p --verbose --output-format stream-json --dangerously-skip-permissions"
-        if UserDefaults.standard.bool(forKey: "claudeQuestionTool") {
+        if questionToolInstalled {
             let sessionId = chatId.uuidString.lowercased()
             let configPath = ClaudeQuestionTool.mcpConfigFilePath(for: sessionId)
             // Write per-session MCP config (inlined in the command chain so no extra round-trip)
