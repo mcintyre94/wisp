@@ -345,56 +345,80 @@ final class LoopManager {
         let config = ServiceRequest(cmd: "bash", args: ["-c", fullCommand], needs: nil, httpPort: nil)
 
         return await withTaskCancellationHandler {
-            // 3. Stream and parse
-            let stream = apiClient.streamService(spriteName: spriteName, serviceName: serviceName, config: config)
-            let parser = ClaudeStreamParser()
-            var responseText = ""
+            // 3. Stream and parse (with retry for transient network errors)
+            var lastError: Error?
+            let maxAttempts = 3
 
-            do {
-                for try await event in stream {
-                    try Task.checkCancellation()
-                    guard event.type == .stdout, let base64Data = event.data else { continue }
-                    guard let rawData = Data(base64Encoded: base64Data) else { continue }
-                    let claudeEvents = await parser.parse(data: rawData)
-                    for claudeEvent in claudeEvents {
-                        if case .assistant(let assistantEvent) = claudeEvent {
-                            for block in assistantEvent.message.content {
-                                if case .text(let text) = block {
-                                    responseText += text
+            for attempt in 1...maxAttempts {
+                try? await apiClient.deleteService(spriteName: spriteName, serviceName: serviceName)
+                if attempt > 1 {
+                    logger.info("Retrying service stream for loop (attempt \(attempt)/\(maxAttempts))")
+                    try? await Task.sleep(for: .seconds(5))
+                }
+                guard !Task.isCancelled else { return .failure(CancellationError()) }
+
+                let stream = apiClient.streamService(spriteName: spriteName, serviceName: serviceName, config: config)
+                let parser = ClaudeStreamParser()
+                var responseText = ""
+                var gotData = false
+
+                do {
+                    for try await event in stream {
+                        try Task.checkCancellation()
+                        gotData = true
+                        guard event.type == .stdout, let base64Data = event.data else { continue }
+                        guard let rawData = Data(base64Encoded: base64Data) else { continue }
+                        let claudeEvents = await parser.parse(data: rawData)
+                        for claudeEvent in claudeEvents {
+                            if case .assistant(let assistantEvent) = claudeEvent {
+                                for block in assistantEvent.message.content {
+                                    if case .text(let text) = block {
+                                        responseText += text
+                                    }
                                 }
                             }
                         }
                     }
+                } catch {
+                    if error is CancellationError || Task.isCancelled {
+                        try? await apiClient.deleteService(spriteName: spriteName, serviceName: serviceName)
+                        return .failure(CancellationError())
+                    }
+                    // Retry if we got no data (connection failed before streaming started)
+                    if !gotData && attempt < maxAttempts {
+                        lastError = error
+                        logger.warning("Service stream failed before receiving data: \(error.localizedDescription)")
+                        continue
+                    }
+                    if responseText.isEmpty {
+                        try? await apiClient.deleteService(spriteName: spriteName, serviceName: serviceName)
+                        return .failure(error)
+                    }
                 }
-            } catch {
-                if error is CancellationError || Task.isCancelled {
-                    try? await apiClient.deleteService(spriteName: spriteName, serviceName: serviceName)
-                    return .failure(CancellationError())
-                }
-                if responseText.isEmpty {
-                    try? await apiClient.deleteService(spriteName: spriteName, serviceName: serviceName)
-                    return .failure(error)
-                }
-            }
 
-            let remaining = await parser.flush()
-            for claudeEvent in remaining {
-                if case .assistant(let assistantEvent) = claudeEvent {
-                    for block in assistantEvent.message.content {
-                        if case .text(let text) = block {
-                            responseText += text
+                let remaining = await parser.flush()
+                for claudeEvent in remaining {
+                    if case .assistant(let assistantEvent) = claudeEvent {
+                        for block in assistantEvent.message.content {
+                            if case .text(let text) = block {
+                                responseText += text
+                            }
                         }
                     }
                 }
+
+                try? await apiClient.deleteService(spriteName: spriteName, serviceName: serviceName)
+
+                if Task.isCancelled {
+                    return .failure(CancellationError())
+                }
+
+                return .success(responseText.isEmpty ? "(No response)" : responseText)
             }
 
+            // All retries exhausted
             try? await apiClient.deleteService(spriteName: spriteName, serviceName: serviceName)
-
-            if Task.isCancelled {
-                return .failure(CancellationError())
-            }
-
-            return .success(responseText.isEmpty ? "(No response)" : responseText)
+            return .failure(lastError ?? NSError(domain: "LoopManager", code: -4, userInfo: [NSLocalizedDescriptionKey: "Service stream failed after \(maxAttempts) attempts"]))
         } onCancel: {
             Task {
                 try? await apiClient.deleteService(spriteName: spriteName, serviceName: serviceName)
