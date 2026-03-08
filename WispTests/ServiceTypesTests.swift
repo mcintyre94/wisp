@@ -114,4 +114,113 @@ struct ServiceTypesTests {
         #expect(json["needs"] as? [String] == ["database"])
         #expect(json["http_port"] as? Int == 3000)
     }
+
+    // MARK: - ServiceInfo Decoding
+
+    @Test func decodeServiceInfo() throws {
+        let json = """
+        {
+          "name": "webapp",
+          "cmd": "python",
+          "args": ["-m", "http.server", "8000"],
+          "http_port": 8000,
+          "needs": ["postgres"],
+          "state": {
+            "name": "webapp",
+            "pid": 1567,
+            "started_at": "2026-01-05T08:01:00Z",
+            "status": "running"
+          }
+        }
+        """
+        let info = try JSONDecoder.apiDecoder().decode(ServiceInfo.self, from: Data(json.utf8))
+        #expect(info.name == "webapp")
+        #expect(info.cmd == "python")
+        #expect(info.args == ["-m", "http.server", "8000"])
+        #expect(info.httpPort == 8000)
+        #expect(info.needs == ["postgres"])
+        #expect(info.state.status == "running")
+        #expect(info.state.pid == 1567)
+        #expect(info.state.startedAt != nil)
+    }
+
+    @Test func decodeServiceInfoNullHttpPort() throws {
+        let json = """
+        {
+          "name": "postgres",
+          "cmd": "postgres",
+          "args": ["-D", "/var/lib/postgresql/data"],
+          "http_port": null,
+          "needs": [],
+          "state": {
+            "name": "postgres",
+            "pid": 1234,
+            "started_at": "2026-01-05T08:00:00Z",
+            "status": "running"
+          }
+        }
+        """
+        let info = try JSONDecoder.apiDecoder().decode(ServiceInfo.self, from: Data(json.utf8))
+        #expect(info.name == "postgres")
+        #expect(info.httpPort == nil)
+        #expect(info.needs.isEmpty)
+    }
+
+    @Test func decodeServiceInfoList() throws {
+        let json = """
+        [
+          {
+            "name": "postgres",
+            "cmd": "postgres",
+            "args": ["-D", "/var/lib/postgresql/data"],
+            "http_port": null,
+            "needs": [],
+            "state": { "name": "postgres", "pid": 1234, "started_at": "2026-01-05T08:00:00Z", "status": "running" }
+          },
+          {
+            "name": "webapp",
+            "cmd": "python",
+            "args": ["-m", "http.server", "8000"],
+            "http_port": 8000,
+            "needs": ["postgres"],
+            "state": { "name": "webapp", "pid": 1567, "started_at": "2026-01-05T08:01:00Z", "status": "running" }
+          }
+        ]
+        """
+        let services = try JSONDecoder.apiDecoder().decode([ServiceInfo].self, from: Data(json.utf8))
+        #expect(services.count == 2)
+        #expect(services[0].name == "postgres")
+        #expect(services[1].name == "webapp")
+        #expect(services[1].needs == ["postgres"])
+    }
+
+    @Test func decodeServiceInfoNoArgs() throws {
+        let json = """
+        {
+          "name": "worker",
+          "cmd": "ruby",
+          "args": null,
+          "http_port": null,
+          "needs": [],
+          "state": { "name": "worker", "pid": 999, "started_at": "2026-01-05T09:00:00Z", "status": "running" }
+        }
+        """
+        let info = try JSONDecoder.apiDecoder().decode(ServiceInfo.self, from: Data(json.utf8))
+        #expect(info.args == nil)
+    }
+
+    @Test func serviceInfoIdentifiable() throws {
+        let json = """
+        {
+          "name": "myservice",
+          "cmd": "node",
+          "args": null,
+          "http_port": null,
+          "needs": [],
+          "state": { "name": "myservice", "pid": 42, "started_at": "2026-01-05T09:00:00Z", "status": "running" }
+        }
+        """
+        let info = try JSONDecoder.apiDecoder().decode(ServiceInfo.self, from: Data(json.utf8))
+        #expect(info.id == "myservice")
+    }
 }

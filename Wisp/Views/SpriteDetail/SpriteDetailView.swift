@@ -7,6 +7,7 @@ struct SpriteDetailView: View {
     @State private var chatListViewModel: SpriteChatListViewModel
     @State private var chatViewModel: ChatViewModel?
     @State private var checkpointsViewModel: CheckpointsViewModel
+    @State private var servicesViewModel: ServicesViewModel
     @State private var showChatSwitcher = false
     @State private var showStaleChatsAlert = false
     @State private var knownStreamingChatIds: Set<UUID> = []
@@ -23,9 +24,21 @@ struct SpriteDetailView: View {
         _selectedTab = selectedTab
         _chatListViewModel = State(initialValue: SpriteChatListViewModel(spriteName: sprite.name))
         _checkpointsViewModel = State(initialValue: CheckpointsViewModel(spriteName: sprite.name))
+        _servicesViewModel = State(initialValue: ServicesViewModel(spriteName: sprite.name))
     }
 
     private var showTabPicker: Bool { sizeClass != .regular }
+
+    /// Maps service name → chat display name for services that correspond to chats.
+    private var chatServiceDisplayNames: [String: String] {
+        var names: [String: String] = [:]
+        for chat in chatListViewModel.chats {
+            if let serviceName = chat.currentServiceName {
+                names[serviceName] = chat.displayName
+            }
+        }
+        return names
+    }
 
     private var navSelectionBinding: Binding<SpriteNavSelection?> {
         Binding(
@@ -33,6 +46,7 @@ struct SpriteDetailView: View {
                 switch selectedTab {
                 case .overview: return .overview
                 case .checkpoints: return .checkpoints
+                case .services: return .services
                 case .chat: return chatListViewModel.activeChatId.map { .chat($0) }
                 }
             },
@@ -43,6 +57,8 @@ struct SpriteDetailView: View {
                     selectedTab = .overview
                 case .checkpoints:
                     selectedTab = .checkpoints
+                case .services:
+                    selectedTab = .services
                 case .chat(let id):
                     selectedTab = .chat
                     if let chat = chatListViewModel.chats.first(where: { $0.id == id }) {
@@ -84,7 +100,7 @@ struct SpriteDetailView: View {
     private var tabContent: some View {
         switch selectedTab {
         case .overview:
-            SpriteOverviewView(sprite: sprite)
+            SpriteOverviewView(sprite: sprite, servicesViewModel: servicesViewModel)
                 .safeAreaInset(edge: .top, spacing: 0) { if showTabPicker { pickerView } }
         case .chat:
             if let chatViewModel {
@@ -106,6 +122,9 @@ struct SpriteDetailView: View {
             }
         case .checkpoints:
             CheckpointsView(viewModel: checkpointsViewModel)
+                .safeAreaInset(edge: .top, spacing: 0) { if showTabPicker { pickerView } }
+        case .services:
+            ServicesView(spriteName: sprite.name, viewModel: servicesViewModel)
                 .safeAreaInset(edge: .top, spacing: 0) { if showTabPicker { pickerView } }
         }
     }
@@ -196,6 +215,9 @@ struct SpriteDetailView: View {
             if let active = chatListViewModel.activeChat {
                 switchToChat(active)
             }
+
+            // Load services after chats so display names are available
+            await servicesViewModel.load(apiClient: apiClient, chatNames: chatServiceDisplayNames)
         }
         .onChange(of: chatListViewModel.activeChatId) { oldId, newId in
             guard newId != oldId, let newId,

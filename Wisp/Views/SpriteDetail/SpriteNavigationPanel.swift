@@ -4,6 +4,7 @@ import SwiftData
 enum SpriteNavSelection: Hashable {
     case overview
     case checkpoints
+    case services
     case chat(UUID)
 }
 
@@ -33,6 +34,9 @@ struct SpriteNavigationPanel: View {
 
             Label("Checkpoints", systemImage: "clock.arrow.circlepath")
                 .tag(SpriteNavSelection.checkpoints)
+
+            Label("Services", systemImage: "gearshape.2")
+                .tag(SpriteNavSelection.services)
 
             Section("Chats") {
                 ForEach(openChats) { chat in

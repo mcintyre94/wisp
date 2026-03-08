@@ -409,6 +409,11 @@ final class SpritesAPIClient {
         }
     }
 
+    /// List all services on a sprite.
+    func listServices(spriteName: String) async throws -> [ServiceInfo] {
+        return try await request(method: "GET", path: "/sprites/\(spriteName)/services")
+    }
+
     /// Check the status of a service.
     func getServiceStatus(spriteName: String, serviceName: String) async throws -> ServiceInfo {
         return try await request(method: "GET", path: "/sprites/\(spriteName)/services/\(serviceName)")

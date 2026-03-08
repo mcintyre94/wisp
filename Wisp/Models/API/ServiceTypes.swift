@@ -30,13 +30,32 @@ extension ServiceLogEvent: Decodable {
     }
 }
 
-/// Response from GET /v1/sprites/{name}/services/{serviceName}
-struct ServiceInfo: Codable, Sendable {
+/// Response from GET /v1/sprites/{name}/services and GET /v1/sprites/{name}/services/{serviceName}
+struct ServiceInfo: Codable, Sendable, Identifiable, Hashable {
     let name: String
+    let cmd: String
+    let args: [String]?
+    let httpPort: Int?
+    let needs: [String]
     let state: ServiceState
 
-    struct ServiceState: Codable, Sendable {
+    var id: String { name }
+
+    struct ServiceState: Codable, Sendable, Hashable {
+        let name: String
+        let pid: Int?
+        let startedAt: Date?
         let status: String  // "running", "stopped", etc.
+
+        enum CodingKeys: String, CodingKey {
+            case name, pid, status
+            case startedAt = "started_at"
+        }
+    }
+
+    enum CodingKeys: String, CodingKey {
+        case name, cmd, args, needs, state
+        case httpPort = "http_port"
     }
 }
 
