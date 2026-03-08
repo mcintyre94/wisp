@@ -299,35 +299,7 @@ final class LoopManager {
             return .failure(NSError(domain: "LoopManager", code: -1, userInfo: [NSLocalizedDescriptionKey: "No API client configured"]))
         }
 
-        // 1. Wake sprite if needed
-        do {
-            try Task.checkCancellation()
-            let sprite = try await apiClient.getSprite(name: spriteName)
-            if sprite.status != .running {
-                // Fire exec to trigger wake — don't await, it may fail for cold sprites
-                Task {
-                    _ = await apiClient.runExec(spriteName: spriteName, command: "true", timeout: 60)
-                }
-                // Poll until running (up to 90s for cold starts)
-                var woke = false
-                for _ in 0..<45 {
-                    try Task.checkCancellation()
-                    try await Task.sleep(for: .seconds(2))
-                    let updated = try await apiClient.getSprite(name: spriteName)
-                    if updated.status == .running {
-                        woke = true
-                        break
-                    }
-                }
-                if !woke {
-                    return .failure(NSError(domain: "LoopManager", code: -3, userInfo: [NSLocalizedDescriptionKey: "Sprite failed to wake after 90s"]))
-                }
-            }
-        } catch {
-            return .failure(error)
-        }
-
-        // 2. Build command
+        // 1. Build command (skip separate wake — streamService PUT triggers wake; retries handle 503s)
         guard let claudeToken = apiClient.claudeToken else {
             return .failure(NSError(domain: "LoopManager", code: -2, userInfo: [NSLocalizedDescriptionKey: "No Claude token configured"]))
         }
