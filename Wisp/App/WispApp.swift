@@ -23,6 +23,8 @@ struct WispApp: App {
             "worktreePerChat": true,
         ])
 
+        KeychainService.shared.migrateAccessibility()
+
         let modelContainer = sharedModelContainer
         BGTaskScheduler.shared.register(
             forTaskWithIdentifier: LoopManager.bgTaskIdentifier,
