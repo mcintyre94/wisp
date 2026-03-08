@@ -348,8 +348,8 @@ final class LoopManager {
                     for try await event in stream {
                         try Task.checkCancellation()
                         gotData = true
-                        guard event.type == .stdout, let base64Data = event.data else { continue }
-                        guard let rawData = Data(base64Encoded: base64Data) else { continue }
+                        guard event.type == .stdout, let stdoutText = event.data else { continue }
+                        let rawData = Data(stdoutText.utf8)
                         let claudeEvents = await parser.parse(data: rawData)
                         for claudeEvent in claudeEvents {
                             switch claudeEvent {
