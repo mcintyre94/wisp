@@ -108,6 +108,10 @@
 		AA00BB11CC22DD33EE550007 /* LoopRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00BB11CC22DD33EE550008 /* LoopRowView.swift */; };
 		AA00BB11CC22DD33EE550009 /* LoopDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00BB11CC22DD33EE55000A /* LoopDetailView.swift */; };
 		AA00BB11CC22DD33EE44FF12 /* LoopModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00BB11CC22DD33EE44FF11 /* LoopModelTests.swift */; };
+		AA33BB44CC55DD66EE77FF11 /* ServicesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA33BB44CC55DD66EE77FF01 /* ServicesViewModel.swift */; };
+		AA33BB44CC55DD66EE77FF12 /* ServiceDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA33BB44CC55DD66EE77FF02 /* ServiceDetailView.swift */; };
+		AA33BB44CC55DD66EE77FF13 /* ServiceRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA33BB44CC55DD66EE77FF03 /* ServiceRowView.swift */; };
+		AA33BB44CC55DD66EE77FF14 /* ServicesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA33BB44CC55DD66EE77FF04 /* ServicesView.swift */; };
 		D5E6F7A8B9C00B52748FA0B2 /* AutoCheckpointTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5E6F7A8B9C00B52748FA0B1 /* AutoCheckpointTests.swift */; };
 		E7F8A9B0C1D2E3F405A6B7C2 /* ChatNameTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E7F8A9B0C1D2E3F405A6B7C1 /* ChatNameTests.swift */; };
 		E1F2A3B4C5D6E7F800000012 /* WispCodeHighlighter.swift in Sources */ = {isa = PBXBuildFile; fileRef = E1F2A3B4C5D6E7F800000001 /* WispCodeHighlighter.swift */; };
@@ -265,6 +269,10 @@
 		E1F2A3B4C5D6E7F800000001 /* WispCodeHighlighter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WispCodeHighlighter.swift; sourceTree = "<group>"; };
 		E1F2A3B4C5D6E7F800000002 /* WispMarkdownTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WispMarkdownTheme.swift; sourceTree = "<group>"; };
 		E1F2A3B4C5D6E7F800000003 /* UnifiedDiffView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UnifiedDiffView.swift; sourceTree = "<group>"; };
+		AA33BB44CC55DD66EE77FF01 /* ServicesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServicesViewModel.swift; sourceTree = "<group>"; };
+		AA33BB44CC55DD66EE77FF02 /* ServiceDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceDetailView.swift; sourceTree = "<group>"; };
+		AA33BB44CC55DD66EE77FF03 /* ServiceRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceRowView.swift; sourceTree = "<group>"; };
+		AA33BB44CC55DD66EE77FF04 /* ServicesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServicesView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -451,8 +459,19 @@
 				B22C752D93810C377FF981DD /* Chat */,
 				13541EF56061CE5B4A38DDFA /* Checkpoints */,
 				C7EC091CA8E532B96108719F /* Overview */,
+				AA33BB44CC55DD66EE77FF20 /* Services */,
 			);
 			path = SpriteDetail;
+			sourceTree = "<group>";
+		};
+		AA33BB44CC55DD66EE77FF20 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				AA33BB44CC55DD66EE77FF02 /* ServiceDetailView.swift */,
+				AA33BB44CC55DD66EE77FF03 /* ServiceRowView.swift */,
+				AA33BB44CC55DD66EE77FF04 /* ServicesView.swift */,
+			);
+			path = Services;
 			sourceTree = "<group>";
 		};
 		9E7CE43A324BE881B8C99C50 /* ViewModels */ = {
@@ -462,6 +481,7 @@
 				540685D9D567596E24E4EF82 /* ChatViewModel.swift */,
 				D0AD6D912964E32FC8685EA3 /* CheckpointsViewModel.swift */,
 				EF49F7E0F4AC02FDF496D379 /* DashboardViewModel.swift */,
+				AA33BB44CC55DD66EE77FF01 /* ServicesViewModel.swift */,
 				C3D4E5F6A7B80920415C6D7E /* SpriteChatListViewModel.swift */,
 				AC9BFD0F0AC39C136C9E828A /* SpriteOverviewViewModel.swift */,
 			);
@@ -849,6 +869,10 @@
 				AA00BB11CC22DD33EE550005 /* CreateLoopSheet.swift in Sources */,
 				AA00BB11CC22DD33EE550007 /* LoopRowView.swift in Sources */,
 				AA00BB11CC22DD33EE550009 /* LoopDetailView.swift in Sources */,
+				AA33BB44CC55DD66EE77FF11 /* ServicesViewModel.swift in Sources */,
+				AA33BB44CC55DD66EE77FF12 /* ServiceDetailView.swift in Sources */,
+				AA33BB44CC55DD66EE77FF13 /* ServiceRowView.swift in Sources */,
+				AA33BB44CC55DD66EE77FF14 /* ServicesView.swift in Sources */,
 				C575C7232C5FCA1A3F18A9D8 /* WispApp.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
