@@ -134,6 +134,7 @@ final class LoopManager {
     }
 
     func handleBackgroundRefresh(modelContext: ModelContext) async -> Bool {
+        dispatchPrecondition(condition: .onQueue(.main))
         defer {
             scheduleBackgroundRefresh(modelContext: modelContext)
         }
