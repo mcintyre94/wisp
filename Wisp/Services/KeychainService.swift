@@ -1,7 +1,7 @@
 import Foundation
 import Security
 
-enum KeychainKey: String {
+enum KeychainKey: String, CaseIterable {
     case spritesToken = "com.wisp.sprites-token"
     case claudeToken = "com.wisp.claude-token"
     case githubToken = "com.wisp.github-token"
@@ -24,7 +24,7 @@ struct KeychainService: Sendable {
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: key.rawValue,
             kSecValueData as String: data,
-            kSecAttrAccessible as String: kSecAttrAccessibleWhenUnlockedThisDeviceOnly,
+            kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlockThisDeviceOnly,
         ]
 
         let status = SecItemAdd(addQuery as CFDictionary, nil)
@@ -48,6 +48,15 @@ struct KeychainService: Sendable {
             return nil
         }
         return String(data: data, encoding: .utf8)
+    }
+
+    /// Re-save existing keychain items with `AfterFirstUnlock` accessibility so
+    /// background tasks can read tokens while the device is locked.
+    func migrateAccessibility() {
+        for key in KeychainKey.allCases {
+            guard let value = load(key: key) else { continue }
+            try? save(value, for: key)
+        }
     }
 
     func delete(key: KeychainKey) {

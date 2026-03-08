@@ -9,6 +9,7 @@ struct ChatInputBar: View {
     var onBrowseSpriteFiles: (() -> Void)? = nil
     var onPickPhoto: (() -> Void)? = nil
     var onPickFile: (() -> Void)? = nil
+    var onLongPressSend: (() -> Void)? = nil
     var isUploading: Bool = false
     var attachedFiles: [AttachedFile] = []
     var onRemoveAttachment: ((AttachedFile) -> Void)? = nil
@@ -83,6 +84,14 @@ struct ChatInputBar: View {
                 .tint(isEmpty || hasQueuedMessage ? .gray : Color("AccentColor"))
                 .disabled(isEmpty || hasQueuedMessage)
                 .buttonStyle(.glass)
+                .simultaneousGesture(
+                    LongPressGesture(minimumDuration: 0.5)
+                        .onEnded { _ in
+                            if !isEmpty && !hasQueuedMessage {
+                                onLongPressSend?()
+                            }
+                        }
+                )
             }
         }
         .animation(.easeInOut(duration: 0.2), value: attachedFiles.count)
