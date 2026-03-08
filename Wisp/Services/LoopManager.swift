@@ -347,13 +347,23 @@ final class LoopManager {
         return await withTaskCancellationHandler {
             // 3. Stream and parse (with retry for transient network errors)
             var lastError: Error?
-            let maxAttempts = 3
+            let maxAttempts = 5
 
             for attempt in 1...maxAttempts {
                 try? await apiClient.deleteService(spriteName: spriteName, serviceName: serviceName)
                 if attempt > 1 {
-                    logger.info("Retrying service stream for loop (attempt \(attempt)/\(maxAttempts))")
-                    try? await Task.sleep(for: .seconds(5))
+                    let backoff = attempt * 10  // 10s, 20s, 30s...
+                    logger.info("Retrying service stream for loop (attempt \(attempt)/\(maxAttempts), backoff \(backoff)s)")
+                    try? await Task.sleep(for: .seconds(backoff))
+                    // Re-verify sprite is running before retry
+                    if let sprite = try? await apiClient.getSprite(name: spriteName), sprite.status != .running {
+                        logger.info("Sprite not running before retry, waiting...")
+                        for _ in 0..<15 {
+                            guard !Task.isCancelled else { break }
+                            try? await Task.sleep(for: .seconds(2))
+                            if let s = try? await apiClient.getSprite(name: spriteName), s.status == .running { break }
+                        }
+                    }
                 }
                 guard !Task.isCancelled else { return .failure(CancellationError()) }
 
