@@ -10,6 +10,7 @@ enum LoopState: String, Codable, Sendable {
 }
 
 enum LoopInterval: Double, Codable, Sendable, CaseIterable {
+    case oneMinute = 60
     case fiveMinutes = 300
     case tenMinutes = 600
     case fifteenMinutes = 900
@@ -22,6 +23,7 @@ enum LoopInterval: Double, Codable, Sendable, CaseIterable {
 
     var displayName: String {
         switch self {
+        case .oneMinute: "1m"
         case .fiveMinutes: "5m"
         case .tenMinutes: "10m"
         case .fifteenMinutes: "15m"
