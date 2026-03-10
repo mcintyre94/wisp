@@ -145,6 +145,106 @@ struct SpriteOverviewView: View {
                 }
             }
 
+            Section("Claude Code") {
+                switch viewModel.claudeCodeVersionStatus {
+                case .unknown, .checking:
+                    HStack(spacing: 8) {
+                        Text("Version")
+                        Spacer()
+                        ProgressView()
+                        Text("Checking...")
+                            .foregroundStyle(.secondary)
+                    }
+                case .upToDate(let version):
+                    HStack {
+                        Text("Version")
+                        Spacer()
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
+                        Text(version)
+                            .foregroundStyle(.secondary)
+                    }
+                    .contextMenu {
+                        Button {
+                            UIPasteboard.general.string = version
+                        } label: {
+                            Label("Copy Version", systemImage: "doc.on.doc")
+                        }
+                    }
+                case .updateAvailable(let current, _):
+                    HStack {
+                        Text("Version")
+                        Spacer()
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .foregroundStyle(.orange)
+                        Text(current)
+                            .foregroundStyle(.secondary)
+                    }
+                    .contextMenu {
+                        Button {
+                            UIPasteboard.general.string = current
+                        } label: {
+                            Label("Copy Version", systemImage: "doc.on.doc")
+                        }
+                    }
+                case .updating:
+                    HStack(spacing: 8) {
+                        Text("Version")
+                        Spacer()
+                        ProgressView()
+                        Text("Updating...")
+                            .foregroundStyle(.secondary)
+                    }
+                case .updateFailed(let error):
+                    HStack {
+                        Text("Version")
+                        Spacer()
+                        Text(error)
+                            .foregroundStyle(.red)
+                            .font(.caption)
+                    }
+                case .failed:
+                    HStack {
+                        Text("Version")
+                        Spacer()
+                        Text("Not installed")
+                            .foregroundStyle(.secondary)
+                    }
+                }
+
+                Button {
+                    Task { await viewModel.updateClaudeCode(apiClient: apiClient) }
+                } label: {
+                    HStack {
+                        if case .updateAvailable(_, let latest) = viewModel.claudeCodeVersionStatus {
+                            Text("Update to \(latest)")
+                                .foregroundStyle(.primary)
+                        } else {
+                            Text("Update Claude Code")
+                                .foregroundStyle(.primary)
+                        }
+                        Spacer()
+                        if case .updating = viewModel.claudeCodeVersionStatus {
+                            ProgressView()
+                        } else if case .checking = viewModel.claudeCodeVersionStatus {
+                            EmptyView()
+                        } else if case .upToDate = viewModel.claudeCodeVersionStatus {
+                            Text("Latest version")
+                                .foregroundStyle(.secondary)
+                        } else {
+                            Image(systemName: "arrow.triangle.2.circlepath")
+                                .foregroundStyle(Color.accentColor)
+                        }
+                    }
+                }
+                .disabled({
+                    if case .updating = viewModel.claudeCodeVersionStatus { return true }
+                    if case .checking = viewModel.claudeCodeVersionStatus { return true }
+                    if case .upToDate = viewModel.claudeCodeVersionStatus { return true }
+                    return false
+                }())
+            }
+
             Section("Sprites CLI") {
                 switch viewModel.spritesCLIAuthStatus {
                 case .unknown, .checking:
@@ -238,8 +338,10 @@ struct SpriteOverviewView: View {
         .task {
             loadWorkingDirectory()
             await viewModel.refresh(apiClient: apiClient)
-            await viewModel.checkSpritesAuth(apiClient: apiClient)
-            await viewModel.checkGitHubAuth(apiClient: apiClient)
+            async let claude: Void = viewModel.checkClaudeCodeVersion(apiClient: apiClient)
+            async let sprites: Void = viewModel.checkSpritesAuth(apiClient: apiClient)
+            async let github: Void = viewModel.checkGitHubAuth(apiClient: apiClient)
+            _ = await (claude, sprites, github)
         }
         .task {
             await viewModel.pollStatus(apiClient: apiClient)

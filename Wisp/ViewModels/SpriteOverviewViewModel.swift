@@ -8,6 +8,16 @@ enum SpritesCLIAuth {
     case unknown, checking, authenticated, notAuthenticated
 }
 
+enum ClaudeCodeVersionStatus: Equatable {
+    case unknown
+    case checking
+    case upToDate(version: String)
+    case updateAvailable(current: String, latest: String)
+    case updating
+    case updateFailed(error: String)
+    case failed
+}
+
 @Observable
 @MainActor
 final class SpriteOverviewViewModel {
@@ -19,6 +29,7 @@ final class SpriteOverviewViewModel {
     var isAuthenticatingGitHub = false
     var spritesCLIAuthStatus: SpritesCLIAuth = .unknown
     var isAuthenticatingSprites = false
+    var claudeCodeVersionStatus: ClaudeCodeVersionStatus = .unknown
     var errorMessage: String?
     var isUploading = false
     var uploadResult: SpritesAPIClient.FileUploadResponse?
@@ -193,6 +204,74 @@ final class SpriteOverviewViewModel {
                 uploadResult = nil
             }
         }
+    }
+
+    func checkClaudeCodeVersion(apiClient: SpritesAPIClient) async {
+        claudeCodeVersionStatus = .checking
+
+        async let execResult = apiClient.runExec(
+            spriteName: sprite.name,
+            command: "claude --version 2>/dev/null || echo CLAUDE_NOT_FOUND"
+        )
+        async let latestVersion = fetchNpmLatestVersion()
+
+        let (output, success) = await execResult
+        let npmVersion = await latestVersion
+
+        if !success || output.contains("CLAUDE_NOT_FOUND") || output.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            claudeCodeVersionStatus = .failed
+            return
+        }
+
+        let installed = output.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        if let npm = npmVersion, let installedSemver = extractSemver(from: installed) {
+            if installedSemver == npm {
+                claudeCodeVersionStatus = .upToDate(version: installed)
+            } else {
+                claudeCodeVersionStatus = .updateAvailable(current: installed, latest: npm)
+            }
+        } else {
+            claudeCodeVersionStatus = .upToDate(version: installed)
+        }
+    }
+
+    func updateClaudeCode(apiClient: SpritesAPIClient) async {
+        claudeCodeVersionStatus = .updating
+        let (output, success) = await apiClient.runExec(
+            spriteName: sprite.name,
+            command: "claude update 2>&1 && claude --version",
+            timeout: 120
+        )
+        if success {
+            let lines = output.trimmingCharacters(in: .whitespacesAndNewlines).split(separator: "\n")
+            if let lastLine = lines.last {
+                let newInstalled = String(lastLine).trimmingCharacters(in: .whitespacesAndNewlines)
+                let npmVersion = await fetchNpmLatestVersion()
+                if let npm = npmVersion, let semver = extractSemver(from: newInstalled), semver == npm {
+                    claudeCodeVersionStatus = .upToDate(version: newInstalled)
+                } else {
+                    claudeCodeVersionStatus = .upToDate(version: newInstalled)
+                }
+            } else {
+                claudeCodeVersionStatus = .updateFailed(error: "Update succeeded but could not read version")
+            }
+        } else {
+            claudeCodeVersionStatus = .updateFailed(error: "Update failed")
+        }
+    }
+
+    private func fetchNpmLatestVersion() async -> String? {
+        guard let url = URL(string: "https://registry.npmjs.org/@anthropic-ai/claude-code/latest") else { return nil }
+        guard let (data, _) = try? await URLSession.shared.data(from: url) else { return nil }
+        struct NpmResponse: Decodable { let version: String }
+        return try? JSONDecoder().decode(NpmResponse.self, from: data).version
+    }
+
+    private func extractSemver(from string: String) -> String? {
+        let pattern = #"\d+\.\d+\.\d+"#
+        return string.range(of: pattern, options: .regularExpression)
+            .map { String(string[$0]) }
     }
 
     func authenticateSprites(apiClient: SpritesAPIClient) async {
