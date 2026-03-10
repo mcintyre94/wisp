@@ -6,6 +6,7 @@ struct RepoPickerView: View {
 
     @Environment(\.dismiss) private var dismiss
     @State private var repos: [GitHubRepo] = []
+    @State private var userRepos: [GitHubRepo] = []
     @State private var searchText = ""
     @State private var cloneURL = ""
     @State private var isLoading = false
@@ -88,7 +89,11 @@ struct RepoPickerView: View {
             searchTask?.cancel()
             if newValue.isEmpty {
                 if hasToken {
-                    searchTask = Task { await loadUserRepos() }
+                    if userRepos.isEmpty {
+                        searchTask = Task { await loadUserRepos() }
+                    } else {
+                        repos = userRepos
+                    }
                 } else {
                     repos = []
                 }
@@ -111,7 +116,9 @@ struct RepoPickerView: View {
         isLoading = true
         errorMessage = nil
         do {
-            repos = try await client.fetchUserRepos()
+            let fetched = try await client.fetchUserRepos()
+            userRepos = fetched
+            repos = fetched
         } catch {
             if !Task.isCancelled {
                 errorMessage = error.localizedDescription
@@ -121,10 +128,20 @@ struct RepoPickerView: View {
     }
 
     private func search(query: String) async {
-        isLoading = true
         errorMessage = nil
+
+        // Show matching user repos immediately via client-side filter
+        let lowercased = query.lowercased()
+        let matchingUserRepos = userRepos.filter { $0.fullName.lowercased().contains(lowercased) }
+        repos = matchingUserRepos
+
+        // Fetch general GitHub search results and append deduplicated entries
+        isLoading = true
         do {
-            repos = try await client.searchRepos(query: query)
+            let searchResults = try await client.searchRepos(query: query)
+            let userRepoIDs = Set(matchingUserRepos.map(\.id))
+            let uniqueSearchResults = searchResults.filter { !userRepoIDs.contains($0.id) }
+            repos = matchingUserRepos + uniqueSearchResults
         } catch {
             if !Task.isCancelled {
                 errorMessage = error.localizedDescription

@@ -37,7 +37,7 @@ struct GitHubAPIClient: Sendable {
 
     func fetchUserRepos() async throws -> [GitHubRepo] {
         guard token != nil else { return [] }
-        let url = URL(string: "https://api.github.com/user/repos?sort=pushed&per_page=20")!
+        let url = URL(string: "https://api.github.com/user/repos?sort=pushed&per_page=50")!
         let data = try await performRequest(url: url)
         return try decodeRepos(from: data)
     }
