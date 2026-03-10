@@ -70,7 +70,7 @@ final class ChatViewModel {
 
     /// UUIDs of Claude NDJSON events already processed.
     /// Used by reconnect to skip already-handled events instead of clearing content.
-    private var processedEventUUIDs: Set<String> = []
+    var processedEventUUIDs: Set<String> = []
     private var hasPlayedFirstTextHaptic = false
 
     init(spriteName: String, chatId: UUID, currentServiceName: String?, workingDirectory: String) {
@@ -186,6 +186,7 @@ final class ChatViewModel {
             let persisted = chat.loadMessages()
             messages = persisted.map { ChatMessage(from: $0) }
             rebuildToolUseIndex()
+            processedEventUUIDs = chat.loadStreamEventUUIDs()
         }
 
         if inputText.isEmpty, let draft = chat.draftInputText, !draft.isEmpty {
@@ -416,6 +417,9 @@ final class ChatViewModel {
         let persisted = messages.map { $0.toPersisted() }
         guard let chat = fetchChat(modelContext: modelContext) else { return }
         chat.saveMessages(persisted)
+        if !processedEventUUIDs.isEmpty {
+            chat.saveStreamEventUUIDs(processedEventUUIDs)
+        }
         try? modelContext.save()
     }
 

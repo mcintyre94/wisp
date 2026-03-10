@@ -13,6 +13,7 @@ final class SpriteChat {
     var createdAt: Date
     var lastUsed: Date
     var messagesData: Data?
+    var streamEventUUIDsData: Data?
     var draftInputText: String?
     var isClosed: Bool
     var spriteCreatedAt: Date?
@@ -46,6 +47,15 @@ final class SpriteChat {
     func loadMessages() -> [PersistedChatMessage] {
         guard let data = messagesData else { return [] }
         return (try? JSONDecoder().decode([PersistedChatMessage].self, from: data)) ?? []
+    }
+
+    func loadStreamEventUUIDs() -> Set<String> {
+        guard let data = streamEventUUIDsData else { return [] }
+        return (try? JSONDecoder().decode(Set<String>.self, from: data)) ?? []
+    }
+
+    func saveStreamEventUUIDs(_ uuids: Set<String>) {
+        streamEventUUIDsData = try? JSONEncoder().encode(uuids)
     }
 
     func saveMessages(_ messages: [PersistedChatMessage]) {

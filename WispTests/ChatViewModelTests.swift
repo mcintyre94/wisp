@@ -583,6 +583,52 @@ struct ChatViewModelTests {
         #expect(lines[2] == "{\"type\":\"plain\"}")
     }
 
+    // MARK: - UUID persistence
+
+    @Test func persistMessages_savesUUIDsToChat() throws {
+        let ctx = try makeModelContext()
+        let (vm, chat) = makeChatViewModel(modelContext: ctx)
+
+        vm.processedEventUUIDs = ["uuid-a", "uuid-b"]
+        vm.persistMessages(modelContext: ctx)
+
+        #expect(chat.loadStreamEventUUIDs() == ["uuid-a", "uuid-b"])
+    }
+
+    @Test func persistMessages_doesNotOverwriteWithEmptySet() throws {
+        let ctx = try makeModelContext()
+        let (vm, chat) = makeChatViewModel(modelContext: ctx)
+
+        // Save a valid UUID set
+        chat.saveStreamEventUUIDs(["uuid-prior"])
+
+        // persistMessages with empty processedEventUUIDs should not overwrite
+        vm.processedEventUUIDs = []
+        vm.persistMessages(modelContext: ctx)
+
+        #expect(chat.loadStreamEventUUIDs() == ["uuid-prior"])
+    }
+
+    @Test func loadSession_restoresProcessedEventUUIDs() throws {
+        let ctx = try makeModelContext()
+        let (vm, chat) = makeChatViewModel(modelContext: ctx)
+
+        chat.saveStreamEventUUIDs(["uuid-x", "uuid-y"])
+
+        vm.loadSession(apiClient: SpritesAPIClient(), modelContext: ctx)
+
+        #expect(vm.processedEventUUIDs == ["uuid-x", "uuid-y"])
+    }
+
+    @Test func loadSession_setsEmptyUUIDsWhenNoneStored() throws {
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        vm.loadSession(apiClient: SpritesAPIClient(), modelContext: ctx)
+
+        #expect(vm.processedEventUUIDs.isEmpty)
+    }
+
     // MARK: - Streaming state (single source of truth)
 
     @Test func currentAssistantMessageId_tracksCurrentMessage() throws {
