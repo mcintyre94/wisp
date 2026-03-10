@@ -541,6 +541,11 @@ final class ChatViewModel {
     func interrupt(apiClient: SpritesAPIClient? = nil, modelContext: ModelContext? = nil) {
         detach(modelContext: modelContext)
 
+        // Interrupted sessions are not cleanly resumable, so clear the session ID
+        // to avoid a spurious "Session expired" message on the next send
+        sessionId = nil
+        if let modelContext { saveSession(modelContext: modelContext) }
+
         // Delete the service to stop it
         if let apiClient {
             let sName = spriteName
