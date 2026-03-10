@@ -155,16 +155,34 @@ struct SpriteOverviewView: View {
                         Text("Checking...")
                             .foregroundStyle(.secondary)
                     }
-                case .loaded(let version):
+                case .upToDate(let version):
                     HStack {
                         Text("Version")
                         Spacer()
+                        Image(systemName: "checkmark.circle.fill")
+                            .foregroundStyle(.green)
                         Text(version)
                             .foregroundStyle(.secondary)
                     }
                     .contextMenu {
                         Button {
                             UIPasteboard.general.string = version
+                        } label: {
+                            Label("Copy Version", systemImage: "doc.on.doc")
+                        }
+                    }
+                case .updateAvailable(let current, _):
+                    HStack {
+                        Text("Version")
+                        Spacer()
+                        Image(systemName: "arrow.triangle.2.circlepath")
+                            .foregroundStyle(.orange)
+                        Text(current)
+                            .foregroundStyle(.secondary)
+                    }
+                    .contextMenu {
+                        Button {
+                            UIPasteboard.general.string = current
                         } label: {
                             Label("Copy Version", systemImage: "doc.on.doc")
                         }
@@ -198,11 +216,21 @@ struct SpriteOverviewView: View {
                     Task { await viewModel.updateClaudeCode(apiClient: apiClient) }
                 } label: {
                     HStack {
-                        Text("Update Claude Code")
-                            .foregroundStyle(.primary)
+                        if case .updateAvailable(_, let latest) = viewModel.claudeCodeVersionStatus {
+                            Text("Update to \(latest)")
+                                .foregroundStyle(.primary)
+                        } else {
+                            Text("Update Claude Code")
+                                .foregroundStyle(.primary)
+                        }
                         Spacer()
                         if case .updating = viewModel.claudeCodeVersionStatus {
                             ProgressView()
+                        } else if case .checking = viewModel.claudeCodeVersionStatus {
+                            EmptyView()
+                        } else if case .upToDate = viewModel.claudeCodeVersionStatus {
+                            Text("Latest version")
+                                .foregroundStyle(.secondary)
                         } else {
                             Image(systemName: "arrow.triangle.2.circlepath")
                                 .foregroundStyle(Color.accentColor)
@@ -212,6 +240,7 @@ struct SpriteOverviewView: View {
                 .disabled({
                     if case .updating = viewModel.claudeCodeVersionStatus { return true }
                     if case .checking = viewModel.claudeCodeVersionStatus { return true }
+                    if case .upToDate = viewModel.claudeCodeVersionStatus { return true }
                     return false
                 }())
             }
@@ -309,9 +338,10 @@ struct SpriteOverviewView: View {
         .task {
             loadWorkingDirectory()
             await viewModel.refresh(apiClient: apiClient)
-            async let _ = viewModel.checkClaudeCodeVersion(apiClient: apiClient)
-            async let _ = viewModel.checkSpritesAuth(apiClient: apiClient)
-            async let _ = viewModel.checkGitHubAuth(apiClient: apiClient)
+            async let claude: Void = viewModel.checkClaudeCodeVersion(apiClient: apiClient)
+            async let sprites: Void = viewModel.checkSpritesAuth(apiClient: apiClient)
+            async let github: Void = viewModel.checkGitHubAuth(apiClient: apiClient)
+            _ = await (claude, sprites, github)
         }
         .onChange(of: workingDirectory) {
             saveWorkingDirectory()
