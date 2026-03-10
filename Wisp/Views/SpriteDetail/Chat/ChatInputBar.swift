@@ -13,6 +13,7 @@ struct ChatInputBar: View {
     var attachedFiles: [AttachedFile] = []
     var onRemoveAttachment: ((AttachedFile) -> Void)? = nil
     var lastUploadedFileName: String? = nil
+    var onStash: (() -> Void)? = nil
     var isFocused: FocusState<Bool>.Binding
 
     @State private var showStopConfirmation = false
@@ -93,6 +94,13 @@ struct ChatInputBar: View {
                 .tint(isEmpty || hasQueuedMessage ? .gray : Color("AccentColor"))
                 .disabled(isEmpty || hasQueuedMessage)
                 .buttonStyle(.glass)
+                .contextMenu {
+                    if let onStash, !isEmpty {
+                        Button("Stash Draft", systemImage: "tray.and.arrow.down") {
+                            onStash()
+                        }
+                    }
+                }
             }
         }
         .animation(.easeInOut(duration: 0.2), value: attachedFiles.count)

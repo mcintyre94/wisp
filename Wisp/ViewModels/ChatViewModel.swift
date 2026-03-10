@@ -62,6 +62,7 @@ final class ChatViewModel {
     private var usedResume = false
     var queuedPrompt: String?
     var queuedAttachments: [AttachedFile] = []
+    var stashedDraft: String?
     private var retriedAfterTimeout = false
     private var turnHasMutations = false
     private var pendingForkContext: String?
@@ -208,6 +209,19 @@ final class ChatViewModel {
         guard let chat = fetchChat(modelContext: modelContext) else { return }
         chat.draftInputText = inputText.isEmpty ? nil : inputText
         try? modelContext.save()
+    }
+
+    func stashDraft() {
+        let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !text.isEmpty else { return }
+        stashedDraft = text
+        inputText = ""
+    }
+
+    private func restoreStash() {
+        guard let stash = stashedDraft else { return }
+        stashedDraft = nil
+        inputText = stash
     }
 
     func fetchRemoteSessions(apiClient: SpritesAPIClient, existingSessionIds: Set<String>) {
@@ -479,12 +493,14 @@ final class ChatViewModel {
             queuedPrompt = text
             queuedAttachments = attachedFiles
             attachedFiles = []
+            restoreStash()
             return
         }
 
         // Build prompt with attached file paths prepended
         let prompt = buildPrompt(text: text, attachments: attachedFiles)
         attachedFiles = []
+        restoreStash()
 
         let isFirstMessage = messages.isEmpty
         let userMessage = ChatMessage(role: .user, content: [.text(prompt)])
