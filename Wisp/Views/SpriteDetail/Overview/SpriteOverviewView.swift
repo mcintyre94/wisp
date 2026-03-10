@@ -34,7 +34,6 @@ struct SpriteOverviewView: View {
                         ProgressView()
                     }
                 }
-
             }
 
             Section("Details") {

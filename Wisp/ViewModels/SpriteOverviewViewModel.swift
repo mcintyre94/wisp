@@ -50,7 +50,7 @@ final class SpriteOverviewViewModel {
         isRefreshing = false
     }
 
-    /// Polls sprite status on a schedule: every 2s while cold, every 10s when warm/running.
+    /// Polls sprite status on a schedule: every 2s while cold or warm, every 10s when running.
     /// Called as a long-running `.task` from the view.
     func pollStatus(apiClient: SpritesAPIClient) async {
         while !Task.isCancelled {

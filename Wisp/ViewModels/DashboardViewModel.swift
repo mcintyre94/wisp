@@ -35,7 +35,7 @@ final class DashboardViewModel {
         isLoading = false
     }
 
-    var wakingSprites: Set<String> = []
+    private(set) var wakingSprites: Set<String> = []
 
     func wakeSprite(_ sprite: Sprite, apiClient: SpritesAPIClient) async {
         guard !wakingSprites.contains(sprite.name) else { return }
