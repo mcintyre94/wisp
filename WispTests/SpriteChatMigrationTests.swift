@@ -68,6 +68,30 @@ struct SpriteChatMigrationTests {
         #expect(chats.isEmpty)
     }
 
+    // MARK: - streamEventUUIDs round-trip
+
+    @Test func saveAndLoadStreamEventUUIDs_roundTrips() throws {
+        let ctx = try makeModelContext()
+        let chat = SpriteChat(spriteName: "test", chatNumber: 1)
+        ctx.insert(chat)
+        try ctx.save()
+
+        let uuids: Set<String> = ["uuid-1", "uuid-2", "uuid-3"]
+        chat.saveStreamEventUUIDs(uuids)
+
+        #expect(chat.loadStreamEventUUIDs() == uuids)
+    }
+
+    @Test func loadStreamEventUUIDs_returnsEmptySetWhenNil() throws {
+        let ctx = try makeModelContext()
+        let chat = SpriteChat(spriteName: "test", chatNumber: 1)
+        ctx.insert(chat)
+        try ctx.save()
+
+        #expect(chat.streamEventUUIDsData == nil)
+        #expect(chat.loadStreamEventUUIDs().isEmpty)
+    }
+
     @Test func migratedChatsHaveNilSpriteCreatedAt() throws {
         let ctx = try makeModelContext()
 
