@@ -9,7 +9,6 @@ struct RepoPickerView: View {
     @State private var userRepos: [GitHubRepo] = []
     @State private var searchText = ""
     @State private var pendingCloneURL: URL? = nil
-    @State private var showClipboardError = false
     @State private var isLoading = false
     @State private var errorMessage: String?
     @State private var searchTask: Task<Void, Never>?
@@ -113,11 +112,6 @@ struct RepoPickerView: View {
         } message: {
             Text(pendingCloneURL?.absoluteString ?? "")
         }
-        .alert("Invalid Clone URL", isPresented: $showClipboardError) {
-            Button("OK", role: .cancel) {}
-        } message: {
-            Text("The clipboard doesn't contain a valid clone URL.")
-        }
         .task {
             if hasToken {
                 await loadUserRepos()
@@ -165,12 +159,12 @@ struct RepoPickerView: View {
 
     private func pasteCloneURL() {
         guard let text = UIPasteboard.general.string else {
-            showClipboardError = true
+            errorMessage = "The clipboard doesn't contain a valid clone URL."
             return
         }
         let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty, let url = URL(string: trimmed), url.host != nil else {
-            showClipboardError = true
+            errorMessage = "The clipboard doesn't contain a valid clone URL."
             return
         }
         pendingCloneURL = url
