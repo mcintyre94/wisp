@@ -34,7 +34,7 @@ struct ToolStepRow: View {
                 }
 
                 if let preview = card.result?.previewContent {
-                    Text(preview)
+                    Text(preview.relativeToCwd(workingDirectory))
                         .font(.system(.caption2, design: .monospaced))
                         .foregroundStyle(.tertiary)
                         .lineLimit(2)
