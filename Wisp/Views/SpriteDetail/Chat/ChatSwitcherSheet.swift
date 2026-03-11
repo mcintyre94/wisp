@@ -170,3 +170,12 @@ private struct ChatRowView: View {
         }
     }
 }
+
+#Preview {
+    @Previewable @State var viewModel = SpriteChatListViewModel(spriteName: "my-sprite")
+    NavigationStack {
+        ChatSwitcherSheet(viewModel: viewModel)
+            .environment(SpritesAPIClient())
+            .modelContainer(for: [SpriteChat.self, SpriteSession.self], inMemory: true)
+    }
+}
