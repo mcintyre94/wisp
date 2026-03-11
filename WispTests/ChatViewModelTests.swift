@@ -223,6 +223,26 @@ struct ChatViewModelTests {
         #expect(vm.activeToolLabel?.contains("npm test") == true)
     }
 
+    @Test func activeToolLabel_relativisesCwd() throws {
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        let msg = ChatMessage(role: .assistant)
+        vm.messages.append(msg)
+        vm.setCurrentAssistantMessage(msg)
+
+        let event = ClaudeStreamEvent.assistant(ClaudeAssistantEvent(
+            type: "assistant",
+            message: ClaudeAssistantMessage(role: "assistant", content: [
+                .toolUse(ClaudeToolUse(id: "tu-cwd", name: "Bash", input: .object(["command": .string("find /home/sprite/project/src -name '*.swift'")])))
+            ])
+        ))
+        vm.handleEvent(event, modelContext: ctx)
+
+        #expect(vm.activeToolLabel?.contains("/home/sprite/project") == false)
+        #expect(vm.activeToolLabel?.contains("./src") == true)
+    }
+
     @Test func activeToolLabel_returnsNilWhenAllToolsComplete() throws {
         let ctx = try makeModelContext()
         let (vm, _) = makeChatViewModel(modelContext: ctx)
