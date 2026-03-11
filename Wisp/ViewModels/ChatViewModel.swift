@@ -164,7 +164,7 @@ final class ChatViewModel {
         guard let message = currentAssistantMessage else { return nil }
         for item in message.content.reversed() {
             if case .toolUse(let card) = item, card.result == nil {
-                return card.activityLabel
+                return card.activityLabel.relativeToCwd(workingDirectory)
             }
         }
         return nil
