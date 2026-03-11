@@ -54,7 +54,7 @@ final class ChatViewModel {
     var isLoadingHistory = false
 
     private var serviceName: String
-    private var sessionId: String?
+    private(set) var sessionId: String?
     var workingDirectory: String
     private var worktreePath: String?
     private var streamTask: Task<Void, Never>?

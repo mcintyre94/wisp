@@ -23,6 +23,10 @@ struct ChatView: View {
     @State private var showFilePicker = false
     @State private var selectedPhotos: [PhotosPickerItem] = []
 
+    // Side chat
+    @State private var showSideChat = false
+    @State private var sideChatViewModel: SideChatViewModel?
+
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
@@ -161,8 +165,24 @@ struct ChatView: View {
                     },
                     lastUploadedFileName: viewModel.lastUploadedFileName,
                     onStash: { viewModel.stashDraft() },
+                    onSideChat: viewModel.sessionId != nil ? {
+                        sideChatViewModel = SideChatViewModel(
+                            spriteName: viewModel.spriteName,
+                            sessionId: viewModel.sessionId!,
+                            workingDirectory: viewModel.workingDirectory
+                        )
+                        showSideChat = true
+                    } : nil,
                     isFocused: $isInputFocused
                 )
+            }
+        }
+        .sheet(isPresented: $showSideChat) {
+            if let vm = sideChatViewModel {
+                SideChatView(viewModel: vm)
+                    .environment(apiClient)
+                    .presentationDetents([.medium, .large])
+                    .presentationDragIndicator(.visible)
             }
         }
         .sheet(isPresented: $showFileBrowser) {
