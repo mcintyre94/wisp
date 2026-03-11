@@ -280,6 +280,26 @@ final class SpritesAPIClient {
         return try await request(method: "GET", path: "/sprites/\(spriteName)/services/\(serviceName)")
     }
 
+    // ServiceLogsProvider conformance — bridges the default-argument version to the protocol signature.
+    func streamServiceLogs(spriteName: String, serviceName: String) -> AsyncThrowingStream<ServiceLogEvent, Error> {
+        streamServiceLogs(spriteName: spriteName, serviceName: serviceName, duration: "3600s")
+    }
+}
+
+// MARK: - ServiceLogsProvider
+
+/// Minimal protocol covering the two API calls used by the reconnect loop,
+/// allowing the loop to be tested without a live network connection.
+@MainActor
+protocol ServiceLogsProvider {
+    func streamServiceLogs(spriteName: String, serviceName: String) -> AsyncThrowingStream<ServiceLogEvent, Error>
+    func getServiceStatus(spriteName: String, serviceName: String) async throws -> ServiceInfo
+}
+
+extension SpritesAPIClient: ServiceLogsProvider {}
+
+extension SpritesAPIClient {
+
     /// Delete a service (5s timeout to avoid blocking callers if sprite is unresponsive).
     func deleteService(spriteName: String, serviceName: String) async throws {
         let _: EmptyResponse = try await request(method: "DELETE", path: "/sprites/\(spriteName)/services/\(serviceName)", timeout: 5)
