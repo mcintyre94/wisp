@@ -120,13 +120,6 @@ struct ChatInputBar: View {
         .padding(.bottom, isRunningOnMac ? 12 : 0)
     }
 
-    private var isRunningOnMac: Bool {
-        #if targetEnvironment(macCatalyst)
-        true
-        #else
-        ProcessInfo.processInfo.isiOSAppOnMac
-        #endif
-    }
 }
 
 #Preview("Idle") {
