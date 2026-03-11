@@ -629,6 +629,44 @@ struct ChatViewModelTests {
         #expect(vm.processedEventUUIDs.isEmpty)
     }
 
+    // MARK: - ChatStatus computed properties
+
+    @Test func chatStatus_isConnecting_onlyForConnecting() {
+        #expect(ChatStatus.connecting.isConnecting == true)
+        #expect(ChatStatus.streaming.isConnecting == false)
+        #expect(ChatStatus.reconnecting.isConnecting == false)
+        #expect(ChatStatus.idle.isConnecting == false)
+        #expect(ChatStatus.error("x").isConnecting == false)
+    }
+
+    @Test func chatStatus_isReconnecting_onlyForReconnecting() {
+        #expect(ChatStatus.reconnecting.isReconnecting == true)
+        #expect(ChatStatus.connecting.isReconnecting == false)
+        #expect(ChatStatus.streaming.isReconnecting == false)
+        #expect(ChatStatus.idle.isReconnecting == false)
+        #expect(ChatStatus.error("x").isReconnecting == false)
+    }
+
+    @Test func chatStatus_isStreaming_trueForActiveStates() throws {
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        vm.status = .connecting
+        #expect(vm.isStreaming == true)
+
+        vm.status = .streaming
+        #expect(vm.isStreaming == true)
+
+        vm.status = .reconnecting
+        #expect(vm.isStreaming == true)
+
+        vm.status = .idle
+        #expect(vm.isStreaming == false)
+
+        vm.status = .error("oops")
+        #expect(vm.isStreaming == false)
+    }
+
     // MARK: - Streaming state (single source of truth)
 
     @Test func currentAssistantMessageId_tracksCurrentMessage() throws {

@@ -39,7 +39,7 @@ struct ChatView: View {
                     ForEach(viewModel.messages) { message in
                         messageView(message)
                     }
-                    if viewModel.isStreaming && viewModel.pendingWispAskCard == nil {
+                    if viewModel.isStreaming && !viewModel.status.isReconnecting && viewModel.pendingWispAskCard == nil {
                         ThinkingShimmerView(label: viewModel.status.isConnecting ? "Connecting…" : (viewModel.activeToolLabel ?? "Thinking…"))
                             .transition(.opacity.combined(with: .move(edge: .bottom)))
                             .id("shimmer")

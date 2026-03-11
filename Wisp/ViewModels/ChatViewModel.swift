@@ -17,6 +17,11 @@ enum ChatStatus: Sendable {
         if case .connecting = self { return true }
         return false
     }
+
+    var isReconnecting: Bool {
+        if case .reconnecting = self { return true }
+        return false
+    }
 }
 
 struct AttachedFile: Identifiable {
@@ -1007,7 +1012,6 @@ final class ChatViewModel {
                 serviceName: serviceName
             )
 
-            status = .streaming
             let streamResult = await processServiceStream(
                 stream: stream,
                 modelContext: modelContext
