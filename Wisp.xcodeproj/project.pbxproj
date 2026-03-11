@@ -38,6 +38,14 @@
 		A21BF0D8D910819DD5591E88 /* ExecSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2554BB4DE8EC315CA48767BF /* ExecSession.swift */; };
 		A610B5413A578D4AA424595D /* ToolUseCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A278B4716095105A7024CF8 /* ToolUseCardView.swift */; };
 		A92BE24BEAF80FF31B4ACA00 /* CheckpointsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = D0AD6D912964E32FC8685EA3 /* CheckpointsViewModel.swift */; };
+		AA10BB20CC30DD40EE50FF01 /* QuickChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10BB20CC30DD40EE50FF02 /* QuickChatViewModel.swift */; };
+		AA3100BB00CC00DD00EE0001 /* QuickActionsViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA3100BB00CC00DD00EE0002 /* QuickActionsViewModel.swift */; };
+		AA3200BB00CC00DD00EE0001 /* BashQuickViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA3200BB00CC00DD00EE0002 /* BashQuickViewModel.swift */; };
+		AA3300BB00CC00DD00EE0001 /* QuickActionsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA3300BB00CC00DD00EE0002 /* QuickActionsView.swift */; };
+		AA3400BB00CC00DD00EE0001 /* QuickChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA3400BB00CC00DD00EE0002 /* QuickChatView.swift */; };
+		AA3500BB00CC00DD00EE0001 /* BashQuickView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA3500BB00CC00DD00EE0002 /* BashQuickView.swift */; };
+		AA3700BB00CC00DD00EE0001 /* BashQuickViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA3700BB00CC00DD00EE0002 /* BashQuickViewModelTests.swift */; };
+		FE9876543210ABCDEF987601 /* QuickChatViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9876543210ABCDEF987602 /* QuickChatViewModelTests.swift */; };
 		AA00BB11CC22DD3300000001 /* WispAskCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00BB11CC22DD3300000002 /* WispAskCard.swift */; };
 		AA11BB22CC33DD44EE55FF02 /* GitHubDeviceFlowClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF01 /* GitHubDeviceFlowClient.swift */; };
 		AA11BB22CC33DD44EE55FF04 /* GitHubDeviceFlowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF03 /* GitHubDeviceFlowView.swift */; };
@@ -234,6 +242,14 @@
 		F7A8B9C0D1E2F30415263749 /* PlanCardView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlanCardView.swift; sourceTree = "<group>"; };
 		FF11AA22BB33CC44DD55EE01 /* ChatViewModelHelpersTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModelHelpersTests.swift; sourceTree = "<group>"; };
 		FF11AA22BB33CC44DD55EE03 /* ChatViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModelTests.swift; sourceTree = "<group>"; };
+		AA10BB20CC30DD40EE50FF02 /* QuickChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickChatViewModel.swift; sourceTree = "<group>"; };
+		AA3100BB00CC00DD00EE0002 /* QuickActionsViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickActionsViewModel.swift; sourceTree = "<group>"; };
+		AA3200BB00CC00DD00EE0002 /* BashQuickViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BashQuickViewModel.swift; sourceTree = "<group>"; };
+		AA3300BB00CC00DD00EE0002 /* QuickActionsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickActionsView.swift; sourceTree = "<group>"; };
+		AA3400BB00CC00DD00EE0002 /* QuickChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickChatView.swift; sourceTree = "<group>"; };
+		AA3500BB00CC00DD00EE0002 /* BashQuickView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BashQuickView.swift; sourceTree = "<group>"; };
+		AA3700BB00CC00DD00EE0002 /* BashQuickViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BashQuickViewModelTests.swift; sourceTree = "<group>"; };
+		FE9876543210ABCDEF987602 /* QuickChatViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickChatViewModelTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -407,6 +423,9 @@
 				EF49F7E0F4AC02FDF496D379 /* DashboardViewModel.swift */,
 				C3D4E5F6A7B80920415C6D7E /* SpriteChatListViewModel.swift */,
 				AC9BFD0F0AC39C136C9E828A /* SpriteOverviewViewModel.swift */,
+				AA3200BB00CC00DD00EE0002 /* BashQuickViewModel.swift */,
+				AA10BB20CC30DD40EE50FF02 /* QuickChatViewModel.swift */,
+				AA3100BB00CC00DD00EE0002 /* QuickActionsViewModel.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -451,6 +470,8 @@
 				DD11EE22FF334455AA66BB03 /* ServiceTypesTests.swift */,
 				EE22FF334455AA66BB770001 /* ExecSessionURLTests.swift */,
 				CC11DD22EE33FF4400110005 /* FileEntryTests.swift */,
+				AA3700BB00CC00DD00EE0002 /* BashQuickViewModelTests.swift */,
+				FE9876543210ABCDEF987602 /* QuickChatViewModelTests.swift */,
 			);
 			path = WispTests;
 			sourceTree = "<group>";
@@ -463,9 +484,20 @@
 				902EF50E1CB6723AF748F886 /* Dashboard */,
 				A5E41B8F9DACBEC637F8192A /* Settings */,
 				90D05FE8D8DC0D59A74BAD85 /* SpriteDetail */,
+				AA3600BB00CC00DD00EE0001 /* QuickActions */,
 				A7B8C9D0E1F2A3B4C5D6E7F8 /* WebView */,
 			);
 			path = Views;
+			sourceTree = "<group>";
+		};
+		AA3600BB00CC00DD00EE0001 /* QuickActions */ = {
+			isa = PBXGroup;
+			children = (
+				AA3300BB00CC00DD00EE0002 /* QuickActionsView.swift */,
+				AA3400BB00CC00DD00EE0002 /* QuickChatView.swift */,
+				AA3500BB00CC00DD00EE0002 /* BashQuickView.swift */,
+			);
+			path = QuickActions;
 			sourceTree = "<group>";
 		};
 		B22C752D93810C377FF981DD /* Chat */ = {
@@ -746,6 +778,12 @@
 				C4D5E6F7A8B90A41637E8FA2 /* CheckpointMarkerView.swift in Sources */,
 				E1F2A3B4C5D6E7F800000014 /* UnifiedDiffView.swift in Sources */,
 				C575C7232C5FCA1A3F18A9D8 /* WispApp.swift in Sources */,
+				AA3500BB00CC00DD00EE0001 /* BashQuickView.swift in Sources */,
+				AA3200BB00CC00DD00EE0001 /* BashQuickViewModel.swift in Sources */,
+				AA3300BB00CC00DD00EE0001 /* QuickActionsView.swift in Sources */,
+				AA3100BB00CC00DD00EE0001 /* QuickActionsViewModel.swift in Sources */,
+				AA3400BB00CC00DD00EE0001 /* QuickChatView.swift in Sources */,
+				AA10BB20CC30DD40EE50FF01 /* QuickChatViewModel.swift in Sources */,
 				E1F2A3B4C5D6E7F800000012 /* WispCodeHighlighter.swift in Sources */,
 				E1F2A3B4C5D6E7F800000013 /* WispMarkdownTheme.swift in Sources */,
 			);
@@ -774,6 +812,8 @@
 				E7F8A9B0C1D2E3F405A6B7C2 /* ChatNameTests.swift in Sources */,
 				0DFF41BB14AC3922E95DF781 /* WorktreeTests.swift in Sources */,
 				CC11DD22EE33FF4400110006 /* FileEntryTests.swift in Sources */,
+				AA3700BB00CC00DD00EE0001 /* BashQuickViewModelTests.swift in Sources */,
+				FE9876543210ABCDEF987601 /* QuickChatViewModelTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

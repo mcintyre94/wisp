@@ -61,3 +61,7 @@ private struct PulsingDot: View {
             }
     }
 }
+
+#Preview {
+    ThinkingShimmerView(label: "Thinking…")
+}

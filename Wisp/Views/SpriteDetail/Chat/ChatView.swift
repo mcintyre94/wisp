@@ -22,6 +22,9 @@ struct ChatView: View {
     @State private var showFilePicker = false
     @State private var selectedPhotos: [PhotosPickerItem] = []
 
+    // Quick Actions
+    @State private var quickActionsViewModel: QuickActionsViewModel?
+
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
@@ -165,9 +168,41 @@ struct ChatView: View {
                     },
                     lastUploadedFileName: viewModel.lastUploadedFileName,
                     onStash: { viewModel.stashDraft() },
+                    onSideChat: {
+                        quickActionsViewModel = QuickActionsViewModel(
+                            spriteName: viewModel.spriteName,
+                            sessionId: viewModel.sessionId,
+                            workingDirectory: viewModel.workingDirectory
+                        )
+                    },
                     isFocused: $isInputFocused
                 )
             }
+        }
+        .toolbar {
+            ToolbarItem(placement: .topBarTrailing) {
+                Button {
+                    quickActionsViewModel = QuickActionsViewModel(
+                        spriteName: viewModel.spriteName,
+                        sessionId: viewModel.sessionId,
+                        workingDirectory: viewModel.workingDirectory
+                    )
+                } label: {
+                    Image(systemName: "bolt")
+                }
+            }
+        }
+        .sheet(item: $quickActionsViewModel) { vm in
+            QuickActionsView(
+                viewModel: vm,
+                insertCallback: { text in
+                    viewModel.inputText += (viewModel.inputText.isEmpty ? "" : "\n") + text
+                    quickActionsViewModel = nil
+                }
+            )
+            .environment(apiClient)
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
         }
         .sheet(isPresented: $showFileBrowser) {
             SpriteFileBrowserView(
