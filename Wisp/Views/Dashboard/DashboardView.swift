@@ -23,6 +23,73 @@ struct DashboardView: View {
         }
     }
 
+    @ViewBuilder
+    private var spriteListRows: some View {
+        ForEach(sortedSprites) { sprite in
+            SpriteRowView(
+                sprite: sprite,
+                isPlain: sizeClass == .regular,
+                isSelected: sizeClass != .regular && selectedSpriteID == sprite.id
+            )
+            .tag(sprite.id)
+            // Recovery for stuck selection on iPhone: if this row is already
+            // selected but we're still at the list (NavigationSplitView popped
+            // without clearing selectedSpriteID), tapping it again won't change
+            // the binding so List won't re-trigger navigation. Force a nil→value
+            // transition so the push fires.
+            .simultaneousGesture(TapGesture().onEnded {
+                if sizeClass != .regular && selectedSpriteID == sprite.id {
+                    selectedSpriteID = nil
+                    Task { @MainActor in selectedSpriteID = sprite.id }
+                }
+            })
+            .swipeActions(edge: .trailing) {
+                Button("Delete") {
+                    viewModel.spriteToDelete = sprite
+                }
+                .tint(.red)
+            }
+            .swipeActions(edge: .leading) {
+                if (sprite.status == .warm || sprite.status == .cold) && !viewModel.wakingSprites.contains(sprite.name) {
+                    Button {
+                        Task { await viewModel.wakeSprite(sprite, apiClient: apiClient) }
+                    } label: {
+                        Label("Wake", systemImage: "bolt.fill")
+                    }
+                    .tint(.orange)
+                }
+            }
+            .contextMenu {
+                if (sprite.status == .warm || sprite.status == .cold) && !viewModel.wakingSprites.contains(sprite.name) {
+                    Button {
+                        Task { await viewModel.wakeSprite(sprite, apiClient: apiClient) }
+                    } label: {
+                        Label("Wake Sprite", systemImage: "bolt.fill")
+                    }
+                }
+                Button(role: .destructive) {
+                    viewModel.spriteToDelete = sprite
+                } label: {
+                    Label("Delete", systemImage: "trash")
+                }
+            }
+            .confirmationDialog("Delete Sprite?", isPresented: .init(
+                get: { viewModel.spriteToDelete?.id == sprite.id },
+                set: { if !$0 { viewModel.spriteToDelete = nil } }
+            )) {
+                Button("Delete", role: .destructive) {
+                    Task { await viewModel.deleteSprite(sprite, apiClient: apiClient) }
+                }
+            } message: {
+                Text("This will permanently delete \"\(sprite.name)\". This action cannot be undone.")
+            }
+            .listRowSeparator(sizeClass == .regular ? .automatic : .hidden)
+            .listRowBackground(sizeClass == .regular ? nil : Color.clear)
+            .listRowInsets(sizeClass == .regular ? nil : EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
+            .id(sprite.id)
+        }
+    }
+
     var body: some View {
         NavigationSplitView {
             Group {
@@ -32,60 +99,20 @@ struct DashboardView: View {
                         systemImage: "sparkles",
                         description: Text("Create a Sprite to get started")
                     )
+                } else if sizeClass == .regular {
+                    // iPad/Mac: use .sidebar list style so the split view properly
+                    // auto-dismisses the sidebar overlay on selection (portrait iPad,
+                    // multitasking). .plain doesn't trigger this behaviour.
+                    List(selection: $selectedSpriteID) {
+                        spriteListRows
+                    }
+                    .listStyle(.sidebar)
+                    .refreshable {
+                        await viewModel.loadSprites(apiClient: apiClient)
+                    }
                 } else {
                     List(selection: $selectedSpriteID) {
-                        ForEach(sortedSprites) { sprite in
-                            SpriteRowView(
-                                sprite: sprite,
-                                isPlain: sizeClass == .regular,
-                                isSelected: sizeClass != .regular && selectedSpriteID == sprite.id
-                            )
-                            .tag(sprite.id)
-                            .swipeActions(edge: .trailing) {
-                                Button("Delete") {
-                                    viewModel.spriteToDelete = sprite
-                                }
-                                .tint(.red)
-                            }
-                            .swipeActions(edge: .leading) {
-                                if (sprite.status == .warm || sprite.status == .cold) && !viewModel.wakingSprites.contains(sprite.name) {
-                                    Button {
-                                        Task { await viewModel.wakeSprite(sprite, apiClient: apiClient) }
-                                    } label: {
-                                        Label("Wake", systemImage: "bolt.fill")
-                                    }
-                                    .tint(.orange)
-                                }
-                            }
-                            .contextMenu {
-                                if (sprite.status == .warm || sprite.status == .cold) && !viewModel.wakingSprites.contains(sprite.name) {
-                                    Button {
-                                        Task { await viewModel.wakeSprite(sprite, apiClient: apiClient) }
-                                    } label: {
-                                        Label("Wake Sprite", systemImage: "bolt.fill")
-                                    }
-                                }
-                                Button(role: .destructive) {
-                                    viewModel.spriteToDelete = sprite
-                                } label: {
-                                    Label("Delete", systemImage: "trash")
-                                }
-                            }
-                            .confirmationDialog("Delete Sprite?", isPresented: .init(
-                                get: { viewModel.spriteToDelete?.id == sprite.id },
-                                set: { if !$0 { viewModel.spriteToDelete = nil } }
-                            )) {
-                                Button("Delete", role: .destructive) {
-                                    Task { await viewModel.deleteSprite(sprite, apiClient: apiClient) }
-                                }
-                            } message: {
-                                Text("This will permanently delete \"\(sprite.name)\". This action cannot be undone.")
-                            }
-                            .listRowSeparator(sizeClass == .regular ? .automatic : .hidden)
-                            .listRowBackground(sizeClass == .regular ? nil : Color.clear)
-                            .listRowInsets(sizeClass == .regular ? nil : EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
-                            .id(sprite.id)
-                        }
+                        spriteListRows
                     }
                     .listStyle(.plain)
                     .scrollContentBackground(.hidden)
@@ -180,4 +207,9 @@ struct DashboardView: View {
             }
         }
     }
+}
+
+#Preview {
+    DashboardView()
+        .environment(SpritesAPIClient())
 }
