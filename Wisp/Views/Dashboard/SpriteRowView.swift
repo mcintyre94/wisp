@@ -74,3 +74,29 @@ struct SpriteRowView: View {
         }
     }
 }
+
+private func mockSprite(id: String = "s1", name: String, status: String) -> Sprite {
+    let decoder = JSONDecoder()
+    decoder.dateDecodingStrategy = .iso8601
+    return try! decoder.decode(Sprite.self, from: Data("""
+        {"id":"\(id)","name":"\(name)","status":"\(status)","created_at":"2025-01-15T10:30:00Z"}
+        """.utf8))
+}
+
+#Preview("Card style (iPhone)") {
+    VStack(spacing: 12) {
+        SpriteRowView(sprite: mockSprite(id: "s1", name: "my-sprite", status: "running"))
+        SpriteRowView(sprite: mockSprite(id: "s2", name: "dev-box", status: "warm"))
+        SpriteRowView(sprite: mockSprite(id: "s3", name: "old-project", status: "cold"))
+        SpriteRowView(sprite: mockSprite(id: "s1", name: "selected-sprite", status: "running"), isSelected: true)
+    }
+    .padding()
+}
+
+#Preview("Plain style (iPad sidebar)") {
+    List {
+        SpriteRowView(sprite: mockSprite(id: "s1", name: "my-sprite", status: "running"), isPlain: true)
+        SpriteRowView(sprite: mockSprite(id: "s2", name: "dev-box", status: "warm"), isPlain: true)
+        SpriteRowView(sprite: mockSprite(id: "s3", name: "old-project", status: "cold"), isPlain: true)
+    }
+}

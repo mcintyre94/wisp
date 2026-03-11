@@ -28,7 +28,12 @@ final class DashboardViewModel {
         guard !isLoading else { return }
         isLoading = true
 
-        if let updated = try? await apiClient.listSprites() {
+        if let updated = try? await apiClient.listSprites(), updated != sprites {
+            // Only replace the array when data actually changed. An unconditional
+            // assignment re-triggers SwiftUI observation even when content is identical,
+            // which re-renders the List and can interrupt an in-flight
+            // NavigationSplitView push on iPhone, leaving selectedSpriteID set but
+            // no detail shown (stuck selection).
             sprites = updated
         }
 
