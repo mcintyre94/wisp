@@ -26,7 +26,7 @@ struct ChatSwitcherSheet: View {
                     }
                     .buttonStyle(.plain)
                     .contextMenu {
-                        if let sessionId = chat.claudeSessionId {
+                        if let sessionId = chat.claudeSessionId, !chat.isClosed {
                             Button {
                                 UIPasteboard.general.string = "cd \(chat.workingDirectory) && claude --resume \(sessionId)"
                             } label: {
@@ -54,7 +54,7 @@ struct ChatSwitcherSheet: View {
                         }
                     }
                     .swipeActions(edge: .leading, allowsFullSwipe: true) {
-                        if let sessionId = chat.claudeSessionId {
+                        if let sessionId = chat.claudeSessionId, !chat.isClosed {
                             Button {
                                 UIPasteboard.general.string = "cd \(chat.workingDirectory) && claude --resume \(sessionId)"
                             } label: {
@@ -170,5 +170,14 @@ private struct ChatRowView: View {
                     .foregroundStyle(.tint)
             }
         }
+    }
+}
+
+#Preview {
+    @Previewable @State var viewModel = SpriteChatListViewModel(spriteName: "my-sprite")
+    NavigationStack {
+        ChatSwitcherSheet(viewModel: viewModel)
+            .environment(SpritesAPIClient())
+            .modelContainer(for: [SpriteChat.self, SpriteSession.self], inMemory: true)
     }
 }
