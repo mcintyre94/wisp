@@ -89,6 +89,8 @@
 		A1B2C3D4E5F60718293A4B5E /* SpriteChat.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5D /* SpriteChat.swift */; };
 		B2C3D4E5F6A70819304B5C6E /* SpriteChatMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F6A70819304B5C6D /* SpriteChatMigration.swift */; };
 		C3D4E5F6A7B80920415C6D7F /* SpriteChatListViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = C3D4E5F6A7B80920415C6D7E /* SpriteChatListViewModel.swift */; };
+		A1B2C3D4E5F6A7B8C9D0E202 /* SideChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B8C9D0E201 /* SideChatViewModel.swift */; };
+		A1B2C3D4E5F6A7B8C9D0E204 /* SideChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6A7B8C9D0E203 /* SideChatView.swift */; };
 		D4E5F6A7B8C90A31526D7E90 /* ChatSwitcherSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4E5F6A7B8C90A31526D7E8F /* ChatSwitcherSheet.swift */; };
 		E5F6A7B8C9D00B42637E8F91 /* SpriteChatListViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = E5F6A7B8C9D00B42637E8F90 /* SpriteChatListViewModelTests.swift */; };
 		F6A7B8C9D0E10C53748F9002 /* SpriteChatMigrationTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = F6A7B8C9D0E10C53748F9001 /* SpriteChatMigrationTests.swift */; };
@@ -265,6 +267,8 @@
 		D1A2B3C4E5F60100AA000008 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		C4D5E6F7A8B90A41637E8FA1 /* CheckpointMarkerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckpointMarkerView.swift; sourceTree = "<group>"; };
 		D5E6F7A8B9C00B52748FA0B1 /* AutoCheckpointTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AutoCheckpointTests.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F6A7B8C9D0E201 /* SideChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SideChatViewModel.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F6A7B8C9D0E203 /* SideChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SideChatView.swift; sourceTree = "<group>"; };
 		E7F8A9B0C1D2E3F405A6B7C1 /* ChatNameTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatNameTests.swift; sourceTree = "<group>"; };
 		E1F2A3B4C5D6E7F800000001 /* WispCodeHighlighter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WispCodeHighlighter.swift; sourceTree = "<group>"; };
 		E1F2A3B4C5D6E7F800000002 /* WispMarkdownTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WispMarkdownTheme.swift; sourceTree = "<group>"; };
@@ -482,6 +486,7 @@
 				D0AD6D912964E32FC8685EA3 /* CheckpointsViewModel.swift */,
 				EF49F7E0F4AC02FDF496D379 /* DashboardViewModel.swift */,
 				AA33BB44CC55DD66EE77FF01 /* ServicesViewModel.swift */,
+				A1B2C3D4E5F6A7B8C9D0E201 /* SideChatViewModel.swift */,
 				C3D4E5F6A7B80920415C6D7E /* SpriteChatListViewModel.swift */,
 				AC9BFD0F0AC39C136C9E828A /* SpriteOverviewViewModel.swift */,
 			);
@@ -553,6 +558,7 @@
 				4FB02E9F26B9003B6E1DBE7C /* ChatView.swift */,
 				F7A8B9C0D1E2F30415263749 /* PlanCardView.swift */,
 				B2C3D4E5F6A7081930DBFF01 /* SessionSuggestionsView.swift */,
+				A1B2C3D4E5F6A7B8C9D0E203 /* SideChatView.swift */,
 				CC11DD22EE33FF4400110004 /* SpriteFileBrowserView.swift */,
 				A1A2A3A4B5B6C7C800000002 /* ThinkingShimmerView.swift */,
 				BB00CC11DD22EE3300000002 /* PendingUserBubbleView.swift */,
@@ -841,6 +847,8 @@
 				A1B2C3D4E5F60718293A4B5E /* SpriteChat.swift in Sources */,
 				B2C3D4E5F6A70819304B5C6E /* SpriteChatMigration.swift in Sources */,
 				C3D4E5F6A7B80920415C6D7F /* SpriteChatListViewModel.swift in Sources */,
+				A1B2C3D4E5F6A7B8C9D0E202 /* SideChatViewModel.swift in Sources */,
+				A1B2C3D4E5F6A7B8C9D0E204 /* SideChatView.swift in Sources */,
 				D4E5F6A7B8C90A31526D7E90 /* ChatSwitcherSheet.swift in Sources */,
 				61CBE460AC96CBE6BF8AF0B0 /* SpriteSession.swift in Sources */,
 				AFD1F0F805631C7AE9679AC7 /* SpritesAPIClient.swift in Sources */,
