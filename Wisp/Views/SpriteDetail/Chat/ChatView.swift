@@ -57,17 +57,15 @@ struct ChatView: View {
                         }
                     }
                     Color.clear.frame(height: 1).id("bottom")
+                        .onScrollVisibilityChange(threshold: 0.5) { visible in
+                            isAtBottom = visible
+                        }
                 }
                 .opacity(contentOpacity)
                 .padding()
             }
             .defaultScrollAnchor(.bottom)
             .scrollDismissesKeyboard(.interactively)
-            .onScrollGeometryChange(for: Bool.self) { geometry in
-                geometry.contentOffset.y + geometry.containerSize.height >= geometry.contentSize.height - 100
-            } action: { _, atBottom in
-                isAtBottom = atBottom
-            }
             .onChange(of: viewModel.messages.count) {
                 proxy.scrollTo("bottom")
             }
