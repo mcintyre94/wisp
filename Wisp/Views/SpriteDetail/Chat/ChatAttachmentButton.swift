@@ -36,7 +36,7 @@ struct ChatAttachmentButton: View {
                     Button {
                         onPasteFromClipboard()
                     } label: {
-                        Label("Paste from Clipboard", systemImage: "clipboard")
+                        Label("Paste from Clipboard", systemImage: "doc.on.clipboard")
                     }
                 }
             } label: {
