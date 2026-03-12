@@ -81,9 +81,6 @@ struct ChatInputBar: View {
                     .frame(minHeight: 36)
                     .glassEffect(in: .rect(cornerRadius: 20))
                     .disabled(hasQueuedMessage)
-                    .onPaste(of: [.image, .fileURL]) { providers in
-                        onPasteItems?(providers)
-                    }
 
                 if isStreaming {
                     Button {
