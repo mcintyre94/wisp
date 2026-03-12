@@ -2,6 +2,7 @@ import SwiftUI
 
 struct ThinkingShimmerView: View {
     let label: String
+    var onTap: (() -> Void)? = nil
 
     @State private var shimmerOffset: CGFloat = -1
 
@@ -22,9 +23,18 @@ struct ThinkingShimmerView: View {
                         .truncationMode(.tail)
                 )
                 .animation(.easeInOut(duration: 0.2), value: label)
+
+            if onTap != nil {
+                Spacer()
+                Text("btw?")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+            }
         }
+        .contentShape(Rectangle())
         .padding(.horizontal, 14)
         .padding(.vertical, 6)
+        .onTapGesture { onTap?() }
         .onAppear {
             withAnimation(.linear(duration: 2).repeatForever(autoreverses: false)) {
                 shimmerOffset = 2

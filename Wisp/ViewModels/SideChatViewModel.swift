@@ -59,7 +59,7 @@ final class SideChatViewModel {
         let commandParts: [String] = [
             "export CLAUDE_CODE_OAUTH_TOKEN='\(claudeToken)'",
             "cd \(workingDirectory)",
-            "claude -p --output-format stream-json --tools \"\" --model \(modelId) --resume \(sessionId) '\(escapedQuestion)'"
+            "claude -p --verbose --output-format stream-json --dangerously-skip-permissions --tools \"\" --model \(modelId) --resume \(sessionId) '\(escapedQuestion)'"
         ]
         let fullCommand = commandParts.joined(separator: " && ")
 
