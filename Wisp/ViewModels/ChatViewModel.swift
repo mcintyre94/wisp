@@ -56,7 +56,7 @@ final class ChatViewModel {
     private var serviceName: String
     private(set) var sessionId: String?
     var workingDirectory: String
-    private var worktreePath: String?
+    private(set) var worktreePath: String?
     private var streamTask: Task<Void, Never>?
     var namingTask: Task<String, Never>?
     private let parser = ClaudeStreamParser()
@@ -241,6 +241,8 @@ final class ChatViewModel {
     }
 
     func fetchRemoteSessions(apiClient: SpritesAPIClient, existingSessionIds: Set<String>) {
+        // Worktrees are always fresh — no sessions to resume
+        guard worktreePath == nil else { return }
         guard !isLoadingRemoteSessions else { return }
         isLoadingRemoteSessions = true
 
