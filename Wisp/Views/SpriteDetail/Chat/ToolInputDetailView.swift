@@ -44,7 +44,7 @@ struct ToolInputDetailView: View {
             Text(label)
                 .font(.caption2)
                 .foregroundStyle(.secondary)
-            Text(input["file_path"]?.stringValue ?? "")
+            Text((input["file_path"]?.stringValue ?? "").relativeToCwd(workingDirectory))
                 .font(.system(.caption, design: .monospaced))
                 .textSelection(.enabled)
         }
@@ -52,7 +52,7 @@ struct ToolInputDetailView: View {
 
     private var writeInput: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(input["file_path"]?.stringValue ?? "")
+            Text((input["file_path"]?.stringValue ?? "").relativeToCwd(workingDirectory))
                 .font(.system(.caption, design: .monospaced))
                 .foregroundStyle(.secondary)
 
@@ -67,7 +67,7 @@ struct ToolInputDetailView: View {
 
     private var editInput: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(input["file_path"]?.stringValue ?? "")
+            Text((input["file_path"]?.stringValue ?? "").relativeToCwd(workingDirectory))
                 .font(.system(.caption, design: .monospaced))
                 .foregroundStyle(.secondary)
 

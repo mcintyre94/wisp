@@ -26,6 +26,33 @@ struct ChatViewModelTests {
         return (vm, chat)
     }
 
+    // MARK: - Mock API client
+
+    private final class MockServiceLogsProvider: ServiceLogsProvider {
+        var streams: [AsyncThrowingStream<ServiceLogEvent, Error>]
+        var statuses: [String]
+        private(set) var streamCallCount = 0
+        private(set) var statusCallCount = 0
+
+        init(streams: [AsyncThrowingStream<ServiceLogEvent, Error>], statuses: [String]) {
+            self.streams = streams
+            self.statuses = statuses
+        }
+
+        func streamServiceLogs(spriteName: String, serviceName: String) -> AsyncThrowingStream<ServiceLogEvent, Error> {
+            let idx = streamCallCount
+            streamCallCount += 1
+            return idx < streams.count ? streams[idx] : AsyncThrowingStream { $0.finish() }
+        }
+
+        func getServiceStatus(spriteName: String, serviceName: String) async throws -> ServiceInfo {
+            let idx = statusCallCount
+            statusCallCount += 1
+            let status = idx < statuses.count ? statuses[idx] : "stopped"
+            return ServiceInfo(name: serviceName, state: ServiceInfo.ServiceState(status: status))
+        }
+    }
+
     // MARK: - handleEvent: system
 
     @Test func handleEvent_systemSetsModelName() throws {
@@ -741,6 +768,65 @@ struct ChatViewModelTests {
 
         #expect(vm.stashedDraft == "second draft")
         #expect(vm.inputText == "")
+    }
+
+    // MARK: - reconnectToServiceLogs: retriedAfterServiceStopped
+
+    @Test func reconnectToServiceLogs_retriesOnceWhenServiceStoppedWithNoResult_thenDeliversResult() async throws {
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        // First stream: delivers a system event but no result — simulates the
+        // stream dying just before Claude finishes.
+        let systemLine = #"{"type":"system","session_id":"s1","model":"claude-sonnet-4-20250514"}"# + "\n"
+        let stream1 = AsyncThrowingStream<ServiceLogEvent, Error> { continuation in
+            continuation.yield(ServiceLogEvent(type: .stdout, data: systemLine, exitCode: nil, timestamp: nil, logFiles: nil))
+            continuation.finish()
+        }
+
+        // Second stream: delivers the result event that landed after the first stream closed.
+        let resultLine = #"{"type":"result","session_id":"s1","subtype":"success"}"# + "\n"
+        let stream2 = AsyncThrowingStream<ServiceLogEvent, Error> { continuation in
+            continuation.yield(ServiceLogEvent(type: .stdout, data: systemLine, exitCode: nil, timestamp: nil, logFiles: nil))
+            continuation.yield(ServiceLogEvent(type: .stdout, data: resultLine, exitCode: nil, timestamp: nil, logFiles: nil))
+            continuation.finish()
+        }
+
+        let mock = MockServiceLogsProvider(streams: [stream1, stream2], statuses: ["stopped"])
+
+        await vm.runReconnectLoop(apiClient: mock, modelContext: ctx)
+
+        #expect(mock.streamCallCount == 2, "Should replay logs twice: once on initial reconnect, once on retry")
+        #expect(mock.statusCallCount == 1, "Should only check status once (before the retry)")
+        guard case .idle = vm.status else {
+            Issue.record("Expected idle status after reconnect completes, got \(vm.status)")
+            return
+        }
+    }
+
+    @Test func reconnectToServiceLogs_givesUpAfterOneRetryWhenServiceStillStopped() async throws {
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        // Both streams return no result event, and the service stays stopped.
+        let systemLine = #"{"type":"system","session_id":"s1","model":"claude-sonnet-4-20250514"}"# + "\n"
+        let makeStream = {
+            AsyncThrowingStream<ServiceLogEvent, Error> { continuation in
+                continuation.yield(ServiceLogEvent(type: .stdout, data: systemLine, exitCode: nil, timestamp: nil, logFiles: nil))
+                continuation.finish()
+            }
+        }
+
+        let mock = MockServiceLogsProvider(streams: [makeStream(), makeStream()], statuses: ["stopped", "stopped"])
+
+        await vm.runReconnectLoop(apiClient: mock, modelContext: ctx)
+
+        #expect(mock.streamCallCount == 2, "Should attempt exactly two replays: initial + one retry")
+        #expect(mock.statusCallCount == 2, "Should check status once per iteration that yields no result event")
+        guard case .idle = vm.status else {
+            Issue.record("Expected idle status after giving up, got \(vm.status)")
+            return
+        }
     }
 
     @Test func stashDraft_leavesInputReadyForNextMessage() throws {

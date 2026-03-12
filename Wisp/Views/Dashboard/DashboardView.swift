@@ -36,17 +36,6 @@ struct DashboardView: View {
                 isSelected: sizeClass != .regular && selectedSpriteID == sprite.id
             )
             .tag(sprite.id)
-            // Recovery for stuck selection on iPhone: if this row is already
-            // selected but we're still at the list (NavigationSplitView popped
-            // without clearing selectedSpriteID), tapping it again won't change
-            // the binding so List won't re-trigger navigation. Force a nil→value
-            // transition so the push fires.
-            .simultaneousGesture(TapGesture().onEnded {
-                if sizeClass != .regular && selectedSpriteID == sprite.id {
-                    selectedSpriteID = nil
-                    Task { @MainActor in selectedSpriteID = sprite.id }
-                }
-            })
             .swipeActions(edge: .trailing) {
                 Button("Delete") {
                     viewModel.spriteToDelete = sprite

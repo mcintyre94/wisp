@@ -698,7 +698,7 @@ final class ChatViewModel {
         // is waiting for an API response and Wisp is detached. The heartbeat
         // writes a byte to stderr every 20s — enough to count as output without
         // interfering with the NDJSON stdout stream. The trap ensures cleanup.
-        let wrappedClaudeCmd = "(while true; do sleep 20; printf . >&2; done) & HBEAT=$!; trap \"kill $HBEAT 2>/dev/null\" EXIT; \(claudeCmd); kill $HBEAT 2>/dev/null"
+        let wrappedClaudeCmd = "{ (while true; do sleep 20; printf . >&2; done) & HBEAT=$!; trap \"kill $HBEAT 2>/dev/null\" EXIT; \(claudeCmd); kill $HBEAT 2>/dev/null; }"
         commandParts.append(wrappedClaudeCmd)
         let fullCommand = commandParts.joined(separator: " && ")
 
@@ -969,8 +969,11 @@ final class ChatViewModel {
     /// so existing content stays on screen with no flash. Only genuinely new events
     /// are appended. If the service is still running after a replay, polls and
     /// re-replays until the service stops or a result event arrives.
-    private func reconnectToServiceLogs(
-        apiClient: SpritesAPIClient,
+    /// Core reconnect loop — fetches full log history on repeat until a result event
+    /// arrives or the service is confirmed stopped. Separated from
+    /// `reconnectToServiceLogs` so it can be tested against a mock API client.
+    func runReconnectLoop(
+        apiClient: some ServiceLogsProvider,
         modelContext: ModelContext
     ) async {
         status = .reconnecting
@@ -1065,6 +1068,13 @@ final class ChatViewModel {
             status = .idle
         }
         persistMessages(modelContext: modelContext)
+    }
+
+    private func reconnectToServiceLogs(
+        apiClient: SpritesAPIClient,
+        modelContext: ModelContext
+    ) async {
+        await runReconnectLoop(apiClient: apiClient, modelContext: modelContext)
 
         if let queued = queuedPrompt, !Task.isCancelled {
             let prompt = buildPrompt(text: queued, attachments: queuedAttachments)
