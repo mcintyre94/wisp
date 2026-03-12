@@ -1,6 +1,8 @@
 import PhotosUI
 import SwiftData
 import SwiftUI
+import UIKit
+import UniformTypeIdentifiers
 
 struct ChatView: View {
     @Environment(SpritesAPIClient.self) private var apiClient
@@ -156,6 +158,8 @@ struct ChatView: View {
                     onPickPhoto: { showPhotoPicker = true },
                     onPickFile: { showFilePicker = true },
                     onLongPressSend: { showCreateLoopSheet = true },
+                    onPasteFromClipboard: handlePasteFromClipboard,
+                    onPasteItems: handlePastedItems,
                     isUploading: viewModel.isUploadingAttachment,
                     attachedFiles: viewModel.attachedFiles,
                     onRemoveAttachment: { file in
@@ -250,6 +254,90 @@ struct ChatView: View {
                 if let remotePath = await viewModel.uploadPhotoData(apiClient: apiClient, data: data, fileExtension: ext) {
                     let name = (remotePath as NSString).lastPathComponent
                     viewModel.attachedFiles.append(AttachedFile(name: name, path: remotePath))
+                }
+            }
+        }
+    }
+
+    private static let pasteImageFormats: [(UTType, String)] = [
+        (.png, "png"),
+        (.jpeg, "jpg"),
+        (.gif, "gif"),
+        (.webP, "webp"),
+        (UTType("public.heic") ?? .image, "heic"),
+    ]
+
+    private func handlePasteFromClipboard() {
+        let pasteboard = UIPasteboard.general
+
+        for (type, ext) in Self.pasteImageFormats {
+            if let data = pasteboard.data(forPasteboardType: type.identifier) {
+                Task {
+                    if let remotePath = await viewModel.uploadPhotoData(apiClient: apiClient, data: data, fileExtension: ext) {
+                        viewModel.addAttachedFile(remotePath: remotePath)
+                    }
+                }
+                return
+            }
+        }
+
+        // Fallback: any image via UIImage
+        if pasteboard.hasImages, let image = pasteboard.image, let data = image.pngData() {
+            Task {
+                if let remotePath = await viewModel.uploadPhotoData(apiClient: apiClient, data: data, fileExtension: "png") {
+                    viewModel.addAttachedFile(remotePath: remotePath)
+                }
+            }
+            return
+        }
+
+        // Try a file URL (e.g. copied from Files app)
+        if let url = pasteboard.url, url.isFileURL {
+            Task {
+                if let remotePath = await viewModel.uploadFileFromDevice(apiClient: apiClient, fileURL: url) {
+                    viewModel.addAttachedFile(remotePath: remotePath)
+                }
+            }
+            return
+        }
+
+        viewModel.uploadAttachmentError = "No image or file found in clipboard"
+    }
+
+    private func handlePastedItems(_ providers: [NSItemProvider]) {
+        guard let provider = providers.first else { return }
+
+        for (type, ext) in Self.pasteImageFormats where provider.hasItemConformingToTypeIdentifier(type.identifier) {
+            provider.loadDataRepresentation(forTypeIdentifier: type.identifier) { data, _ in
+                guard let data else { return }
+                Task { @MainActor in
+                    if let remotePath = await viewModel.uploadPhotoData(apiClient: apiClient, data: data, fileExtension: ext) {
+                        viewModel.addAttachedFile(remotePath: remotePath)
+                    }
+                }
+            }
+            return
+        }
+
+        if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
+            provider.loadDataRepresentation(forTypeIdentifier: UTType.png.identifier) { data, _ in
+                guard let data else { return }
+                Task { @MainActor in
+                    if let remotePath = await viewModel.uploadPhotoData(apiClient: apiClient, data: data, fileExtension: "png") {
+                        viewModel.addAttachedFile(remotePath: remotePath)
+                    }
+                }
+            }
+            return
+        }
+
+        if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
+            provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier) { item, _ in
+                guard let url = item as? URL, url.isFileURL else { return }
+                Task { @MainActor in
+                    if let remotePath = await viewModel.uploadFileFromDevice(apiClient: apiClient, fileURL: url) {
+                        viewModel.addAttachedFile(remotePath: remotePath)
+                    }
                 }
             }
         }

@@ -1,4 +1,5 @@
 import SwiftUI
+import UniformTypeIdentifiers
 
 struct ChatInputBar: View {
     @Binding var text: String
@@ -10,6 +11,8 @@ struct ChatInputBar: View {
     var onPickPhoto: (() -> Void)? = nil
     var onPickFile: (() -> Void)? = nil
     var onLongPressSend: (() -> Void)? = nil
+    var onPasteFromClipboard: (() -> Void)? = nil
+    var onPasteItems: (([NSItemProvider]) -> Void)? = nil
     var isUploading: Bool = false
     var attachedFiles: [AttachedFile] = []
     var onRemoveAttachment: ((AttachedFile) -> Void)? = nil
@@ -55,7 +58,8 @@ struct ChatInputBar: View {
                         isDisabled: hasQueuedMessage,
                         onBrowseSpriteFiles: onBrowseSpriteFiles,
                         onPickPhoto: onPickPhoto,
-                        onPickFile: onPickFile
+                        onPickFile: onPickFile,
+                        onPasteFromClipboard: onPasteFromClipboard
                     )
                 }
 
@@ -77,6 +81,9 @@ struct ChatInputBar: View {
                     .frame(minHeight: 36)
                     .glassEffect(in: .rect(cornerRadius: 20))
                     .disabled(hasQueuedMessage)
+                    .onPaste(of: [.image, .fileURL]) { providers in
+                        onPasteItems?(providers)
+                    }
 
                 if isStreaming {
                     Button {
