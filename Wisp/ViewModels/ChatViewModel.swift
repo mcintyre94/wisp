@@ -95,6 +95,11 @@ final class ChatViewModel {
 
     private static let maxUploadBytes: Int = 10 * 1024 * 1024 // 10 MB
 
+    func addAttachedFile(remotePath: String) {
+        let name = (remotePath as NSString).lastPathComponent
+        attachedFiles.append(AttachedFile(name: name, path: remotePath))
+    }
+
     func uploadFileFromDevice(apiClient: SpritesAPIClient, fileURL: URL) async -> String? {
         let accessing = fileURL.startAccessingSecurityScopedResource()
         defer { if accessing { fileURL.stopAccessingSecurityScopedResource() } }

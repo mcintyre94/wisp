@@ -6,6 +6,7 @@ struct ChatAttachmentButton: View {
     let onBrowseSpriteFiles: () -> Void
     let onPickPhoto: () -> Void
     let onPickFile: () -> Void
+    var onPasteFromClipboard: (() -> Void)? = nil
 
     var body: some View {
         if isUploading {
@@ -29,6 +30,14 @@ struct ChatAttachmentButton: View {
                     onPickFile()
                 } label: {
                     Label("Choose File", systemImage: "doc")
+                }
+
+                if let onPasteFromClipboard {
+                    Button {
+                        onPasteFromClipboard()
+                    } label: {
+                        Label("Paste from Clipboard", systemImage: "clipboard")
+                    }
                 }
             } label: {
                 Image(systemName: "plus.circle.fill")
