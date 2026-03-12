@@ -6,7 +6,7 @@ import UIKit
 
 private let logger = Logger(subsystem: "com.wisp.app", category: "Chat")
 
-enum ChatStatus: Sendable {
+enum ChatStatus: Sendable, Equatable {
     case idle
     case connecting
     case streaming
@@ -84,6 +84,10 @@ final class ChatViewModel {
     private var isReplaying = false
     private var replayContentBuffer: [ChatContent] = []
     private var replayToolUseBuffer: [String: (messageIndex: Int, toolName: String)] = [:]
+    /// When true (reconnecting to a still-running service), isReplaying is cleared
+    /// on the first new event so live events stream in incrementally rather than
+    /// being batched until the connection drops.
+    private var isReplayingLiveService = false
 
     init(spriteName: String, chatId: UUID, currentServiceName: String?, workingDirectory: String) {
         self.spriteName = spriteName
@@ -540,7 +544,7 @@ final class ChatViewModel {
         // Cancel the stale stream and reconnect via service logs
         streamTask?.cancel()
         streamTask = Task {
-            await reconnectToServiceLogs(apiClient: apiClient, modelContext: modelContext)
+            await reconnectToServiceLogs(apiClient: apiClient, modelContext: modelContext, serviceIsRunning: true)
         }
     }
 
@@ -587,12 +591,19 @@ final class ChatViewModel {
     func reconnectIfNeeded(apiClient: SpritesAPIClient, modelContext: ModelContext) {
         guard !isStreaming, !messages.isEmpty else { return }
 
+        // If the last session completed cleanly, content is already loaded from
+        // persistence — no need to hit the network at all.
+        if let chat = fetchChat(modelContext: modelContext), chat.lastSessionComplete {
+            return
+        }
+
         streamTask = Task {
             // Only reconnect if the service exists (running or stopped with logs)
-            guard let _ = try? await apiClient.getServiceStatus(spriteName: spriteName, serviceName: serviceName)
+            guard let serviceInfo = try? await apiClient.getServiceStatus(spriteName: spriteName, serviceName: serviceName)
             else { return }
 
-            await reconnectToServiceLogs(apiClient: apiClient, modelContext: modelContext)
+            let isRunning = serviceInfo.state.status == "running"
+            await reconnectToServiceLogs(apiClient: apiClient, modelContext: modelContext, serviceIsRunning: isRunning)
         }
     }
 
@@ -619,8 +630,8 @@ final class ChatViewModel {
             }
         }
 
-        // Persist the new service name immediately for reconnect
-        saveSession(modelContext: modelContext)
+        // Persist the new service name immediately for reconnect; clear any prior completion flag
+        saveSession(modelContext: modelContext, isComplete: false)
 
         guard let claudeToken = apiClient.claudeToken else {
             status = .error("No Claude token configured")
@@ -736,7 +747,7 @@ final class ChatViewModel {
         // Attempt reconnection on disconnect
         if case .disconnected = streamResult {
             logger.info("[Chat] Disconnected mid-stream, attempting reconnect via service logs")
-            await reconnectToServiceLogs(apiClient: apiClient, modelContext: modelContext)
+            await reconnectToServiceLogs(apiClient: apiClient, modelContext: modelContext, serviceIsRunning: true)
             return
         }
 
@@ -849,6 +860,15 @@ final class ChatViewModel {
             }
             if let uuid = parsedEvent.uuid {
                 processedEventUUIDs.insert(uuid)
+            }
+            // First new event after skipping historical ones on a live-service reconnect:
+            // flush the replay buffer (empty, since skipped events don't buffer anything)
+            // and switch to incremental rendering so live events stream in as they arrive.
+            if isReplayingLiveService {
+                applyReplayBuffer()
+                isReplaying = false
+                isReplayingLiveService = false
+                if case .reconnecting = status { status = .streaming }
             }
             handleEvent(parsedEvent, modelContext: modelContext)
         }
@@ -968,12 +988,15 @@ final class ChatViewModel {
     /// `reconnectToServiceLogs` so it can be tested against a mock API client.
     func runReconnectLoop(
         apiClient: some ServiceLogsProvider,
-        modelContext: ModelContext
+        modelContext: ModelContext,
+        serviceIsRunning: Bool = false
     ) async {
         isReplaying = true
+        isReplayingLiveService = serviceIsRunning
         defer {
             applyReplayBuffer()
             isReplaying = false
+            isReplayingLiveService = false
         }
         status = .reconnecting
         let priorUUIDs = processedEventUUIDs.count
@@ -1074,9 +1097,10 @@ final class ChatViewModel {
 
     private func reconnectToServiceLogs(
         apiClient: SpritesAPIClient,
-        modelContext: ModelContext
+        modelContext: ModelContext,
+        serviceIsRunning: Bool = false
     ) async {
-        await runReconnectLoop(apiClient: apiClient, modelContext: modelContext)
+        await runReconnectLoop(apiClient: apiClient, modelContext: modelContext, serviceIsRunning: serviceIsRunning)
 
         if let queued = queuedPrompt, !Task.isCancelled {
             let prompt = buildPrompt(text: queued, attachments: queuedAttachments)
@@ -1191,7 +1215,7 @@ final class ChatViewModel {
             }
             receivedResultEvent = true
             sessionId = resultEvent.sessionId
-            saveSession(modelContext: modelContext)
+            saveSession(modelContext: modelContext, isComplete: true)
 
             let autoCheckpointEnabled = UserDefaults.standard.bool(forKey: "autoCheckpoint")
             if !isReplaying, turnHasMutations, autoCheckpointEnabled, let apiClient {
@@ -1451,11 +1475,12 @@ final class ChatViewModel {
         return try? modelContext.fetch(descriptor).first
     }
 
-    private func saveSession(modelContext: ModelContext) {
+    private func saveSession(modelContext: ModelContext, isComplete: Bool? = nil) {
         guard let chat = fetchChat(modelContext: modelContext) else { return }
         chat.claudeSessionId = sessionId
         chat.currentServiceName = serviceName
         chat.lastUsed = Date()
+        if let isComplete { chat.lastSessionComplete = isComplete }
         try? modelContext.save()
     }
 

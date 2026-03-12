@@ -21,6 +21,7 @@ final class SpriteChat {
     var forkContext: String?
     var worktreePath: String?
     var worktreeBranch: String?
+    var lastSessionComplete: Bool = false
 
     var displayName: String {
         customName ?? "Chat \(chatNumber)"
