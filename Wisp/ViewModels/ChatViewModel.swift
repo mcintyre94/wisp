@@ -57,6 +57,9 @@ final class ChatViewModel {
     private var sessionId: String?
     var workingDirectory: String
     private(set) var worktreePath: String?
+    /// True when any chat for this sprite has had a worktree created, indicating the
+    /// sprite has a git repo. Used to suppress session-resume UI on new chats.
+    private(set) var spriteUsesWorktrees = false
     private var streamTask: Task<Void, Never>?
     var namingTask: Task<String, Never>?
     private let parser = ClaudeStreamParser()
@@ -187,6 +190,14 @@ final class ChatViewModel {
             serviceName = svcName
         }
 
+        // Check if any chat on this sprite has ever had a worktree — if so the sprite
+        // has git and new chats should suppress the session-resume UI.
+        let name = spriteName
+        let worktreeDescriptor = FetchDescriptor<SpriteChat>(
+            predicate: #Predicate { $0.spriteName == name && $0.worktreePath != nil }
+        )
+        spriteUsesWorktrees = (try? modelContext.fetch(worktreeDescriptor))?.isEmpty == false
+
         if messages.isEmpty {
             let persisted = chat.loadMessages()
             messages = persisted.map { ChatMessage(from: $0) }
@@ -225,10 +236,10 @@ final class ChatViewModel {
     }
 
     /// True when this chat uses (or will use) a git worktree.
-    /// Covers both established worktrees and fresh chats where the worktree
-    /// hasn't been created yet but the setting is enabled.
+    /// Covers both established worktrees and fresh chats on sprites that have
+    /// previously created worktrees (i.e. the sprite has a git repo).
     var usesWorktree: Bool {
-        worktreePath != nil || UserDefaults.standard.bool(forKey: "worktreePerChat")
+        worktreePath != nil || spriteUsesWorktrees
     }
 
     func fetchRemoteSessions(apiClient: SpritesAPIClient, existingSessionIds: Set<String>) {
@@ -1400,6 +1411,7 @@ final class ChatViewModel {
 
         workingDirectory = path
         worktreePath = path
+        spriteUsesWorktrees = true
         if let chat = fetchChat(modelContext: modelContext) {
             chat.worktreePath = path
             chat.worktreeBranch = uniqueBranchName
