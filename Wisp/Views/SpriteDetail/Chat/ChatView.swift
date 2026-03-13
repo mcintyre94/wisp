@@ -47,9 +47,19 @@ struct ChatView: View {
                         messageView(message)
                     }
                     if viewModel.isStreaming && !viewModel.status.isReconnecting && viewModel.pendingWispAskCard == nil {
-                        ThinkingShimmerView(label: viewModel.status.isConnecting ? "Connecting…" : (viewModel.activeToolLabel ?? "Thinking…"))
-                            .transition(.opacity.combined(with: .move(edge: .bottom)))
-                            .id("shimmer")
+                        ThinkingShimmerView(
+                            label: viewModel.status.isConnecting ? "Connecting…" : (viewModel.activeToolLabel ?? "Thinking…"),
+                            onTap: viewModel.sessionId != nil ? {
+                                sideChatViewModel = SideChatViewModel(
+                                    spriteName: viewModel.spriteName,
+                                    sessionId: viewModel.sessionId!,
+                                    workingDirectory: viewModel.workingDirectory
+                                )
+                                showSideChat = true
+                            } : nil
+                        )
+                        .transition(.opacity.combined(with: .move(edge: .bottom)))
+                        .id("shimmer")
                     }
                     if let pendingText = viewModel.queuedPrompt {
                         PendingUserBubbleView(
@@ -170,14 +180,6 @@ struct ChatView: View {
                     },
                     lastUploadedFileName: viewModel.lastUploadedFileName,
                     onStash: { viewModel.stashDraft() },
-                    onSideChat: viewModel.sessionId != nil ? {
-                        sideChatViewModel = SideChatViewModel(
-                            spriteName: viewModel.spriteName,
-                            sessionId: viewModel.sessionId!,
-                            workingDirectory: viewModel.workingDirectory
-                        )
-                        showSideChat = true
-                    } : nil,
                     isFocused: $isInputFocused
                 )
             }

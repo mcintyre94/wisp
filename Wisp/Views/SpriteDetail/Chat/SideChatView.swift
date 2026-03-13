@@ -86,13 +86,6 @@ struct SideChatView: View {
         }
     }
 
-    private var isRunningOnMac: Bool {
-        #if targetEnvironment(macCatalyst)
-        true
-        #else
-        ProcessInfo.processInfo.isiOSAppOnMac
-        #endif
-    }
 }
 
 #Preview {

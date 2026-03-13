@@ -30,6 +30,7 @@
 		A1A2A3A4B5B6C7C800000005 /* ToolDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A2A3A4B5B6C7C800000006 /* ToolDetailSheet.swift */; };
 		F7A8B9C0D1E2F30415263748 /* PlanCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F7A8B9C0D1E2F30415263749 /* PlanCardView.swift */; };
 		8F72503BCFF96CEF02334CA8 /* ChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 540685D9D567596E24E4EF82 /* ChatViewModel.swift */; };
+		AA10BB20CC30DD40EE50FF01 /* SideChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10BB20CC30DD40EE50FF02 /* SideChatViewModel.swift */; };
 		974996B0FB4D30828E89DD21 /* SpriteOverviewViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC9BFD0F0AC39C136C9E828A /* SpriteOverviewViewModel.swift */; };
 		CC11DD22EE33FF4400110001 /* ChatAttachmentButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC11DD22EE33FF4400110002 /* ChatAttachmentButton.swift */; };
 		DD22EE33FF4400110007AA01 /* AttachmentChipsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD22EE33FF4400110007AA02 /* AttachmentChipsView.swift */; };
@@ -46,6 +47,7 @@
 		B7DA2D050FD589F71FCE51AF /* Checkpoint.swift in Sources */ = {isa = PBXBuildFile; fileRef = BF811FA7AB6EDA25869DEF75 /* Checkpoint.swift */; };
 		B7EF7CBB1F7311DBDC3681EA /* DashboardViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = EF49F7E0F4AC02FDF496D379 /* DashboardViewModel.swift */; };
 		C10FC1984A740DF12DE2B9FC /* ChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4FB02E9F26B9003B6E1DBE7C /* ChatView.swift */; };
+		AA10BB20CC30DD40EE50FF03 /* SideChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA10BB20CC30DD40EE50FF04 /* SideChatView.swift */; };
 		C28D2088D3562DF23E1FEF57 /* AuthView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82F0818DD437A77B57594574 /* AuthView.swift */; };
 		C575C7232C5FCA1A3F18A9D8 /* WispApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD9CB342E72F33408AA0CB63 /* WispApp.swift */; };
 		C6F4D8ADAC992544E82FC4D0 /* ChatStatusBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 42C4A8D129C538233C34B2A6 /* ChatStatusBar.swift */; };
@@ -85,6 +87,7 @@
 		CC11DD22EE33FF4400110006 /* FileEntryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC11DD22EE33FF4400110005 /* FileEntryTests.swift */; };
 		FF11AA22BB33CC44DD55EE02 /* ChatViewModelHelpersTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF11AA22BB33CC44DD55EE01 /* ChatViewModelHelpersTests.swift */; };
 		FF11AA22BB33CC44DD55EE04 /* ChatViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF11AA22BB33CC44DD55EE03 /* ChatViewModelTests.swift */; };
+		FE9876543210ABCDEF987601 /* SideChatViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9876543210ABCDEF987602 /* SideChatViewModelTests.swift */; };
 		BB33CC44DD55EE66FF770001 /* WispAskTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = BB33CC44DD55EE66FF770002 /* WispAskTests.swift */; };
 		A1B2C3D4E5F60718293A4B5E /* SpriteChat.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5D /* SpriteChat.swift */; };
 		B2C3D4E5F6A70819304B5C6E /* SpriteChatMigration.swift in Sources */ = {isa = PBXBuildFile; fileRef = B2C3D4E5F6A70819304B5C6D /* SpriteChatMigration.swift */; };
@@ -178,7 +181,9 @@
 		42C4A8D129C538233C34B2A6 /* ChatStatusBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatStatusBar.swift; sourceTree = "<group>"; };
 		45BC8CB419377B55A1D1F896 /* UserBubbleView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserBubbleView.swift; sourceTree = "<group>"; };
 		4FB02E9F26B9003B6E1DBE7C /* ChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatView.swift; sourceTree = "<group>"; };
+		AA10BB20CC30DD40EE50FF04 /* SideChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SideChatView.swift; sourceTree = "<group>"; };
 		540685D9D567596E24E4EF82 /* ChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModel.swift; sourceTree = "<group>"; };
+		AA10BB20CC30DD40EE50FF02 /* SideChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SideChatViewModel.swift; sourceTree = "<group>"; };
 		54C849AF5732774C39968056 /* SpriteDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpriteDetailView.swift; sourceTree = "<group>"; };
 		A1E74C3B8D2F0C9547B6A891 /* SpriteNavigationPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpriteNavigationPanel.swift; sourceTree = "<group>"; };
 		616F53154EEA09CE101C7703 /* AppError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppError.swift; sourceTree = "<group>"; };
@@ -249,6 +254,7 @@
 		FF11AA22BB33CC44DD55EE01 /* ChatViewModelHelpersTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModelHelpersTests.swift; sourceTree = "<group>"; };
 		BB33CC44DD55EE66FF770002 /* WispAskTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WispAskTests.swift; sourceTree = "<group>"; };
 		FF11AA22BB33CC44DD55EE03 /* ChatViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModelTests.swift; sourceTree = "<group>"; };
+		FE9876543210ABCDEF987602 /* SideChatViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SideChatViewModelTests.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718293A4B5D /* SpriteChat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpriteChat.swift; sourceTree = "<group>"; };
 		B2C3D4E5F6A70819304B5C6D /* SpriteChatMigration.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpriteChatMigration.swift; sourceTree = "<group>"; };
 		C3D4E5F6A7B80920415C6D7E /* SpriteChatListViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpriteChatListViewModel.swift; sourceTree = "<group>"; };
@@ -483,6 +489,7 @@
 			children = (
 				241DA350F74EECF3A998A903 /* AuthViewModel.swift */,
 				540685D9D567596E24E4EF82 /* ChatViewModel.swift */,
+				AA10BB20CC30DD40EE50FF02 /* SideChatViewModel.swift */,
 				D0AD6D912964E32FC8685EA3 /* CheckpointsViewModel.swift */,
 				EF49F7E0F4AC02FDF496D379 /* DashboardViewModel.swift */,
 				AA33BB44CC55DD66EE77FF01 /* ServicesViewModel.swift */,
@@ -556,6 +563,7 @@
 				42C4A8D129C538233C34B2A6 /* ChatStatusBar.swift */,
 				D4E5F6A7B8C90A31526D7E8F /* ChatSwitcherSheet.swift */,
 				4FB02E9F26B9003B6E1DBE7C /* ChatView.swift */,
+				AA10BB20CC30DD40EE50FF04 /* SideChatView.swift */,
 				F7A8B9C0D1E2F30415263749 /* PlanCardView.swift */,
 				B2C3D4E5F6A7081930DBFF01 /* SessionSuggestionsView.swift */,
 				A1B2C3D4E5F6A7B8C9D0E203 /* SideChatView.swift */,
@@ -639,6 +647,7 @@
 				E7F8A9B0C1D2E3F405A6B7C1 /* ChatNameTests.swift */,
 				FF11AA22BB33CC44DD55EE01 /* ChatViewModelHelpersTests.swift */,
 				FF11AA22BB33CC44DD55EE03 /* ChatViewModelTests.swift */,
+				FE9876543210ABCDEF987602 /* SideChatViewModelTests.swift */,
 				BB33CC44DD55EE66FF770002 /* WispAskTests.swift */,
 				B5C3D17E8A9FABC001D2E3F4 /* ClaudeModelTests.swift */,
 				AABB0011223344556677F005 /* ClaudeStreamEventTests.swift */,
@@ -831,6 +840,8 @@
 				C6F4D8ADAC992544E82FC4D0 /* ChatStatusBar.swift in Sources */,
 				C10FC1984A740DF12DE2B9FC /* ChatView.swift in Sources */,
 				8F72503BCFF96CEF02334CA8 /* ChatViewModel.swift in Sources */,
+				AA10BB20CC30DD40EE50FF03 /* SideChatView.swift in Sources */,
+				AA10BB20CC30DD40EE50FF01 /* SideChatViewModel.swift in Sources */,
 				B7DA2D050FD589F71FCE51AF /* Checkpoint.swift in Sources */,
 				7F8737574DF6D523DE958341 /* CheckpointsView.swift in Sources */,
 				A92BE24BEAF80FF31B4ACA00 /* CheckpointsViewModel.swift in Sources */,
@@ -925,6 +936,7 @@
 				AABB0011223344556677F00A /* AppErrorTests.swift in Sources */,
 				FF11AA22BB33CC44DD55EE02 /* ChatViewModelHelpersTests.swift in Sources */,
 				FF11AA22BB33CC44DD55EE04 /* ChatViewModelTests.swift in Sources */,
+				FE9876543210ABCDEF987601 /* SideChatViewModelTests.swift in Sources */,
 				BB33CC44DD55EE66FF770001 /* WispAskTests.swift in Sources */,
 				C6D4E28F9B0ABCD112E3F405 /* ClaudeModelTests.swift in Sources */,
 				AABB0011223344556677F006 /* ClaudeStreamEventTests.swift in Sources */,

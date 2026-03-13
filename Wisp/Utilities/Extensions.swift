@@ -1,4 +1,15 @@
 import Foundation
+#if canImport(UIKit)
+import UIKit
+#endif
+
+var isRunningOnMac: Bool {
+    #if targetEnvironment(macCatalyst)
+    true
+    #else
+    ProcessInfo.processInfo.isiOSAppOnMac
+    #endif
+}
 
 extension JSONDecoder {
     static func apiDecoder() -> JSONDecoder {

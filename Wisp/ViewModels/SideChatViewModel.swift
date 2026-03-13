@@ -11,9 +11,9 @@ final class SideChatViewModel {
     let workingDirectory: String
 
     var question = ""
-    var response = ""
-    var isStreaming = false
-    var error: String?
+    private(set) var response = ""
+    private(set) var isStreaming = false
+    private(set) var error: String?
 
     private var streamTask: Task<Void, Never>?
     private let parser = ClaudeStreamParser()
@@ -59,7 +59,7 @@ final class SideChatViewModel {
         let commandParts: [String] = [
             "export CLAUDE_CODE_OAUTH_TOKEN='\(claudeToken)'",
             "cd \(workingDirectory)",
-            "claude -p --output-format stream-json --tools \"\" --model \(modelId) --resume \(sessionId) '\(escapedQuestion)'"
+            "claude -p --verbose --output-format stream-json --dangerously-skip-permissions --tools \"\" --model \(modelId) --resume \(sessionId) '\(escapedQuestion)'"
         ]
         let fullCommand = commandParts.joined(separator: " && ")
 
@@ -128,7 +128,7 @@ final class SideChatViewModel {
         }
     }
 
-    private func handle(_ event: ClaudeStreamEvent) {
+    func handle(_ event: ClaudeStreamEvent) {
         switch event {
         case .assistant(let assistantEvent):
             for block in assistantEvent.message.content {
