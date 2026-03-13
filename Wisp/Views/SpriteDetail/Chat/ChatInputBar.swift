@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct ChatInputBar: View {
     @Binding var text: String
@@ -89,23 +90,23 @@ struct ChatInputBar: View {
                     }
                 }
 
-                Button {
-                    isFocused.wrappedValue = false
-                    onSend()
-                } label: {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.title2)
-                }
-                .tint(isEmpty || hasQueuedMessage ? .gray : Color("AccentColor"))
-                .disabled(isEmpty || hasQueuedMessage)
-                .buttonStyle(.glass)
-                .contextMenu {
+                Menu {
                     if let onStash, !isEmpty {
                         Button("Stash Draft", systemImage: "tray.and.arrow.down") {
                             onStash()
                         }
                     }
+                } label: {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.title2)
+                } primaryAction: {
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    isFocused.wrappedValue = false
+                    onSend()
                 }
+                .tint(isEmpty || hasQueuedMessage ? .gray : Color("AccentColor"))
+                .disabled(isEmpty || hasQueuedMessage)
+                .buttonStyle(.glass)
             }
         }
         .animation(.easeInOut(duration: 0.2), value: attachedFiles.count)
