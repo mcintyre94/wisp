@@ -676,6 +676,50 @@ struct ChatViewModelTests {
         #expect(vm.processedEventUUIDs.isEmpty)
     }
 
+    // MARK: - fetchRemoteSessions
+
+    @Test func fetchRemoteSessions_isNoOpWhenWorktreePathIsSet() throws {
+        // Established worktrees (worktreePath already set) are always fresh — no sessions to resume.
+        let ctx = try makeModelContext()
+        let (vm, chat) = makeChatViewModel(modelContext: ctx)
+
+        chat.worktreePath = "/tmp/worktrees/my-branch"
+        vm.loadSession(apiClient: SpritesAPIClient(), modelContext: ctx)
+
+        vm.fetchRemoteSessions(apiClient: SpritesAPIClient(), existingSessionIds: [])
+
+        #expect(vm.remoteSessions.isEmpty)
+        #expect(vm.isLoadingRemoteSessions == false)
+    }
+
+    @Test func fetchRemoteSessions_isNoOpWhenSiblingChatHasWorktree() throws {
+        // A fresh chat on a sprite that has previously created worktrees should also
+        // suppress remote session fetching — the sprite has git, so resumes are irrelevant.
+        let ctx = try makeModelContext()
+
+        // Create an older chat for the same sprite with an established worktree
+        let olderChat = SpriteChat(spriteName: "test", chatNumber: 1)
+        olderChat.worktreePath = "/tmp/worktrees/main"
+        ctx.insert(olderChat)
+        try ctx.save()
+
+        // New chat for the same sprite — worktreePath is nil (not yet created)
+        let newChat = SpriteChat(spriteName: "test", chatNumber: 2)
+        ctx.insert(newChat)
+        try ctx.save()
+
+        let vm = ChatViewModel(spriteName: "test", chatId: newChat.id, currentServiceName: nil, workingDirectory: newChat.workingDirectory)
+        vm.loadSession(apiClient: SpritesAPIClient(), modelContext: ctx)
+
+        #expect(vm.worktreePath == nil)
+        #expect(vm.spriteUsesWorktrees == true)
+
+        vm.fetchRemoteSessions(apiClient: SpritesAPIClient(), existingSessionIds: [])
+
+        #expect(vm.remoteSessions.isEmpty)
+        #expect(vm.isLoadingRemoteSessions == false)
+    }
+
     // MARK: - ChatStatus computed properties
 
     @Test func chatStatus_isConnecting_onlyForConnecting() {
@@ -924,6 +968,48 @@ struct ChatViewModelTests {
             #expect(card.toolUseId == "tu-1")
         } else {
             Issue.record("Expected tool result at index 1")
+        }
+    }
+
+    @Test func runReconnectLoop_mergesTextAcrossRetryIterations() async throws {
+        // Text from iteration 1 and text from iteration 2 (the "one retry after service
+        // stopped" path) must merge into a single .text entry, not produce two bubbles.
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        let assistantMsg = ChatMessage(role: .assistant)
+        vm.messages.append(assistantMsg)
+        vm.setCurrentAssistantMessage(assistantMsg)
+
+        let systemLine = #"{"type":"system","session_id":"s1","model":"claude-sonnet-4-20250514","uuid":"uuid-sys"}"# + "\n"
+        let textLine1 = #"{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Hello "}]},"uuid":"uuid-text1"}"# + "\n"
+        let textLine2 = #"{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"world"}]},"uuid":"uuid-text2"}"# + "\n"
+        let resultLine = #"{"type":"result","session_id":"s1","subtype":"success","uuid":"uuid-result"}"# + "\n"
+
+        // Stream 1: partial text, no result (triggers one-retry path)
+        let stream1 = AsyncThrowingStream<ServiceLogEvent, Error> { continuation in
+            continuation.yield(ServiceLogEvent(type: .stdout, data: systemLine, exitCode: nil, timestamp: nil, logFiles: nil))
+            continuation.yield(ServiceLogEvent(type: .stdout, data: textLine1, exitCode: nil, timestamp: nil, logFiles: nil))
+            continuation.finish()
+        }
+        // Stream 2: same text (now skipped) + more text + result
+        let stream2 = AsyncThrowingStream<ServiceLogEvent, Error> { continuation in
+            continuation.yield(ServiceLogEvent(type: .stdout, data: systemLine, exitCode: nil, timestamp: nil, logFiles: nil))
+            continuation.yield(ServiceLogEvent(type: .stdout, data: textLine1, exitCode: nil, timestamp: nil, logFiles: nil))
+            continuation.yield(ServiceLogEvent(type: .stdout, data: textLine2, exitCode: nil, timestamp: nil, logFiles: nil))
+            continuation.yield(ServiceLogEvent(type: .stdout, data: resultLine, exitCode: nil, timestamp: nil, logFiles: nil))
+            continuation.finish()
+        }
+
+        let mock = MockServiceLogsProvider(streams: [stream1, stream2], statuses: ["stopped"])
+        await vm.runReconnectLoop(apiClient: mock, modelContext: ctx)
+
+        // Should be one merged text entry, not two separate bubbles
+        #expect(assistantMsg.content.count == 1)
+        if case .text(let text) = assistantMsg.content.first {
+            #expect(text == "Hello world")
+        } else {
+            Issue.record("Expected single merged text entry after two replay iterations")
         }
     }
 

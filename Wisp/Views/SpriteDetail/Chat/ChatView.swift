@@ -33,7 +33,7 @@ struct ChatView: View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(spacing: 12) {
-                    if viewModel.messages.isEmpty && !isReadOnly && viewModel.worktreePath == nil {
+                    if viewModel.messages.isEmpty && !isReadOnly && !viewModel.usesWorktree {
                         SessionSuggestionsView(
                             sessions: viewModel.remoteSessions,
                             hasAnySessions: viewModel.hasAnyRemoteSessions,
