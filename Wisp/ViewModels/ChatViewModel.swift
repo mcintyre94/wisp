@@ -193,6 +193,12 @@ final class ChatViewModel {
             inputText = draft
         }
 
+        if attachedFiles.isEmpty, let paths = chat.draftAttachmentPaths, !paths.isEmpty {
+            attachedFiles = paths.map { path in
+                AttachedFile(name: (path as NSString).lastPathComponent, path: path)
+            }
+        }
+
         if let context = chat.forkContext, !context.isEmpty {
             let notice = ChatMessage(role: .system, content: [.text("Forked from a previous chat")])
             messages.insert(notice, at: 0)
@@ -203,6 +209,8 @@ final class ChatViewModel {
     func saveDraft(modelContext: ModelContext) {
         guard let chat = fetchChat(modelContext: modelContext) else { return }
         chat.draftInputText = inputText.isEmpty ? nil : inputText
+        let paths = attachedFiles.map(\.path)
+        chat.draftAttachmentPaths = paths.isEmpty ? nil : paths
         try? modelContext.save()
     }
 
