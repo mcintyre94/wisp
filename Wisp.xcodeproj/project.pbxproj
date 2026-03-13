@@ -667,6 +667,7 @@
 				FCFBC2DD2F37A7B9481D6068 /* Resources */,
 				4B2C4E0585F6B4BFE384E0F2 /* Frameworks */,
 				D1A2B3C4E5F60400DD000033 /* Embed Foundation Extensions */,
+				DEADBEEF00112233AABBCC01 /* Inject Git Commit Hash */,
 			);
 			buildRules = (
 			);
@@ -789,6 +790,27 @@
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		DEADBEEF00112233AABBCC01 /* Inject Git Commit Hash */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+			);
+			name = "Inject Git Commit Hash";
+			outputFileListPaths = (
+			);
+			outputPaths = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "COMMIT=$(git -C \"$SRCROOT\" rev-parse --short HEAD 2>/dev/null || echo \"unknown\")\nINFO_PLIST=\"$BUILT_PRODUCTS_DIR/$INFOPLIST_PATH\"\nif [ -f \"$INFO_PLIST\" ]; then\n  /usr/libexec/PlistBuddy -c \"Add :GitCommitHash string $COMMIT\" \"$INFO_PLIST\" 2>/dev/null || /usr/libexec/PlistBuddy -c \"Set :GitCommitHash string $COMMIT\" \"$INFO_PLIST\"\nfi\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		9D93DB780FFF4DC6180B4608 /* Sources */ = {
