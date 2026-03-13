@@ -1185,4 +1185,64 @@ struct ChatViewModelTests {
         #expect(vm.inputText == "long prompt I want to come back to")
         #expect(vm.stashedDraft == nil)
     }
+
+    // MARK: - Draft attachment persistence
+
+    @Test func saveDraft_persistsAttachmentPaths() throws {
+        let ctx = try makeModelContext()
+        let (vm, chat) = makeChatViewModel(modelContext: ctx)
+
+        vm.attachedFiles = [
+            AttachedFile(name: "main.py", path: "/home/sprite/project/main.py"),
+            AttachedFile(name: "README.md", path: "/home/sprite/project/README.md"),
+        ]
+        vm.saveDraft(modelContext: ctx)
+
+        #expect(chat.draftAttachmentPaths == [
+            "/home/sprite/project/main.py",
+            "/home/sprite/project/README.md",
+        ])
+    }
+
+    @Test func saveDraft_clearsAttachmentPathsWhenEmpty() throws {
+        let ctx = try makeModelContext()
+        let (vm, chat) = makeChatViewModel(modelContext: ctx)
+
+        chat.draftAttachmentPaths = ["/home/sprite/project/old.py"]
+        vm.attachedFiles = []
+        vm.saveDraft(modelContext: ctx)
+
+        #expect(chat.draftAttachmentPaths == nil)
+    }
+
+    @Test func loadSession_restoresDraftAttachments() throws {
+        let ctx = try makeModelContext()
+        let (vm, chat) = makeChatViewModel(modelContext: ctx)
+
+        chat.draftAttachmentPaths = [
+            "/home/sprite/project/main.py",
+            "/home/sprite/project/photo.png",
+        ]
+
+        vm.loadSession(apiClient: SpritesAPIClient(), modelContext: ctx)
+
+        #expect(vm.attachedFiles.count == 2)
+        #expect(vm.attachedFiles[0].name == "main.py")
+        #expect(vm.attachedFiles[0].path == "/home/sprite/project/main.py")
+        #expect(vm.attachedFiles[1].name == "photo.png")
+        #expect(vm.attachedFiles[1].path == "/home/sprite/project/photo.png")
+    }
+
+    @Test func loadSession_doesNotOverwriteExistingAttachments() throws {
+        let ctx = try makeModelContext()
+        let (vm, chat) = makeChatViewModel(modelContext: ctx)
+
+        chat.draftAttachmentPaths = ["/home/sprite/project/persisted.py"]
+        vm.attachedFiles = [AttachedFile(name: "live.py", path: "/home/sprite/project/live.py")]
+
+        vm.loadSession(apiClient: SpritesAPIClient(), modelContext: ctx)
+
+        #expect(vm.attachedFiles.count == 1)
+        #expect(vm.attachedFiles[0].name == "live.py")
+    }
 }

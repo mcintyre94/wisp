@@ -15,6 +15,7 @@ final class SpriteChat {
     var messagesData: Data?
     var streamEventUUIDsData: Data?
     var draftInputText: String?
+    var draftAttachmentPaths: [String]?
     var isClosed: Bool
     var spriteCreatedAt: Date?
     var firstMessagePreview: String?

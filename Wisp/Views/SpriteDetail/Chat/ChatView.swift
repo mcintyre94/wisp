@@ -136,6 +136,9 @@ struct ChatView: View {
         .onChange(of: viewModel.inputText) {
             viewModel.saveDraft(modelContext: modelContext)
         }
+        .onChange(of: viewModel.attachedFiles.count) {
+            viewModel.saveDraft(modelContext: modelContext)
+        }
         .onDisappear {
             viewModel.saveDraft(modelContext: modelContext)
         }
