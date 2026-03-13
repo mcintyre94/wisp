@@ -17,8 +17,12 @@ struct SettingsView: View {
     @State private var copiedTokenFlash = false
     #if DEBUG
     @State private var copiedDeviceIDFlash = false
+    @State private var copiedCommitFlash = false
     private var deviceID: String {
         UIDevice.current.identifierForVendor?.uuidString ?? "Unavailable"
+    }
+    private var buildCommit: String {
+        Bundle.main.infoDictionary?["GitCommitHash"] as? String ?? "unknown"
     }
     #endif
 
@@ -242,6 +246,30 @@ struct SettingsView: View {
                 }
             }
             .animation(.default, value: copiedDeviceIDFlash)
+            HStack {
+                Label("Build Commit", systemImage: "hammer")
+                Spacer()
+                Text(buildCommit)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fontDesign(.monospaced)
+            }
+            .onTapGesture {
+                UIPasteboard.general.string = buildCommit
+                copiedCommitFlash = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    copiedCommitFlash = false
+                }
+            }
+            .overlay(alignment: .trailing) {
+                if copiedCommitFlash {
+                    Text("Copied!")
+                        .font(.caption)
+                        .foregroundStyle(.green)
+                        .transition(.opacity)
+                }
+            }
+            .animation(.default, value: copiedCommitFlash)
         } header: {
             Text("Developer")
         } footer: {
