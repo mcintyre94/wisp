@@ -245,6 +245,8 @@ struct SettingsView: View {
                     .font(.caption)
                     .foregroundStyle(copiedCommitFlash ? .green : .secondary)
                     .fontDesign(.monospaced)
+                    .lineLimit(1)
+                    .truncationMode(.middle)
                     .contentTransition(.numericText())
             }
             .onTapGesture {
@@ -260,8 +262,6 @@ struct SettingsView: View {
             }
         } header: {
             Text("Developer")
-        } footer: {
-            Text("Device identifier for push notification targeting. Tap to copy.")
         }
     }
     #endif
