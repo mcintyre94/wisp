@@ -109,8 +109,7 @@ struct ChatInputBar: View {
             }
         }
         .animation(.easeInOut(duration: 0.2), value: attachedFiles.count)
-        .anima
-        tion(.easeInOut(duration: 0.2), value: lastUploadedFileName)
+        .animation(.easeInOut(duration: 0.2), value: lastUploadedFileName)
         .padding(.horizontal)
         .padding(.vertical, 4)
         .padding(.bottom, isRunningOnMac ? 12 : 0)
