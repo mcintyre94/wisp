@@ -198,10 +198,10 @@ final class SpriteOverviewViewModel {
             data: data
         )
         uploadResult = result
-        Task {
+        Task { [weak self] in
             try? await Task.sleep(for: .seconds(3))
-            if uploadResult?.path == result.path {
-                uploadResult = nil
+            if self?.uploadResult?.path == result.path {
+                self?.uploadResult = nil
             }
         }
     }
