@@ -263,7 +263,10 @@ final class SpritesAPIClient {
                 .replacingOccurrences(of: "+", with: "%2B")
         }
 
-        return ExecSession(url: components.url!, token: spritesToken ?? "")
+        guard let url = components.url else {
+            preconditionFailure("URLComponents with scheme=wss, host=api.sprites.dev failed to produce URL")
+        }
+        return ExecSession(url: url, token: spritesToken ?? "")
     }
 
     func attachExecSession(spriteName: String, execSessionId: String) -> ExecSession {
@@ -272,7 +275,10 @@ final class SpritesAPIClient {
         components.host = "api.sprites.dev"
         components.path = "/v1/sprites/\(spriteName)/exec/\(execSessionId)"
 
-        return ExecSession(url: components.url!, token: spritesToken ?? "")
+        guard let url = components.url else {
+            preconditionFailure("URLComponents with scheme=wss, host=api.sprites.dev failed to produce URL")
+        }
+        return ExecSession(url: url, token: spritesToken ?? "")
     }
 
     // MARK: - Services
@@ -459,7 +465,9 @@ extension SpritesAPIClient {
             throw AppError.noToken
         }
 
-        var components = URLComponents(string: baseURL + "/sprites/\(spriteName)/fs/read")!
+        guard var components = URLComponents(string: baseURL + "/sprites/\(spriteName)/fs/read") else {
+            throw AppError.invalidURL
+        }
         components.queryItems = [
             URLQueryItem(name: "path", value: remotePath),
         ]
@@ -500,7 +508,9 @@ extension SpritesAPIClient {
             throw AppError.noToken
         }
 
-        var components = URLComponents(string: baseURL + "/sprites/\(spriteName)/fs/write")!
+        guard var components = URLComponents(string: baseURL + "/sprites/\(spriteName)/fs/write") else {
+            throw AppError.invalidURL
+        }
         components.queryItems = [
             URLQueryItem(name: "path", value: remotePath),
             URLQueryItem(name: "mkdir", value: "true"),

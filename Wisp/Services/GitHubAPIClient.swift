@@ -22,14 +22,14 @@ struct GitHubAPIClient: Sendable {
     let token: String?
 
     func fetchUserProfile() async throws -> GitHubUser {
-        let url = URL(string: "https://api.github.com/user")!
+        guard let url = URL(string: "https://api.github.com/user") else { throw URLError(.badURL) }
         let data = try await performRequest(url: url)
         let json = try JSONDecoder().decode(UserJSON.self, from: data)
         return GitHubUser(name: json.name, email: json.email, login: json.login)
     }
 
     func fetchPrimaryEmail() async throws -> String? {
-        let url = URL(string: "https://api.github.com/user/emails")!
+        guard let url = URL(string: "https://api.github.com/user/emails") else { throw URLError(.badURL) }
         let data = try await performRequest(url: url)
         let emails = try JSONDecoder().decode([EmailJSON].self, from: data)
         return emails.first(where: { $0.primary })?.email ?? emails.first?.email
@@ -37,7 +37,7 @@ struct GitHubAPIClient: Sendable {
 
     func fetchUserRepos() async throws -> [GitHubRepo] {
         guard token != nil else { return [] }
-        let url = URL(string: "https://api.github.com/user/repos?sort=pushed&per_page=50")!
+        guard let url = URL(string: "https://api.github.com/user/repos?sort=pushed&per_page=50") else { throw URLError(.badURL) }
         let data = try await performRequest(url: url)
         return try decodeRepos(from: data)
     }
