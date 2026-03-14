@@ -66,6 +66,7 @@ struct ChatInputBar: View {
                     .frame(minHeight: 36)
                     .glassEffect(in: .rect(cornerRadius: 20))
                     .disabled(hasQueuedMessage)
+                    .id(text.isEmpty)
 
                 if isStreaming {
                     Button {
