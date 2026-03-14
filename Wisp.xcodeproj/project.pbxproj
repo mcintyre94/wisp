@@ -85,6 +85,7 @@
 		DD11EE22FF334455AA66BB02 /* ServiceTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD11EE22FF334455AA66BB01 /* ServiceTypes.swift */; };
 		DD11EE22FF334455AA66BB04 /* ServiceTypesTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD11EE22FF334455AA66BB03 /* ServiceTypesTests.swift */; };
 		EE22FF334455AA66BB770002 /* ExecSessionURLTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE22FF334455AA66BB770001 /* ExecSessionURLTests.swift */; };
+		0DFF41BB14AC3922E95DF781 /* WorktreeTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = C469FD20E7B004F78FC5072A /* WorktreeTests.swift */; };
 		CC11DD22EE33FF4400110006 /* FileEntryTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC11DD22EE33FF4400110005 /* FileEntryTests.swift */; };
 		FF11AA22BB33CC44DD55EE02 /* ChatViewModelHelpersTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF11AA22BB33CC44DD55EE01 /* ChatViewModelHelpersTests.swift */; };
 		FF11AA22BB33CC44DD55EE04 /* ChatViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF11AA22BB33CC44DD55EE03 /* ChatViewModelTests.swift */; };
@@ -252,6 +253,7 @@
 		DD11EE22FF334455AA66BB01 /* ServiceTypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceTypes.swift; sourceTree = "<group>"; };
 		DD11EE22FF334455AA66BB03 /* ServiceTypesTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceTypesTests.swift; sourceTree = "<group>"; };
 		EE22FF334455AA66BB770001 /* ExecSessionURLTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExecSessionURLTests.swift; sourceTree = "<group>"; };
+		C469FD20E7B004F78FC5072A /* WorktreeTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WorktreeTests.swift; sourceTree = "<group>"; };
 		CC11DD22EE33FF4400110005 /* FileEntryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileEntryTests.swift; sourceTree = "<group>"; };
 		FF11AA22BB33CC44DD55EE01 /* ChatViewModelHelpersTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatViewModelHelpersTests.swift; sourceTree = "<group>"; };
 		BB33CC44DD55EE66FF770002 /* WispAskTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WispAskTests.swift; sourceTree = "<group>"; };
@@ -662,6 +664,7 @@
 				F6A7B8C9D0E10C53748F9001 /* SpriteChatMigrationTests.swift */,
 				DD11EE22FF334455AA66BB03 /* ServiceTypesTests.swift */,
 				EE22FF334455AA66BB770001 /* ExecSessionURLTests.swift */,
+				C469FD20E7B004F78FC5072A /* WorktreeTests.swift */,
 				CC11DD22EE33FF4400110005 /* FileEntryTests.swift */,
 				AA00BB11CC22DD33EE44FF11 /* LoopModelTests.swift */,
 			);
@@ -950,6 +953,7 @@
 				AABB0011223344556677F004 /* JSONValueTests.swift in Sources */,
 				DD11EE22FF334455AA66BB04 /* ServiceTypesTests.swift in Sources */,
 				EE22FF334455AA66BB770002 /* ExecSessionURLTests.swift in Sources */,
+				0DFF41BB14AC3922E95DF781 /* WorktreeTests.swift in Sources */,
 				E5F6A7B8C9D00B42637E8F91 /* SpriteChatListViewModelTests.swift in Sources */,
 				F6A7B8C9D0E10C53748F9002 /* SpriteChatMigrationTests.swift in Sources */,
 				D5E6F7A8B9C00B52748FA0B2 /* AutoCheckpointTests.swift in Sources */,
