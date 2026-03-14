@@ -579,7 +579,10 @@ final class ChatViewModel {
                 // rebuild the prompt so the paths it receives point inside the worktree.
                 if self.worktreePath != nil && !capturedAttachments.isEmpty {
                     let worktreeAttachments = await self.copyAttachmentsToWorktree(capturedAttachments, apiClient: apiClient)
-                    claudePrompt = self.buildPrompt(text: capturedText, attachments: worktreeAttachments)
+                    let rebuiltPrompt = self.buildPrompt(text: capturedText, attachments: worktreeAttachments)
+                    claudePrompt = rebuiltPrompt
+                    // Sync the displayed user bubble to show the same paths Claude receives
+                    userMessage.content = [.text(rebuiltPrompt)]
                 }
             }
             await executeClaudeCommand(prompt: claudePrompt, apiClient: apiClient, modelContext: modelContext)
