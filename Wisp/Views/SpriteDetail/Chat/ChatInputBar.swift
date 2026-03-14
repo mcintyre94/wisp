@@ -73,6 +73,7 @@ struct ChatInputBar: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
                 .glassEffect(in: .rect(cornerRadius: 20))
+                .id(text.isEmpty)
 
                 if isStreaming {
                     Button {
