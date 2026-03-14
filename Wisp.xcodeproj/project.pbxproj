@@ -19,6 +19,7 @@
 		61CBE460AC96CBE6BF8AF0B0 /* SpriteSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6BE6E0D68BBB35DE56600E1 /* SpriteSession.swift */; };
 		6445AB5A4723D213CFDF0460 /* JSONValue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 3893EEF3ADDA05DF7A9C0909 /* JSONValue.swift */; };
 		6D0E6C856F514B6E4F81313C /* AppError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 616F53154EEA09CE101C7703 /* AppError.swift */; };
+		A1B2C3D4E5F60001DEADBEEF /* ShellEscaping.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60002DEADBEEF /* ShellEscaping.swift */; };
 		6F12D7D1F6C0AAFE6C28AB4C /* ClaudeEventTypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2B299898C61EA80D1A91AF37 /* ClaudeEventTypes.swift */; };
 		735DA590AAB4728F7A8B5037 /* Extensions.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8C4C3A1F2B2D57313431E50 /* Extensions.swift */; };
 		760347D84B9D49623B0A5BC5 /* AssistantMessageView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 39E3CEEE606D9AFF4265AB76 /* AssistantMessageView.swift */; };
@@ -241,6 +242,7 @@
 		AABB0011223344556677F007 /* APIModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIModelTests.swift; sourceTree = "<group>"; };
 		AABB0011223344556677F009 /* AppErrorTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppErrorTests.swift; sourceTree = "<group>"; };
 		AABB0011223344556677F00B /* ExtensionsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExtensionsTests.swift; sourceTree = "<group>"; };
+		A1B2C3D4E5F60002DEADBEEF /* ShellEscaping.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellEscaping.swift; sourceTree = "<group>"; };
 		B5C3D17E8A9FABC001D2E3F4 /* ClaudeModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeModelTests.swift; sourceTree = "<group>"; };
 		AA11BB22CC33DD44EE55FF01 /* GitHubDeviceFlowClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubDeviceFlowClient.swift; sourceTree = "<group>"; };
 		AA11BB22CC33DD44EE55FF03 /* GitHubDeviceFlowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = GitHubDeviceFlowView.swift; sourceTree = "<group>"; };
@@ -416,6 +418,7 @@
 				C8C4C3A1F2B2D57313431E50 /* Extensions.swift */,
 				A1B2C3D4E5F6A7B8C9D0E1F2 /* InAppBrowserCoordinator.swift */,
 				3893EEF3ADDA05DF7A9C0909 /* JSONValue.swift */,
+				A1B2C3D4E5F60002DEADBEEF /* ShellEscaping.swift */,
 				B2C3D4E5F6A70819304B5C6D /* SpriteChatMigration.swift */,
 			);
 			path = Utilities;
@@ -885,6 +888,7 @@
 				974996B0FB4D30828E89DD21 /* SpriteOverviewViewModel.swift in Sources */,
 				0418F9D619251B7E6DB0276F /* SpriteRowView.swift in Sources */,
 				A1B2C3D4E5F60718293A4B5E /* SpriteChat.swift in Sources */,
+				A1B2C3D4E5F60001DEADBEEF /* ShellEscaping.swift in Sources */,
 				B2C3D4E5F6A70819304B5C6E /* SpriteChatMigration.swift in Sources */,
 				C3D4E5F6A7B80920415C6D7F /* SpriteChatListViewModel.swift in Sources */,
 				A1B2C3D4E5F6A7B8C9D0E202 /* SideChatViewModel.swift in Sources */,
