@@ -156,15 +156,21 @@ enum ClaudeQuestionTool {
     static let versionPath = "/home/sprite/.wisp/claude-question/version"
 
     // Per-session helpers — each chat uses its own files so concurrent sessions don't conflict
+    static func sanitizedSessionId(_ sessionId: String) -> String {
+        // Only allow alphanumeric, hyphens, and underscores
+        sessionId.filter { $0.isLetter || $0.isNumber || $0 == "-" || $0 == "_" }
+    }
+
     static func mcpConfigJSON(for sessionId: String) -> String {
-        #"{"mcpServers":{"askUser":{"command":"python3","args":["/home/sprite/.wisp/claude-question/server.py"],"env":{"WISP_SESSION_ID":""# + sessionId + #""}}}}"#
+        let safe = sanitizedSessionId(sessionId)
+        return #"{"mcpServers":{"askUser":{"command":"python3","args":["/home/sprite/.wisp/claude-question/server.py"],"env":{"WISP_SESSION_ID":""# + safe + #""}}}}"#
     }
 
     static func mcpConfigFilePath(for sessionId: String) -> String {
-        "/tmp/.wisp_mcp_\(sessionId).json"
+        "/tmp/.wisp_mcp_\(sanitizedSessionId(sessionId)).json"
     }
 
     static func responseFilePath(for sessionId: String) -> String {
-        "/tmp/.wisp_ask_response_\(sessionId).json"
+        "/tmp/.wisp_ask_response_\(sanitizedSessionId(sessionId)).json"
     }
 }
