@@ -116,17 +116,7 @@ struct ChatInputBar: View {
                             onStash()
                         }
                     }
-                } label: {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.title2)
-                } primaryAction: {
-                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
-                    isFocused.wrappedValue = false
-                    onSend()
                 }
-                .tint(isEmpty || hasQueuedMessage ? .gray : Color("AccentColor"))
-                .disabled(isEmpty || hasQueuedMessage)
-                .buttonStyle(.glass)
             }
         }
         .animation(.easeInOut(duration: 0.2), value: attachedFiles.count)
