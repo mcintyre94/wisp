@@ -1473,17 +1473,28 @@ final class ChatViewModel {
         let worktreeParent = "/home/sprite/.wisp/worktrees/\(repoName)"
         let worktreeDir = "\(worktreeParent)/\(uniqueBranchName)"
 
-        let command = "git -C '\(currentWorkDir)' pull 2>/dev/null || true; mkdir -p '\(worktreeParent)' && if git -C '\(currentWorkDir)' worktree add '\(worktreeDir)' -b '\(uniqueBranchName)' 2>/dev/null; then echo '\(worktreeDir)'; fi"
+        // Mark all directories as safe to avoid "dubious ownership" errors when the repo
+        // is owned by a different uid than the running process (common on Sprites).
+        // Prune stale worktree registrations (handles dirs deleted without `git worktree remove`).
+        // Capture stderr from worktree add collapsed to one line so we can log it on failure.
+        let command = "git config --global --add safe.directory '*' 2>/dev/null; git -C '\(currentWorkDir)' pull 2>/dev/null || true; git -C '\(currentWorkDir)' worktree prune 2>/dev/null; mkdir -p '\(worktreeParent)' && GTWT_OUT=$(git -C '\(currentWorkDir)' worktree add '\(worktreeDir)' -b '\(uniqueBranchName)' 2>&1); if [ $? -eq 0 ]; then echo '\(worktreeDir)'; else echo \"WORKTREE_ERR:$(echo $GTWT_OUT)\"; fi"
 
         let (output, _) = await apiClient.runExec(spriteName: spriteName, command: command, timeout: 60)
         // git worktree add may print "HEAD is now at..." to stdout before our echo,
         // so take only the last non-empty line which is always the echo'd path.
-        let path = output
+        let lastLine = output
             .split(separator: "\n", omittingEmptySubsequences: true)
             .last
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) } ?? ""
 
-        guard !path.isEmpty else {
+        if lastLine.hasPrefix("WORKTREE_ERR:") {
+            logger.warning("[Worktree] git worktree add failed: \(lastLine)")
+            return
+        }
+
+        // Guard against any unexpected non-path output being treated as a working directory
+        let path = lastLine
+        guard !path.isEmpty && path.hasPrefix("/") else {
             logger.info("[Worktree] Setup skipped — not a git repo or worktree add failed")
             return
         }
