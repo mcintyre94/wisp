@@ -685,6 +685,7 @@ final class ChatViewModel {
         // Build the full bash -c command with env vars inlined
         var commandParts: [String] = [
             "export CLAUDE_CODE_OAUTH_TOKEN='\(claudeToken)'",
+            "export NO_DNA=1", // Signal to CLIs that they're running under an agent operator (no-dna.org)
             "mkdir -p \(workingDirectory)",
             "cd \(workingDirectory)",
         ]

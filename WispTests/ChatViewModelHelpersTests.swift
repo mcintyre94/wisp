@@ -75,4 +75,10 @@ struct ChatViewModelHelpersTests {
         let result = ChatViewModel.sanitize(input)
         #expect(result == "export CLAUDE_CODE_OAUTH_TOKEN=<redacted> && claude -p 'hello'")
     }
+
+    @Test func sanitize_noDNANotRedacted() {
+        let input = "export NO_DNA=1 && claude -p 'hello'"
+        let result = ChatViewModel.sanitize(input)
+        #expect(result == "export NO_DNA=1 && claude -p 'hello'")
+    }
 }
