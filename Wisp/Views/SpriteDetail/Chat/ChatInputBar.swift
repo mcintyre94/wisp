@@ -109,6 +109,9 @@ struct ChatInputBar: View {
                 .buttonStyle(.glass)
             }
         }
+        .onChange(of: text) { _, newValue in
+            if newValue.isEmpty { textInputHeight = 36 }
+        }
         .animation(.easeInOut(duration: 0.2), value: attachedFiles.count)
         .animation(.easeInOut(duration: 0.2), value: lastUploadedFileName)
         .padding(.horizontal)
