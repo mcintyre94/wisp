@@ -933,6 +933,7 @@ final class ChatViewModel {
                     receivedData = true
                     timeoutTask.cancel()
                     if case .connecting = status { status = .streaming }
+                    else if case .reconnecting = status { status = .streaming }
 
                     // Two-level NDJSON: ServiceLogEvent.data contains Claude NDJSON.
                     // The logs endpoint prefixes each line with a timestamp
@@ -961,6 +962,7 @@ final class ChatViewModel {
                     receivedData = true
                     timeoutTask.cancel()
                     if case .connecting = status { status = .streaming }
+                    else if case .reconnecting = status { status = .streaming }
                     if let text = event.data {
                         logger.warning("Service stderr: \(text.prefix(500), privacy: .public)")
                     }
@@ -994,6 +996,7 @@ final class ChatViewModel {
 
                 case .started:
                     if case .connecting = status { status = .streaming }
+                    else if case .reconnecting = status { status = .streaming }
 
                 case .stopping, .stopped:
                     break
