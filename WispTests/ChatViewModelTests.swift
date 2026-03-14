@@ -1046,7 +1046,7 @@ struct ChatViewModelTests {
     // MARK: - Live service reconnect
 
     @Test func runReconnectLoop_liveService_appliesContentCorrectly() async throws {
-        // When serviceIsRunning is true, isReplaying is cleared on the first new event
+        // When serviceAlreadyStopped is false (service is live), isReplaying is cleared on the first new event
         // so events render incrementally rather than being batched. The final content
         // should be identical to the batched path.
         let ctx = try makeModelContext()
@@ -1068,7 +1068,7 @@ struct ChatViewModelTests {
         }
         let mock = MockServiceLogsProvider(streams: [stream], statuses: ["stopped"])
 
-        await vm.runReconnectLoop(apiClient: mock, modelContext: ctx, serviceIsRunning: true)
+        await vm.runReconnectLoop(apiClient: mock, modelContext: ctx, serviceAlreadyStopped: false)
 
         #expect(assistantMsg.content.count == 1)
         if case .text(let text) = assistantMsg.content.first {
@@ -1106,7 +1106,7 @@ struct ChatViewModelTests {
         // The text and result events are new and should be processed via the live path.
         vm.processedEventUUIDs = ["s1-system"]
 
-        await vm.runReconnectLoop(apiClient: mock, modelContext: ctx, serviceIsRunning: true)
+        await vm.runReconnectLoop(apiClient: mock, modelContext: ctx, serviceAlreadyStopped: false)
 
         // New content lands even though a historical event was skipped first
         #expect(assistantMsg.content.count == 1)

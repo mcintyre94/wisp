@@ -594,7 +594,7 @@ final class ChatViewModel {
         // Cancel the stale stream and reconnect via service logs
         streamTask?.cancel()
         streamTask = Task {
-            await reconnectToServiceLogs(apiClient: apiClient, modelContext: modelContext, serviceIsRunning: true)
+            await reconnectToServiceLogs(apiClient: apiClient, modelContext: modelContext, serviceAlreadyStopped: false)
         }
     }
 
@@ -650,8 +650,8 @@ final class ChatViewModel {
             guard let serviceInfo = try? await apiClient.getServiceStatus(spriteName: spriteName, serviceName: serviceName)
             else { return }
 
-            let isRunning = serviceInfo.state.status == "running"
-            await reconnectToServiceLogs(apiClient: apiClient, modelContext: modelContext, serviceIsRunning: isRunning)
+            let alreadyStopped = serviceInfo.state.status != "running"
+            await reconnectToServiceLogs(apiClient: apiClient, modelContext: modelContext, serviceAlreadyStopped: alreadyStopped)
         }
     }
 
@@ -796,7 +796,7 @@ final class ChatViewModel {
         // Attempt reconnection on disconnect
         if case .disconnected = streamResult {
             logger.info("[Chat] Disconnected mid-stream, attempting reconnect via service logs")
-            await reconnectToServiceLogs(apiClient: apiClient, modelContext: modelContext, serviceIsRunning: true)
+            await reconnectToServiceLogs(apiClient: apiClient, modelContext: modelContext, serviceAlreadyStopped: false)
             return
         }
 
@@ -1041,10 +1041,10 @@ final class ChatViewModel {
     func runReconnectLoop(
         apiClient: some ServiceLogsProvider,
         modelContext: ModelContext,
-        serviceIsRunning: Bool = false
+        serviceAlreadyStopped: Bool = false
     ) async {
         isReplaying = true
-        isReplayingLiveService = serviceIsRunning
+        isReplayingLiveService = !serviceAlreadyStopped
         defer {
             applyReplayBuffer()
             isReplaying = false
@@ -1111,10 +1111,12 @@ final class ChatViewModel {
             // If we got a result event, Claude is done
             if receivedResultEvent { break }
 
-            // Check if service is still running
-            let isRunning = (try? await apiClient.getServiceStatus(spriteName: spriteName, serviceName: serviceName))?.state.status == "running"
+            // If we already knew the service was stopped before entering, no need to re-check
+            if serviceAlreadyStopped { break }
 
-            if isRunning {
+            // Check if service is still running before retrying
+            if let serviceInfo = try? await apiClient.getServiceStatus(spriteName: spriteName, serviceName: serviceName),
+               serviceInfo.state.status == "running" {
                 logger.info("[Chat] Service still running, will re-poll after delay")
                 try? await Task.sleep(for: .seconds(2))
                 continue
@@ -1150,9 +1152,9 @@ final class ChatViewModel {
     private func reconnectToServiceLogs(
         apiClient: SpritesAPIClient,
         modelContext: ModelContext,
-        serviceIsRunning: Bool = false
+        serviceAlreadyStopped: Bool = false
     ) async {
-        await runReconnectLoop(apiClient: apiClient, modelContext: modelContext, serviceIsRunning: serviceIsRunning)
+        await runReconnectLoop(apiClient: apiClient, modelContext: modelContext, serviceAlreadyStopped: serviceAlreadyStopped)
 
         if let queued = queuedPrompt, !Task.isCancelled {
             let prompt = buildPrompt(text: queued, attachments: queuedAttachments)
