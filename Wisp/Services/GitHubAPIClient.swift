@@ -20,18 +20,19 @@ struct GitHubUser: Sendable {
 
 struct GitHubAPIClient: Sendable {
     let token: String?
+    private static let jsonDecoder = JSONDecoder()
 
     func fetchUserProfile() async throws -> GitHubUser {
         let url = URL(string: "https://api.github.com/user")!
         let data = try await performRequest(url: url)
-        let json = try JSONDecoder().decode(UserJSON.self, from: data)
+        let json = try Self.jsonDecoder.decode(UserJSON.self, from: data)
         return GitHubUser(name: json.name, email: json.email, login: json.login)
     }
 
     func fetchPrimaryEmail() async throws -> String? {
         let url = URL(string: "https://api.github.com/user/emails")!
         let data = try await performRequest(url: url)
-        let emails = try JSONDecoder().decode([EmailJSON].self, from: data)
+        let emails = try Self.jsonDecoder.decode([EmailJSON].self, from: data)
         return emails.first(where: { $0.primary })?.email ?? emails.first?.email
     }
 
@@ -71,12 +72,12 @@ struct GitHubAPIClient: Sendable {
     }
 
     private func decodeRepos(from data: Data) throws -> [GitHubRepo] {
-        let items = try JSONDecoder().decode([RepoJSON].self, from: data)
+        let items = try Self.jsonDecoder.decode([RepoJSON].self, from: data)
         return items.map(\.toGitHubRepo)
     }
 
     private func decodeSearchResults(from data: Data) throws -> [GitHubRepo] {
-        let result = try JSONDecoder().decode(SearchResultJSON.self, from: data)
+        let result = try Self.jsonDecoder.decode(SearchResultJSON.self, from: data)
         return result.items.map(\.toGitHubRepo)
     }
 }
