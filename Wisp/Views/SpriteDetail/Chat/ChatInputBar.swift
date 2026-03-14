@@ -72,7 +72,6 @@ struct ChatInputBar: View {
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
                 .glassEffect(in: .rect(cornerRadius: 20))
-                .id(text.isEmpty)
 
                 if isStreaming {
                     Button {
@@ -109,6 +108,9 @@ struct ChatInputBar: View {
                 .disabled(isEmpty || hasQueuedMessage)
                 .buttonStyle(.glass)
             }
+        }
+        .onChange(of: text) { _, newValue in
+            if newValue.isEmpty { textInputHeight = 36 }
         }
         .animation(.easeInOut(duration: 0.2), value: attachedFiles.count)
         .animation(.easeInOut(duration: 0.2), value: lastUploadedFileName)
