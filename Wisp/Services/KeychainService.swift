@@ -59,12 +59,14 @@ struct KeychainService: Sendable {
         }
     }
 
-    func delete(key: KeychainKey) {
+    @discardableResult
+    func delete(key: KeychainKey) -> Bool {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: key.rawValue,
         ]
-        SecItemDelete(query as CFDictionary)
+        let status = SecItemDelete(query as CFDictionary)
+        return status == errSecSuccess || status == errSecItemNotFound
     }
 }
 
