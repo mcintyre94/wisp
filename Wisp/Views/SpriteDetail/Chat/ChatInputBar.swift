@@ -83,6 +83,7 @@ struct ChatInputBar: View {
                             .font(.title2)
                     }
                     .tint(.red)
+                    .accessibilityLabel("Stop response")
                     .buttonStyle(.glass)
                     .confirmationDialog("Stop Claude?", isPresented: $showStopConfirmation) {
                         Button("Stop", role: .destructive, action: onInterrupt)
@@ -118,6 +119,7 @@ struct ChatInputBar: View {
                         }
                     }
                 }
+                .accessibilityLabel("Send message")
             }
         }
         .onChange(of: text) { _, newValue in
