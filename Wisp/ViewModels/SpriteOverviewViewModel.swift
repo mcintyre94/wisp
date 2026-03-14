@@ -247,12 +247,7 @@ final class SpriteOverviewViewModel {
             let lines = output.trimmingCharacters(in: .whitespacesAndNewlines).split(separator: "\n")
             if let lastLine = lines.last {
                 let newInstalled = String(lastLine).trimmingCharacters(in: .whitespacesAndNewlines)
-                let npmVersion = await fetchNpmLatestVersion()
-                if let npm = npmVersion, let semver = extractSemver(from: newInstalled), semver == npm {
-                    claudeCodeVersionStatus = .upToDate(version: newInstalled)
-                } else {
-                    claudeCodeVersionStatus = .upToDate(version: newInstalled)
-                }
+                claudeCodeVersionStatus = .upToDate(version: newInstalled)
             } else {
                 claudeCodeVersionStatus = .updateFailed(error: "Update succeeded but could not read version")
             }
