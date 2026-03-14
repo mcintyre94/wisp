@@ -77,34 +77,29 @@ struct SettingsView: View {
             HStack {
                 Label("GitHub", systemImage: "lock.shield")
                 Spacer()
-                if apiClient.hasGitHubToken {
-                    Text("Connected")
-                        .foregroundStyle(.green)
-                } else {
-                    Text("Not Connected")
-                        .foregroundStyle(.secondary)
-                }
+                #if DEBUG
+                Text(copiedTokenFlash ? "Copied!" : (apiClient.hasGitHubToken ? "Connected" : "Not Connected"))
+                    .foregroundStyle(copiedTokenFlash ? .green : (apiClient.hasGitHubToken ? .green : .secondary))
+                    .contentTransition(.numericText())
+                #else
+                Text(apiClient.hasGitHubToken ? "Connected" : "Not Connected")
+                    .foregroundStyle(apiClient.hasGitHubToken ? .green : .secondary)
+                #endif
             }
             #if DEBUG
             .onTapGesture {
                 if let token = apiClient.githubToken {
                     UIPasteboard.general.string = token
-                    copiedTokenFlash = true
-                    Task {
-                        try? await Task.sleep(for: .milliseconds(1500))
-                        copiedTokenFlash = false
+                    withAnimation {
+                        copiedTokenFlash = true
+                    }
+                    DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                        withAnimation {
+                            copiedTokenFlash = false
+                        }
                     }
                 }
             }
-            .overlay(alignment: .trailing) {
-                if copiedTokenFlash {
-                    Text("Copied!")
-                        .font(.caption)
-                        .foregroundStyle(.green)
-                        .transition(.opacity)
-                }
-            }
-            .animation(.easeInOut(duration: 0.2), value: copiedTokenFlash)
             #endif
 
             if apiClient.hasGitHubToken {
@@ -225,57 +220,46 @@ struct SettingsView: View {
             HStack {
                 Label("Device ID", systemImage: "iphone")
                 Spacer()
-                Text(deviceID)
+                Text(copiedDeviceIDFlash ? "Copied!" : deviceID)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(copiedDeviceIDFlash ? .green : .secondary)
                     .lineLimit(1)
                     .truncationMode(.middle)
+                    .contentTransition(.numericText())
             }
             .onTapGesture {
                 UIPasteboard.general.string = deviceID
-                copiedDeviceIDFlash = true
-                Task {
-                    try? await Task.sleep(for: .milliseconds(1500))
-                    copiedDeviceIDFlash = false
+                withAnimation {
+                    copiedDeviceIDFlash = true
+                }
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    withAnimation {
+                        copiedDeviceIDFlash = false
+                    }
                 }
             }
-            .overlay(alignment: .trailing) {
-                if copiedDeviceIDFlash {
-                    Text("Copied!")
-                        .font(.caption)
-                        .foregroundStyle(.green)
-                        .transition(.opacity)
-                }
-            }
-            .animation(.easeInOut(duration: 0.2), value: copiedDeviceIDFlash)
             HStack {
                 Label("Build Commit", systemImage: "hammer")
                 Spacer()
-                Text(buildCommit)
+                Text(copiedCommitFlash ? "Copied!" : buildCommit)
                     .font(.caption)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(copiedCommitFlash ? .green : .secondary)
                     .fontDesign(.monospaced)
+                    .contentTransition(.numericText())
             }
             .onTapGesture {
                 UIPasteboard.general.string = buildCommit
-                copiedCommitFlash = true
+                withAnimation {
+                    copiedCommitFlash = true
+                }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
-                    copiedCommitFlash = false
+                    withAnimation {
+                        copiedCommitFlash = false
+                    }
                 }
             }
-            .overlay(alignment: .trailing) {
-                if copiedCommitFlash {
-                    Text("Copied!")
-                        .font(.caption)
-                        .foregroundStyle(.green)
-                        .transition(.opacity)
-                }
-            }
-            .animation(.default, value: copiedCommitFlash)
         } header: {
             Text("Developer")
-        } footer: {
-            Text("Device identifier for push notification targeting. Tap to copy.")
         }
     }
     #endif

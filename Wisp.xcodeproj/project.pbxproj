@@ -35,6 +35,7 @@
 		CC11DD22EE33FF4400110001 /* ChatAttachmentButton.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC11DD22EE33FF4400110002 /* ChatAttachmentButton.swift */; };
 		DD22EE33FF4400110007AA01 /* AttachmentChipsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = DD22EE33FF4400110007AA02 /* AttachmentChipsView.swift */; };
 		994D6CD07165B1FDF9AE7300 /* ChatInputBar.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7C308D530B9DAC21AD2A843B /* ChatInputBar.swift */; };
+		EE11FF22AA33BB4400220001 /* PasteInterceptingTextInput.swift in Sources */ = {isa = PBXBuildFile; fileRef = EE11FF22AA33BB4400220002 /* PasteInterceptingTextInput.swift */; };
 		CC11DD22EE33FF4400110003 /* SpriteFileBrowserView.swift in Sources */ = {isa = PBXBuildFile; fileRef = CC11DD22EE33FF4400110004 /* SpriteFileBrowserView.swift */; };
 		99BA5812AF56D1C7501D1F0C /* CreateCheckpointSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2DDF8D1F423CF62E04FDBA07 /* CreateCheckpointSheet.swift */; };
 		9CAC809156C87B9CBD77F706 /* MarkdownUI in Frameworks */ = {isa = PBXBuildFile; productRef = 6F228BF923FFA9401FFC29C5 /* MarkdownUI */; };
@@ -190,6 +191,7 @@
 		CC11DD22EE33FF4400110002 /* ChatAttachmentButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatAttachmentButton.swift; sourceTree = "<group>"; };
 		DD22EE33FF4400110007AA02 /* AttachmentChipsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AttachmentChipsView.swift; sourceTree = "<group>"; };
 		7C308D530B9DAC21AD2A843B /* ChatInputBar.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatInputBar.swift; sourceTree = "<group>"; };
+		EE11FF22AA33BB4400220002 /* PasteInterceptingTextInput.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PasteInterceptingTextInput.swift; sourceTree = "<group>"; };
 		CC11DD22EE33FF4400110004 /* SpriteFileBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpriteFileBrowserView.swift; sourceTree = "<group>"; };
 		7EE32C593901CBCD7DE899D3 /* ExecMessage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ExecMessage.swift; sourceTree = "<group>"; };
 		82F0818DD437A77B57594574 /* AuthView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthView.swift; sourceTree = "<group>"; };
@@ -559,6 +561,7 @@
 				CC11DD22EE33FF4400110002 /* ChatAttachmentButton.swift */,
 				C4D5E6F7A8B90A41637E8FA1 /* CheckpointMarkerView.swift */,
 				7C308D530B9DAC21AD2A843B /* ChatInputBar.swift */,
+				EE11FF22AA33BB4400220002 /* PasteInterceptingTextInput.swift */,
 				D9BC746AE628458445D34FCE /* ChatMessageView.swift */,
 				42C4A8D129C538233C34B2A6 /* ChatStatusBar.swift */,
 				D4E5F6A7B8C90A31526D7E8F /* ChatSwitcherSheet.swift */,
@@ -835,6 +838,7 @@
 				DD22EE33FF4400110007AA01 /* AttachmentChipsView.swift in Sources */,
 				CC11DD22EE33FF4400110001 /* ChatAttachmentButton.swift in Sources */,
 				994D6CD07165B1FDF9AE7300 /* ChatInputBar.swift in Sources */,
+				EE11FF22AA33BB4400220001 /* PasteInterceptingTextInput.swift in Sources */,
 				252341DD690F4B3DA4E378BE /* ChatMessage.swift in Sources */,
 				0DCFEEB6A976CC63316F4535 /* ChatMessageView.swift in Sources */,
 				C6F4D8ADAC992544E82FC4D0 /* ChatStatusBar.swift in Sources */,

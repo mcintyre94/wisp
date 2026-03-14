@@ -1,5 +1,5 @@
 import SwiftUI
-import UniformTypeIdentifiers
+import UIKit
 
 struct ChatInputBar: View {
     @Binding var text: String
@@ -12,7 +12,6 @@ struct ChatInputBar: View {
     var onPickFile: (() -> Void)? = nil
     var onLongPressSend: (() -> Void)? = nil
     var onPasteFromClipboard: (() -> Void)? = nil
-    var onPasteItems: (([NSItemProvider]) -> Void)? = nil
     var isUploading: Bool = false
     var attachedFiles: [AttachedFile] = []
     var onRemoveAttachment: ((AttachedFile) -> Void)? = nil
@@ -21,6 +20,7 @@ struct ChatInputBar: View {
     var isFocused: FocusState<Bool>.Binding
 
     @State private var showStopConfirmation = false
+    @State private var textInputHeight: CGFloat = 36
 
     private var isEmpty: Bool {
         text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && attachedFiles.isEmpty
@@ -57,21 +57,22 @@ struct ChatInputBar: View {
                         isDisabled: hasQueuedMessage,
                         onBrowseSpriteFiles: onBrowseSpriteFiles,
                         onPickPhoto: onPickPhoto,
-                        onPickFile: onPickFile,
-                        onPasteFromClipboard: onPasteFromClipboard
+                        onPickFile: onPickFile
                     )
                 }
 
-                TextField("Message...", text: $text, axis: .vertical)
-                    .focused(isFocused)
-                    .lineLimit(1...5)
-                    .textFieldStyle(.plain)
-                    .padding(.horizontal, 16)
-                    .padding(.vertical, 8)
-                    .frame(minHeight: 36)
-                    .glassEffect(in: .rect(cornerRadius: 20))
-                    .disabled(hasQueuedMessage)
-                    .modifier(PasteItemsModifier(onPasteItems: onPasteItems))
+                PasteInterceptingTextInput(
+                    text: $text,
+                    isFocused: isFocused,
+                    isDisabled: hasQueuedMessage,
+                    placeholder: "Message...",
+                    onPasteNonText: onPasteFromClipboard,
+                    dynamicHeight: $textInputHeight
+                )
+                .frame(height: max(textInputHeight, 36))
+                .padding(.horizontal, 16)
+                .padding(.vertical, 8)
+                .glassEffect(in: .rect(cornerRadius: 20))
 
                 if isStreaming {
                     Button {
@@ -91,6 +92,7 @@ struct ChatInputBar: View {
                 }
 
                 Button {
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
                     isFocused.wrappedValue = false
                     onSend()
                 } label: {
@@ -114,7 +116,17 @@ struct ChatInputBar: View {
                             onStash()
                         }
                     }
+                } label: {
+                    Image(systemName: "arrow.up.circle.fill")
+                        .font(.title2)
+                } primaryAction: {
+                    UIApplication.shared.sendAction(#selector(UIResponder.resignFirstResponder), to: nil, from: nil, for: nil)
+                    isFocused.wrappedValue = false
+                    onSend()
                 }
+                .tint(isEmpty || hasQueuedMessage ? .gray : Color("AccentColor"))
+                .disabled(isEmpty || hasQueuedMessage)
+                .buttonStyle(.glass)
             }
         }
         .animation(.easeInOut(duration: 0.2), value: attachedFiles.count)
@@ -124,20 +136,6 @@ struct ChatInputBar: View {
         .padding(.bottom, isRunningOnMac ? 12 : 0)
     }
 
-}
-
-private struct PasteItemsModifier: ViewModifier {
-    var onPasteItems: (([NSItemProvider]) -> Void)?
-
-    func body(content: Content) -> some View {
-        #if targetEnvironment(macCatalyst)
-        content.onPaste(of: [.image, .fileURL]) { providers in
-            onPasteItems?(providers)
-        }
-        #else
-        content
-        #endif
-    }
 }
 
 #Preview("Idle") {

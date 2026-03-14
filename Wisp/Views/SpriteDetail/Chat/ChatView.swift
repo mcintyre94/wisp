@@ -172,7 +172,6 @@ struct ChatView: View {
                     onPickFile: { showFilePicker = true },
                     onLongPressSend: { showCreateLoopSheet = true },
                     onPasteFromClipboard: handlePasteFromClipboard,
-                    onPasteItems: handlePastedItems,
                     isUploading: viewModel.isUploadingAttachment,
                     attachedFiles: viewModel.attachedFiles,
                     onRemoveAttachment: { file in
@@ -296,7 +295,22 @@ struct ChatView: View {
             return
         }
 
-        // Try a file URL (e.g. copied from Files app)
+        // Try a file URL via item providers (handles security-scoped URLs from Files app)
+        for provider in pasteboard.itemProviders {
+            if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
+                provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier) { item, _ in
+                    guard let url = item as? URL else { return }
+                    Task { @MainActor in
+                        if let remotePath = await viewModel.uploadFileFromDevice(apiClient: apiClient, fileURL: url) {
+                            viewModel.addAttachedFile(remotePath: remotePath)
+                        }
+                    }
+                }
+                return
+            }
+        }
+
+        // Fallback: direct URL from pasteboard
         if let url = pasteboard.url, url.isFileURL {
             Task {
                 if let remotePath = await viewModel.uploadFileFromDevice(apiClient: apiClient, fileURL: url) {
@@ -306,46 +320,41 @@ struct ChatView: View {
             return
         }
 
+        // Fallback: load raw data from item providers (files from Files app use their
+        // content UTI directly — e.g. com.adobe.pdf — rather than public.file-url)
+        for provider in pasteboard.itemProviders {
+            guard let typeId = provider.registeredTypeIdentifiers.first(where: { id in
+                guard let type = UTType(id) else { return false }
+                return type.conforms(to: .data) && !type.conforms(to: .text)
+            }) else { continue }
+
+            let suggestedName = provider.suggestedName
+            let fileExt = UTType(typeId)?.preferredFilenameExtension
+            provider.loadDataRepresentation(forTypeIdentifier: typeId) { data, _ in
+                guard let data else { return }
+                let baseName = suggestedName ?? "pasted_file"
+                let filename: String
+                if let ext = fileExt, !baseName.hasSuffix(".\(ext)") {
+                    filename = "\(baseName).\(ext)"
+                } else {
+                    filename = baseName
+                }
+                let tempURL = FileManager.default.temporaryDirectory
+                    .appendingPathComponent(UUID().uuidString)
+                    .appendingPathComponent(filename)
+                try? FileManager.default.createDirectory(at: tempURL.deletingLastPathComponent(), withIntermediateDirectories: true)
+                guard (try? data.write(to: tempURL)) != nil else { return }
+                Task { @MainActor in
+                    if let remotePath = await viewModel.uploadFileFromDevice(apiClient: apiClient, fileURL: tempURL) {
+                        viewModel.addAttachedFile(remotePath: remotePath)
+                    }
+                    try? FileManager.default.removeItem(at: tempURL.deletingLastPathComponent())
+                }
+            }
+            return
+        }
+
         viewModel.uploadAttachmentError = "No image or file found in clipboard"
-    }
-
-    private func handlePastedItems(_ providers: [NSItemProvider]) {
-        guard let provider = providers.first else { return }
-
-        for (type, ext) in Self.pasteImageFormats where provider.hasItemConformingToTypeIdentifier(type.identifier) {
-            provider.loadDataRepresentation(forTypeIdentifier: type.identifier) { data, _ in
-                guard let data else { return }
-                Task { @MainActor in
-                    if let remotePath = await viewModel.uploadPhotoData(apiClient: apiClient, data: data, fileExtension: ext) {
-                        viewModel.addAttachedFile(remotePath: remotePath)
-                    }
-                }
-            }
-            return
-        }
-
-        if provider.hasItemConformingToTypeIdentifier(UTType.image.identifier) {
-            provider.loadDataRepresentation(forTypeIdentifier: UTType.png.identifier) { data, _ in
-                guard let data else { return }
-                Task { @MainActor in
-                    if let remotePath = await viewModel.uploadPhotoData(apiClient: apiClient, data: data, fileExtension: "png") {
-                        viewModel.addAttachedFile(remotePath: remotePath)
-                    }
-                }
-            }
-            return
-        }
-
-        if provider.hasItemConformingToTypeIdentifier(UTType.fileURL.identifier) {
-            provider.loadItem(forTypeIdentifier: UTType.fileURL.identifier) { item, _ in
-                guard let url = item as? URL, url.isFileURL else { return }
-                Task { @MainActor in
-                    if let remotePath = await viewModel.uploadFileFromDevice(apiClient: apiClient, fileURL: url) {
-                        viewModel.addAttachedFile(remotePath: remotePath)
-                    }
-                }
-            }
-        }
     }
 
     @ViewBuilder
