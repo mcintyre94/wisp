@@ -330,7 +330,7 @@ final class SpritesAPIClient {
                         return
                     }
 
-                    let decoder = JSONDecoder()
+                    let decoder = self.decoder
                     for try await line in bytes.lines {
                         guard !line.isEmpty, let data = line.data(using: .utf8) else { continue }
                         do {
@@ -394,7 +394,7 @@ final class SpritesAPIClient {
                         return
                     }
 
-                    let decoder = JSONDecoder()
+                    let decoder = self.decoder
                     for try await line in bytes.lines {
                         guard !line.isEmpty, let data = line.data(using: .utf8) else { continue }
                         do {
@@ -684,7 +684,7 @@ extension SpritesAPIClient {
             }
         }
 
-        let decoder = JSONDecoder()
+        let decoder = self.decoder
         for try await line in bytes.lines {
             guard !line.isEmpty, let data = line.data(using: .utf8) else { continue }
             if let event = try? decoder.decode(CheckpointStreamEvent.self, from: data) {
