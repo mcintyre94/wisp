@@ -22,6 +22,7 @@ struct BashQuickView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding([.horizontal, .top])
                                 .padding(.bottom, viewModel.output.isEmpty ? 12 : 4)
+                                .copyContextMenu(viewModel.lastCommand)
                         }
                         if !viewModel.output.isEmpty {
                             Text(viewModel.output)
@@ -31,6 +32,7 @@ struct BashQuickView: View {
                                 .padding(.horizontal)
                                 .padding(.bottom)
                                 .id("output")
+                                .copyContextMenu(viewModel.output)
                         } else if viewModel.isRunning {
                             ThinkingShimmerView(label: "Running…")
                                 .padding()

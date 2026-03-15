@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 #if canImport(UIKit)
 import UIKit
 #endif
@@ -73,5 +74,17 @@ extension String {
     func relativeToCwd(_ cwd: String) -> String {
         guard !cwd.isEmpty else { return self }
         return replacingOccurrences(of: cwd + "/", with: "./")
+    }
+}
+
+extension View {
+    func copyContextMenu(_ text: String) -> some View {
+        contextMenu {
+            Button {
+                UIPasteboard.general.string = text
+            } label: {
+                Label("Copy", systemImage: "doc.on.doc")
+            }
+        }
     }
 }
