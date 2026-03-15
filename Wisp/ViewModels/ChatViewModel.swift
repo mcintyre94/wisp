@@ -1302,8 +1302,9 @@ final class ChatViewModel {
             }
             receivedResultEvent = true
             sessionId = resultEvent.sessionId
+            let alreadyComplete = fetchChat(modelContext: modelContext)?.lastSessionComplete ?? false
             saveSession(modelContext: modelContext, isComplete: true)
-            if !isReplaying { markChatUnread(modelContext: modelContext) }
+            if !alreadyComplete { markChatUnread(modelContext: modelContext) }
 
             let autoCheckpointEnabled = UserDefaults.standard.bool(forKey: "autoCheckpoint")
             if !isReplaying, turnHasMutations, autoCheckpointEnabled, let apiClient {
