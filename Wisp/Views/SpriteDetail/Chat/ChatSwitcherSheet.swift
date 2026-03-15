@@ -9,22 +9,29 @@ struct ChatSwitcherSheet: View {
     @State private var chatToDelete: SpriteChat?
     @State private var chatToRename: SpriteChat?
     @State private var renameText = ""
+    @State private var searchText = ""
+
+    private var filteredChats: [SpriteChat] {
+        guard !searchText.isEmpty else { return viewModel.chats }
+        return viewModel.chats.filter { chat in
+            chat.displayName.localizedCaseInsensitiveContains(searchText) ||
+            chat.fullTextContent?.localizedCaseInsensitiveContains(searchText) == true
+        }
+    }
 
     var body: some View {
         NavigationStack {
             List {
-                ForEach(viewModel.chats, id: \.id) { chat in
-                    Button {
+                ForEach(filteredChats, id: \.id) { chat in
+                    ChatRowView(
+                        chat: chat,
+                        isActive: chat.id == viewModel.activeChatId
+                    )
+                    .contentShape(Rectangle())
+                    .onTapGesture {
                         viewModel.selectChat(chat)
                         dismiss()
-                    } label: {
-                        ChatRowView(
-                            chat: chat,
-                            isActive: chat.id == viewModel.activeChatId
-                        )
-                        .contentShape(Rectangle())
                     }
-                    .buttonStyle(.plain)
                     .contextMenu {
                         if let sessionId = chat.claudeSessionId, !chat.isClosed {
                             Button {
@@ -99,6 +106,7 @@ struct ChatSwitcherSheet: View {
             }
             .navigationTitle("Chats")
             .navigationBarTitleDisplayMode(.inline)
+            .searchable(text: $searchText, prompt: "Search chats")
             .toolbar {
                 ToolbarItem(placement: .cancellationAction) {
                     Button("Done") { dismiss() }
