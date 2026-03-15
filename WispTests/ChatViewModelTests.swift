@@ -1046,7 +1046,7 @@ struct ChatViewModelTests {
     // MARK: - Live service reconnect
 
     @Test func runReconnectLoop_liveService_appliesContentCorrectly() async throws {
-        // When serviceIsRunning is true, isReplaying is cleared on the first new event
+        // When serviceAlreadyStopped is false (service is live), isReplaying is cleared on the first new event
         // so events render incrementally rather than being batched. The final content
         // should be identical to the batched path.
         let ctx = try makeModelContext()
@@ -1068,7 +1068,7 @@ struct ChatViewModelTests {
         }
         let mock = MockServiceLogsProvider(streams: [stream], statuses: ["stopped"])
 
-        await vm.runReconnectLoop(apiClient: mock, modelContext: ctx, serviceIsRunning: true)
+        await vm.runReconnectLoop(apiClient: mock, modelContext: ctx, serviceAlreadyStopped: false)
 
         #expect(assistantMsg.content.count == 1)
         if case .text(let text) = assistantMsg.content.first {
@@ -1106,7 +1106,7 @@ struct ChatViewModelTests {
         // The text and result events are new and should be processed via the live path.
         vm.processedEventUUIDs = ["s1-system"]
 
-        await vm.runReconnectLoop(apiClient: mock, modelContext: ctx, serviceIsRunning: true)
+        await vm.runReconnectLoop(apiClient: mock, modelContext: ctx, serviceAlreadyStopped: false)
 
         // New content lands even though a historical event was skipped first
         #expect(assistantMsg.content.count == 1)
@@ -1115,6 +1115,82 @@ struct ChatViewModelTests {
         } else {
             Issue.record("Expected text content after skipped historical event")
         }
+    }
+
+    // MARK: - runReconnectLoop: assistant message placement
+
+    @Test func runReconnectLoop_appendsAssistantAfterLatestUserMessage() async throws {
+        // Regression: messages.last(where: .assistant) would find a *previous* exchange's
+        // assistant message and write the new response into it, placing it before the latest
+        // user message. The fix checks messages.last only, so a new assistant message is
+        // always created after the most recent user message.
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        // Simulate a completed prior exchange already in messages
+        let prevUser = ChatMessage(role: .user, content: [.text("first question")])
+        let prevAssistant = ChatMessage(role: .assistant, content: [.text("first answer")])
+        let newUser = ChatMessage(role: .user, content: [.text("second question")])
+        vm.messages = [prevUser, prevAssistant, newUser]
+
+        let textLine = #"{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"second answer"}]}}"# + "\n"
+        let resultLine = #"{"type":"result","session_id":"s1","subtype":"success"}"# + "\n"
+        let stream = AsyncThrowingStream<ServiceLogEvent, Error> { continuation in
+            continuation.yield(ServiceLogEvent(type: .stdout, data: textLine, exitCode: nil, timestamp: nil, logFiles: nil))
+            continuation.yield(ServiceLogEvent(type: .stdout, data: resultLine, exitCode: nil, timestamp: nil, logFiles: nil))
+            continuation.finish()
+        }
+        let mock = MockServiceLogsProvider(streams: [stream], statuses: ["stopped"])
+
+        await vm.runReconnectLoop(apiClient: mock, modelContext: ctx, serviceAlreadyStopped: true)
+
+        // Should have 4 messages: prevUser, prevAssistant, newUser, newAssistant
+        #expect(vm.messages.count == 4)
+        #expect(vm.messages[0].role == .user)
+        #expect(vm.messages[1].role == .assistant)
+        #expect(vm.messages[2].role == .user)
+        #expect(vm.messages[3].role == .assistant)
+        // New response lands in the new assistant message, not the previous one
+        if case .text(let text) = vm.messages[3].content.first {
+            #expect(text == "second answer")
+        } else {
+            Issue.record("Expected text in new assistant message")
+        }
+        // Prior assistant message content is untouched
+        if case .text(let text) = vm.messages[1].content.first {
+            #expect(text == "first answer")
+        } else {
+            Issue.record("Expected prior assistant message to be unchanged")
+        }
+    }
+
+    // MARK: - reconnecting → streaming status transition
+
+    @Test func runReconnectLoop_transitionsReconnectingToStreamingOnStdoutData() async throws {
+        // Verifies the status trajectory: idle → reconnecting → streaming → idle
+        // When stdout data arrives in .reconnecting state, status must move to .streaming (line 935-936).
+        // When the result event arrives and the loop exits cleanly, status returns to .idle.
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        let assistantMsg = ChatMessage(role: .assistant)
+        vm.messages.append(assistantMsg)
+        vm.setCurrentAssistantMessage(assistantMsg)
+
+        let textLine = #"{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Hello"}]}}"# + "\n"
+        let resultLine = #"{"type":"result","session_id":"s1","subtype":"success"}"# + "\n"
+
+        let stream = AsyncThrowingStream<ServiceLogEvent, Error> { continuation in
+            continuation.yield(ServiceLogEvent(type: .stdout, data: textLine, exitCode: nil, timestamp: nil, logFiles: nil))
+            continuation.yield(ServiceLogEvent(type: .stdout, data: resultLine, exitCode: nil, timestamp: nil, logFiles: nil))
+            continuation.finish()
+        }
+        let mock = MockServiceLogsProvider(streams: [stream], statuses: ["stopped"])
+
+        #expect(vm.status == .idle)
+        await vm.runReconnectLoop(apiClient: mock, modelContext: ctx, serviceAlreadyStopped: true)
+        // Loop completed cleanly: reconnecting → streaming → idle
+        #expect(vm.status == .idle)
     }
 
     // MARK: - addAttachedFile
@@ -1219,5 +1295,54 @@ struct ChatViewModelTests {
 
         #expect(vm.attachedFiles.count == 1)
         #expect(vm.attachedFiles[0].name == "live.py")
+    }
+
+    // MARK: - restoreUndeliveredDraft
+
+    @Test func restoreUndeliveredDraft_removesTrailingUserMessageAndRestoresInputText() throws {
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        vm.messages = [
+            ChatMessage(role: .user, content: [.text("first message")]),
+            ChatMessage(role: .assistant, content: [.text("response")]),
+            ChatMessage(role: .user, content: [.text("unsent message")]),
+        ]
+
+        vm.restoreUndeliveredDraft(modelContext: ctx)
+
+        #expect(vm.messages.count == 2)
+        #expect(vm.inputText == "unsent message")
+    }
+
+    @Test func restoreUndeliveredDraft_isNoopWhenLastMessageIsAssistant() throws {
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        vm.messages = [
+            ChatMessage(role: .user, content: [.text("hello")]),
+            ChatMessage(role: .assistant, content: [.text("hi there")]),
+        ]
+
+        vm.restoreUndeliveredDraft(modelContext: ctx)
+
+        #expect(vm.messages.count == 2)
+        #expect(vm.inputText == "")
+    }
+
+    @Test func restoreUndeliveredDraft_doesNotOverwriteExistingInputText() throws {
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        vm.messages = [
+            ChatMessage(role: .user, content: [.text("unsent message")]),
+        ]
+        vm.inputText = "already typing something"
+
+        vm.restoreUndeliveredDraft(modelContext: ctx)
+
+        // Message removed but inputText NOT overwritten
+        #expect(vm.messages.count == 0)
+        #expect(vm.inputText == "already typing something")
     }
 }

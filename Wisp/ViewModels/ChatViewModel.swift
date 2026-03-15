@@ -594,7 +594,7 @@ final class ChatViewModel {
         // Cancel the stale stream and reconnect via service logs
         streamTask?.cancel()
         streamTask = Task {
-            await reconnectToServiceLogs(apiClient: apiClient, modelContext: modelContext, serviceIsRunning: true)
+            await reconnectToServiceLogs(apiClient: apiClient, modelContext: modelContext, serviceAlreadyStopped: false)
         }
     }
 
@@ -642,17 +642,39 @@ final class ChatViewModel {
         // If the last session completed cleanly, content is already loaded from
         // persistence — no need to hit the network at all.
         if let chat = fetchChat(modelContext: modelContext), chat.lastSessionComplete {
+            // Edge case: app killed between persistMessages and saveSession(isComplete:false).
+            // The session was previously complete but a new user message was appended and
+            // persisted before the service was created. Restore it as a draft.
+            restoreUndeliveredDraft(modelContext: modelContext)
             return
         }
 
         streamTask = Task {
             // Only reconnect if the service exists (running or stopped with logs)
             guard let serviceInfo = try? await apiClient.getServiceStatus(spriteName: spriteName, serviceName: serviceName)
-            else { return }
+            else {
+                // Service was never created (e.g. app killed before the service call).
+                // Restore any trailing user message as a draft rather than leaving a
+                // stale bubble with no response.
+                restoreUndeliveredDraft(modelContext: modelContext)
+                return
+            }
 
-            let isRunning = serviceInfo.state.status == "running"
-            await reconnectToServiceLogs(apiClient: apiClient, modelContext: modelContext, serviceIsRunning: isRunning)
+            let alreadyStopped = serviceInfo.state.status != "running"
+            await reconnectToServiceLogs(apiClient: apiClient, modelContext: modelContext, serviceAlreadyStopped: alreadyStopped)
         }
+    }
+
+    /// If the last message is a user message with no response, remove it from history
+    /// and restore its text to the input box as a draft.
+    func restoreUndeliveredDraft(modelContext: ModelContext) {
+        guard let last = messages.last, last.role == .user else { return }
+        let text = last.textContent
+        messages.removeLast()
+        persistMessages(modelContext: modelContext)
+        guard !text.isEmpty, inputText.isEmpty else { return }
+        inputText = text
+        saveDraft(modelContext: modelContext)
     }
 
     // MARK: - Private
@@ -796,7 +818,7 @@ final class ChatViewModel {
         // Attempt reconnection on disconnect
         if case .disconnected = streamResult {
             logger.info("[Chat] Disconnected mid-stream, attempting reconnect via service logs")
-            await reconnectToServiceLogs(apiClient: apiClient, modelContext: modelContext, serviceIsRunning: true)
+            await reconnectToServiceLogs(apiClient: apiClient, modelContext: modelContext, serviceAlreadyStopped: false)
             return
         }
 
@@ -933,6 +955,7 @@ final class ChatViewModel {
                     receivedData = true
                     timeoutTask.cancel()
                     if case .connecting = status { status = .streaming }
+                    else if case .reconnecting = status { status = .streaming }
 
                     // Two-level NDJSON: ServiceLogEvent.data contains Claude NDJSON.
                     // The logs endpoint prefixes each line with a timestamp
@@ -961,6 +984,7 @@ final class ChatViewModel {
                     receivedData = true
                     timeoutTask.cancel()
                     if case .connecting = status { status = .streaming }
+                    else if case .reconnecting = status { status = .streaming }
                     if let text = event.data {
                         logger.warning("Service stderr: \(text.prefix(500), privacy: .public)")
                     }
@@ -994,6 +1018,7 @@ final class ChatViewModel {
 
                 case .started:
                     if case .connecting = status { status = .streaming }
+                    else if case .reconnecting = status { status = .streaming }
 
                 case .stopping, .stopped:
                     break
@@ -1038,10 +1063,10 @@ final class ChatViewModel {
     func runReconnectLoop(
         apiClient: some ServiceLogsProvider,
         modelContext: ModelContext,
-        serviceIsRunning: Bool = false
+        serviceAlreadyStopped: Bool = false
     ) async {
         isReplaying = true
-        isReplayingLiveService = serviceIsRunning
+        isReplayingLiveService = !serviceAlreadyStopped
         defer {
             applyReplayBuffer()
             isReplaying = false
@@ -1060,7 +1085,11 @@ final class ChatViewModel {
         if let existing = currentAssistantMessage {
             assistantMessage = existing
             if !hasPriorEvents { assistantMessage.content = [] }
-        } else if let last = messages.last(where: { $0.role == .assistant }) {
+        } else if let last = messages.last, last.role == .assistant {
+            // Only reuse an assistant message if it's already at the tail — meaning
+            // the last exchange ended with a partial response that needs replaying.
+            // If the last message is a user message, fall through to create a new
+            // assistant message after it (each service is scoped to one user message).
             assistantMessage = last
             if !hasPriorEvents { assistantMessage.content = [] }
             currentAssistantMessage = last
@@ -1108,10 +1137,12 @@ final class ChatViewModel {
             // If we got a result event, Claude is done
             if receivedResultEvent { break }
 
-            // Check if service is still running
-            let isRunning = (try? await apiClient.getServiceStatus(spriteName: spriteName, serviceName: serviceName))?.state.status == "running"
+            // If we already knew the service was stopped before entering, no need to re-check
+            if serviceAlreadyStopped { break }
 
-            if isRunning {
+            // Check if service is still running before retrying
+            if let serviceInfo = try? await apiClient.getServiceStatus(spriteName: spriteName, serviceName: serviceName),
+               serviceInfo.state.status == "running" {
                 logger.info("[Chat] Service still running, will re-poll after delay")
                 try? await Task.sleep(for: .seconds(2))
                 continue
@@ -1147,9 +1178,9 @@ final class ChatViewModel {
     private func reconnectToServiceLogs(
         apiClient: SpritesAPIClient,
         modelContext: ModelContext,
-        serviceIsRunning: Bool = false
+        serviceAlreadyStopped: Bool = false
     ) async {
-        await runReconnectLoop(apiClient: apiClient, modelContext: modelContext, serviceIsRunning: serviceIsRunning)
+        await runReconnectLoop(apiClient: apiClient, modelContext: modelContext, serviceAlreadyStopped: serviceAlreadyStopped)
 
         if let queued = queuedPrompt, !Task.isCancelled {
             let prompt = buildPrompt(text: queued, attachments: queuedAttachments)

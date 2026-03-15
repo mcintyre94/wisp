@@ -13,6 +13,7 @@ struct SpriteNavigationPanel: View {
     let chatListViewModel: SpriteChatListViewModel
     let onCreateChat: () -> Void
     @Environment(SpritesAPIClient.self) private var apiClient
+    @Environment(ChatSessionManager.self) private var chatSessionManager
     @Environment(\.modelContext) private var modelContext
     @State private var chatToRename: SpriteChat?
     @State private var renameText = ""
@@ -97,6 +98,7 @@ struct SpriteNavigationPanel: View {
             }
             if !chat.isClosed {
                 Button {
+                    chatSessionManager.remove(chatId: chat.id, modelContext: modelContext)
                     chatListViewModel.closeChat(chat, apiClient: apiClient, modelContext: modelContext)
                 } label: {
                     Label("Close", systemImage: "xmark.circle")
@@ -117,6 +119,7 @@ struct SpriteNavigationPanel: View {
             }
             if !chat.isClosed {
                 Button {
+                    chatSessionManager.remove(chatId: chat.id, modelContext: modelContext)
                     chatListViewModel.closeChat(chat, apiClient: apiClient, modelContext: modelContext)
                 } label: {
                     Label("Close", systemImage: "xmark.circle")
@@ -133,6 +136,7 @@ struct SpriteNavigationPanel: View {
             titleVisibility: .visible
         ) {
             Button("Delete", role: .destructive) {
+                chatSessionManager.remove(chatId: chat.id, modelContext: modelContext)
                 chatListViewModel.deleteChat(chat, apiClient: apiClient, modelContext: modelContext)
                 chatToDelete = nil
             }

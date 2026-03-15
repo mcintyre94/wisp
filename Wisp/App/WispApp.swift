@@ -5,6 +5,7 @@ import SwiftUI
 struct WispApp: App {
     @State private var apiClient = SpritesAPIClient()
     @State private var browserCoordinator = InAppBrowserCoordinator()
+    @State private var chatSessionManager = ChatSessionManager()
     @AppStorage("theme") private var theme: String = "system"
 
     init() {
@@ -27,6 +28,7 @@ struct WispApp: App {
             RootView()
                 .environment(apiClient)
                 .environment(browserCoordinator)
+                .environment(chatSessionManager)
                 .preferredColorScheme(preferredColorScheme)
                 .onChange(of: apiClient.isAuthenticated, initial: true) {
                     browserCoordinator.authToken = apiClient.spritesToken

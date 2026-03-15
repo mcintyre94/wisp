@@ -14,6 +14,7 @@
 		3855BDFB5819B6D35F57ED9E /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 099181E9B8BFE6F3475C5D36 /* Assets.xcassets */; };
 		3A36571818CB2EBA1ED78500 /* ToolInputDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AB04F3FB6C647DE1F6DC0FD0 /* ToolInputDetailView.swift */; };
 		4FE7C138A35A53B4C38BEF98 /* ClaudeStreamParser.swift in Sources */ = {isa = PBXBuildFile; fileRef = C8F1378232DC7FA71A8B5444 /* ClaudeStreamParser.swift */; };
+		AA33BB44CC55DD66EE77FF02 /* ChatSessionManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA33BB44CC55DD66EE77FF01 /* ChatSessionManager.swift */; };
 		5A1F582DDCBB994013E4BA2E /* DashboardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0B99AA33329D50DEDB7343B7 /* DashboardView.swift */; };
 		5ABE241326BF34FF2E3C3E51 /* CreateSpriteSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = EA1634863D8543868BA11B02 /* CreateSpriteSheet.swift */; };
 		61CBE460AC96CBE6BF8AF0B0 /* SpriteSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6BE6E0D68BBB35DE56600E1 /* SpriteSession.swift */; };
@@ -45,6 +46,7 @@
 		AA3400BB00CC00DD00EE0001 /* QuickChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA3400BB00CC00DD00EE0002 /* QuickChatView.swift */; };
 		AA3500BB00CC00DD00EE0001 /* BashQuickView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA3500BB00CC00DD00EE0002 /* BashQuickView.swift */; };
 		AA3700BB00CC00DD00EE0001 /* BashQuickViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA3700BB00CC00DD00EE0002 /* BashQuickViewModelTests.swift */; };
+		AA3800BB00CC00DD00EE0001 /* ChatSessionManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA3800BB00CC00DD00EE0002 /* ChatSessionManagerTests.swift */; };
 		FE9876543210ABCDEF987601 /* QuickChatViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9876543210ABCDEF987602 /* QuickChatViewModelTests.swift */; };
 		AA00BB11CC22DD3300000001 /* WispAskCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00BB11CC22DD3300000002 /* WispAskCard.swift */; };
 		AA11BB22CC33DD44EE55FF02 /* GitHubDeviceFlowClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF01 /* GitHubDeviceFlowClient.swift */; };
@@ -210,6 +212,7 @@
 		C4D5E6F7A8B90A41637E8FA1 /* CheckpointMarkerView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CheckpointMarkerView.swift; sourceTree = "<group>"; };
 		C8C4C3A1F2B2D57313431E50 /* Extensions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Extensions.swift; sourceTree = "<group>"; };
 		C8F1378232DC7FA71A8B5444 /* ClaudeStreamParser.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeStreamParser.swift; sourceTree = "<group>"; };
+		AA33BB44CC55DD66EE77FF01 /* ChatSessionManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatSessionManager.swift; sourceTree = "<group>"; };
 		CC11DD22EE33FF4400110002 /* ChatAttachmentButton.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatAttachmentButton.swift; sourceTree = "<group>"; };
 		CC11DD22EE33FF4400110004 /* SpriteFileBrowserView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpriteFileBrowserView.swift; sourceTree = "<group>"; };
 		CC11DD22EE33FF4400110005 /* FileEntryTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FileEntryTests.swift; sourceTree = "<group>"; };
@@ -249,6 +252,7 @@
 		AA3400BB00CC00DD00EE0002 /* QuickChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickChatView.swift; sourceTree = "<group>"; };
 		AA3500BB00CC00DD00EE0002 /* BashQuickView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BashQuickView.swift; sourceTree = "<group>"; };
 		AA3700BB00CC00DD00EE0002 /* BashQuickViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BashQuickViewModelTests.swift; sourceTree = "<group>"; };
+		AA3800BB00CC00DD00EE0002 /* ChatSessionManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatSessionManagerTests.swift; sourceTree = "<group>"; };
 		FE9876543210ABCDEF987602 /* QuickChatViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickChatViewModelTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -307,6 +311,7 @@
 			isa = PBXGroup;
 			children = (
 				AA22BB33CC44DD55EE66FF02 /* ClaudeQuestionTool.swift */,
+				AA33BB44CC55DD66EE77FF01 /* ChatSessionManager.swift */,
 				C8F1378232DC7FA71A8B5444 /* ClaudeStreamParser.swift */,
 				2554BB4DE8EC315CA48767BF /* ExecSession.swift */,
 				BB11CC22DD33EE44FF660A01 /* GitHubAPIClient.swift */,
@@ -471,6 +476,7 @@
 				EE22FF334455AA66BB770001 /* ExecSessionURLTests.swift */,
 				CC11DD22EE33FF4400110005 /* FileEntryTests.swift */,
 				AA3700BB00CC00DD00EE0002 /* BashQuickViewModelTests.swift */,
+				AA3800BB00CC00DD00EE0002 /* ChatSessionManagerTests.swift */,
 				FE9876543210ABCDEF987602 /* QuickChatViewModelTests.swift */,
 			);
 			path = WispTests;
@@ -728,6 +734,7 @@
 				D2B1EF5C6A7F8B9304C5E6F7 /* ClaudeModel.swift in Sources */,
 				2A18611EA392DA2BFFE74250 /* ClaudeStreamEvent.swift in Sources */,
 				4FE7C138A35A53B4C38BEF98 /* ClaudeStreamParser.swift in Sources */,
+				AA33BB44CC55DD66EE77FF02 /* ChatSessionManager.swift in Sources */,
 				99BA5812AF56D1C7501D1F0C /* CreateCheckpointSheet.swift in Sources */,
 				5ABE241326BF34FF2E3C3E51 /* CreateSpriteSheet.swift in Sources */,
 				5A1F582DDCBB994013E4BA2E /* DashboardView.swift in Sources */,
@@ -813,6 +820,7 @@
 				0DFF41BB14AC3922E95DF781 /* WorktreeTests.swift in Sources */,
 				CC11DD22EE33FF4400110006 /* FileEntryTests.swift in Sources */,
 				AA3700BB00CC00DD00EE0001 /* BashQuickViewModelTests.swift in Sources */,
+				AA3800BB00CC00DD00EE0001 /* ChatSessionManagerTests.swift in Sources */,
 				FE9876543210ABCDEF987601 /* QuickChatViewModelTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
