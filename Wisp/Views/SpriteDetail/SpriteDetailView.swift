@@ -10,12 +10,12 @@ struct SpriteDetailView: View {
     @State private var servicesViewModel: ServicesViewModel
     @State private var showChatSwitcher = false
     @State private var showStaleChatsAlert = false
-    @State private var knownStreamingChatIds: Set<UUID> = []
     @State private var showCopiedFeedback = false
     @State private var pendingFork: (checkpointId: String, messageId: UUID)? = nil
     @State private var isForking = false
     @State private var spriteQuickActionsViewModel: QuickActionsViewModel?
     @Environment(SpritesAPIClient.self) private var apiClient
+    @Environment(ChatSessionManager.self) private var chatSessionManager
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -249,8 +249,7 @@ struct SpriteDetailView: View {
         }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
-                chatViewModel?.resumeAfterBackground(apiClient: apiClient, modelContext: modelContext)
-                chatViewModel?.reconnectIfNeeded(apiClient: apiClient, modelContext: modelContext)
+                chatSessionManager.resumeAllAfterBackground(apiClient: apiClient, modelContext: modelContext)
             }
         }
         .sheet(isPresented: $showChatSwitcher) {
@@ -271,6 +270,8 @@ struct SpriteDetailView: View {
         }
         .alert("Sprite Recreated", isPresented: $showStaleChatsAlert) {
             Button("Start Fresh", role: .destructive) {
+                chatSessionManager.detachAll(modelContext: modelContext)
+                chatViewModel = nil
                 chatListViewModel.clearAllChats(apiClient: apiClient, modelContext: modelContext)
                 let chat = chatListViewModel.createChat(modelContext: modelContext)
                 switchToChat(chat)
@@ -307,29 +308,18 @@ struct SpriteDetailView: View {
     private func switchToChat(_ chat: SpriteChat) {
         guard chatViewModel?.chatId != chat.id else { return }
 
-        // Detach old VM (cancel stream but keep service running)
-        if let oldVM = chatViewModel {
-            let wasStreaming = oldVM.detach(modelContext: modelContext)
-            if wasStreaming {
-                knownStreamingChatIds.insert(oldVM.chatId)
-            }
-        }
-
-        let vm = ChatViewModel(
+        // Look up or create a VM from the app-wide cache — old VM keeps streaming in background
+        let vm = chatSessionManager.viewModel(
+            for: chat,
             spriteName: sprite.name,
-            chatId: chat.id,
-            currentServiceName: chat.currentServiceName,
-            workingDirectory: chat.workingDirectory
+            apiClient: apiClient,
+            modelContext: modelContext
         )
-        vm.loadSession(apiClient: apiClient, modelContext: modelContext)
         chatViewModel = vm
         chatListViewModel.activeChatId = chat.id
 
-        // Always try reconnect — checks service status first, so it's
-        // cheap for old chats where the service has already stopped.
-        // This handles both switching between chats and navigating
-        // back to the sprite after the view was destroyed.
-        knownStreamingChatIds.remove(chat.id)
+        // Reconnect if idle with a service that may have new events.
+        // Guards on !isStreaming internally, so safe to call on an already-streaming VM.
         vm.reconnectIfNeeded(apiClient: apiClient, modelContext: modelContext)
     }
 
