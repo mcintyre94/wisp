@@ -25,6 +25,12 @@ struct ChatSwitcherSheet: View {
                         dismiss()
                     }
                     .contextMenu {
+                        Button {
+                            chat.isUnread.toggle()
+                            try? modelContext.save()
+                        } label: {
+                            Label(chat.isUnread ? "Mark as Read" : "Mark as Unread", systemImage: chat.isUnread ? "envelope.open" : "envelope.badge")
+                        }
                         if let sessionId = chat.claudeSessionId, !chat.isClosed {
                             Button {
                                 UIPasteboard.general.string = "cd \(chat.workingDirectory) && claude --resume \(sessionId)"
@@ -54,13 +60,20 @@ struct ChatSwitcherSheet: View {
                         }
                     }
                     .swipeActions(edge: .leading, allowsFullSwipe: true) {
+                        Button {
+                            chat.isUnread.toggle()
+                            try? modelContext.save()
+                        } label: {
+                            Label(chat.isUnread ? "Read" : "Unread", systemImage: chat.isUnread ? "envelope.open" : "envelope.badge")
+                        }
+                        .tint(.blue)
                         if let sessionId = chat.claudeSessionId, !chat.isClosed {
                             Button {
                                 UIPasteboard.general.string = "cd \(chat.workingDirectory) && claude --resume \(sessionId)"
                             } label: {
                                 Label("Copy Resume", systemImage: "terminal")
                             }
-                            .tint(.blue)
+                            .tint(.gray)
                         }
                     }
                     .swipeActions(edge: .trailing, allowsFullSwipe: false) {
@@ -139,10 +152,16 @@ private struct ChatRowView: View {
 
     var body: some View {
         HStack {
+            if chat.isUnread {
+                Circle()
+                    .fill(Color.accentColor)
+                    .frame(width: 8, height: 8)
+            }
             VStack(alignment: .leading, spacing: 4) {
                 HStack(spacing: 6) {
                     Text(chat.displayName)
                         .font(.body)
+                        .fontWeight(chat.isUnread ? .semibold : .regular)
                     if chat.isClosed {
                         Text("Closed")
                             .font(.caption2)

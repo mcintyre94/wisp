@@ -75,6 +75,7 @@ struct SpriteNavigationPanel: View {
             VStack(alignment: .leading, spacing: 2) {
                 Text(chat.displayName)
                     .font(.subheadline)
+                    .fontWeight(chat.isUnread ? .semibold : .regular)
                 if let preview = chat.firstMessagePreview {
                     Text(preview)
                         .font(.caption)
@@ -83,13 +84,23 @@ struct SpriteNavigationPanel: View {
                 }
             }
             Spacer(minLength: 0)
-            if chat.isClosed {
+            if chat.isUnread {
+                Circle()
+                    .fill(Color.accentColor)
+                    .frame(width: 8, height: 8)
+            } else if chat.isClosed {
                 Image(systemName: "archivebox")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
             }
         }
         .contextMenu {
+            Button {
+                chat.isUnread.toggle()
+                try? modelContext.save()
+            } label: {
+                Label(chat.isUnread ? "Mark as Read" : "Mark as Unread", systemImage: chat.isUnread ? "envelope.open" : "envelope.badge")
+            }
             Button {
                 renameText = chat.customName ?? ""
                 chatToRename = chat
@@ -110,6 +121,15 @@ struct SpriteNavigationPanel: View {
             } label: {
                 Label("Delete", systemImage: "trash")
             }
+        }
+        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+            Button {
+                chat.isUnread.toggle()
+                try? modelContext.save()
+            } label: {
+                Label(chat.isUnread ? "Read" : "Unread", systemImage: chat.isUnread ? "envelope.open" : "envelope.badge")
+            }
+            .tint(.blue)
         }
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             Button(role: .destructive) {

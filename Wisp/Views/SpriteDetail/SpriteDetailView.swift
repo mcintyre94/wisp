@@ -175,7 +175,18 @@ struct SpriteDetailView: View {
                             Button {
                                 showChatSwitcher = true
                             } label: {
+                                let hasOtherUnread = chatListViewModel.chats.contains {
+                                    $0.isUnread && $0.id != chatListViewModel.activeChatId
+                                }
                                 Image(systemName: "bubble.left.and.bubble.right")
+                                    .overlay(alignment: .topTrailing) {
+                                        if hasOtherUnread {
+                                            Circle()
+                                                .fill(Color.accentColor)
+                                                .frame(width: 8, height: 8)
+                                                .offset(x: 3, y: -3)
+                                        }
+                                    }
                             }
                         }
 
@@ -285,6 +296,15 @@ struct SpriteDetailView: View {
     private func switchToChat(_ chat: SpriteChat) {
         guard chatViewModel?.chatId != chat.id else { return }
 
+        // Deactivate outgoing VM
+        chatViewModel?.isActive = false
+
+        // Clear unread when opening a chat
+        if chat.isUnread {
+            chat.isUnread = false
+            try? modelContext.save()
+        }
+
         // Look up or create a VM from the app-wide cache — old VM keeps streaming in background
         let vm = chatSessionManager.viewModel(
             for: chat,
@@ -292,6 +312,7 @@ struct SpriteDetailView: View {
             apiClient: apiClient,
             modelContext: modelContext
         )
+        vm.isActive = true
         chatViewModel = vm
         chatListViewModel.activeChatId = chat.id
 

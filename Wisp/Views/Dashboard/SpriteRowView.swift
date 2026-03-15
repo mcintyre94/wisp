@@ -4,6 +4,7 @@ struct SpriteRowView: View {
     let sprite: Sprite
     var isPlain: Bool = false
     var isSelected: Bool = false
+    var hasUnreadChats: Bool = false
 
     @State private var isPulsing = false
 
@@ -56,6 +57,12 @@ struct SpriteRowView: View {
                 .padding(.horizontal, 8)
                 .padding(.vertical, 3)
                 .background(statusColor.opacity(0.15), in: Capsule())
+
+            if hasUnreadChats {
+                Circle()
+                    .fill(Color.accentColor)
+                    .frame(width: 8, height: 8)
+            }
         }
     }
 
@@ -89,6 +96,7 @@ private func mockSprite(id: String = "s1", name: String, status: String) -> Spri
         SpriteRowView(sprite: mockSprite(id: "s2", name: "dev-box", status: "warm"))
         SpriteRowView(sprite: mockSprite(id: "s3", name: "old-project", status: "cold"))
         SpriteRowView(sprite: mockSprite(id: "s1", name: "selected-sprite", status: "running"), isSelected: true)
+        SpriteRowView(sprite: mockSprite(id: "s4", name: "busy-sprite", status: "running"), hasUnreadChats: true)
     }
     .padding()
 }
@@ -98,5 +106,6 @@ private func mockSprite(id: String = "s1", name: String, status: String) -> Spri
         SpriteRowView(sprite: mockSprite(id: "s1", name: "my-sprite", status: "running"), isPlain: true)
         SpriteRowView(sprite: mockSprite(id: "s2", name: "dev-box", status: "warm"), isPlain: true)
         SpriteRowView(sprite: mockSprite(id: "s3", name: "old-project", status: "cold"), isPlain: true)
+        SpriteRowView(sprite: mockSprite(id: "s4", name: "busy-sprite", status: "running"), isPlain: true, hasUnreadChats: true)
     }
 }

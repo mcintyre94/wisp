@@ -23,6 +23,7 @@ final class SpriteChat {
     var worktreePath: String?
     var worktreeBranch: String?
     var lastSessionComplete: Bool = false
+    var isUnread: Bool = false
 
     var displayName: String {
         customName ?? "Chat \(chatNumber)"

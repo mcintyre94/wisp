@@ -1,3 +1,4 @@
+import SwiftData
 import SwiftUI
 
 enum SpriteSortOrder: String, CaseIterable {
@@ -9,6 +10,7 @@ struct DashboardView: View {
     @Environment(SpritesAPIClient.self) private var apiClient
     @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var viewModel = DashboardViewModel()
+    @Query(filter: #Predicate<SpriteChat> { $0.isUnread }) private var unreadChats: [SpriteChat]
     @State private var selectedSpriteID: String?
     @State private var selectedTab: SpriteTab = .chat
     @State private var sortOrder: SpriteSortOrder = .newest
@@ -29,7 +31,8 @@ struct DashboardView: View {
             SpriteRowView(
                 sprite: sprite,
                 isPlain: sizeClass == .regular,
-                isSelected: sizeClass != .regular && selectedSpriteID == sprite.id
+                isSelected: sizeClass != .regular && selectedSpriteID == sprite.id,
+                hasUnreadChats: unreadChats.contains { $0.spriteName == sprite.name }
             )
             .tag(sprite.id)
             .swipeActions(edge: .trailing) {
