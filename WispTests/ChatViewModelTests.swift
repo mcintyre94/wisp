@@ -1117,6 +1117,35 @@ struct ChatViewModelTests {
         }
     }
 
+    // MARK: - reconnecting → streaming status transition
+
+    @Test func runReconnectLoop_transitionsReconnectingToStreamingOnStdoutData() async throws {
+        // Verifies the status trajectory: idle → reconnecting → streaming → idle
+        // When stdout data arrives in .reconnecting state, status must move to .streaming (line 935-936).
+        // When the result event arrives and the loop exits cleanly, status returns to .idle.
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        let assistantMsg = ChatMessage(role: .assistant)
+        vm.messages.append(assistantMsg)
+        vm.setCurrentAssistantMessage(assistantMsg)
+
+        let textLine = #"{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Hello"}]}}"# + "\n"
+        let resultLine = #"{"type":"result","session_id":"s1","subtype":"success"}"# + "\n"
+
+        let stream = AsyncThrowingStream<ServiceLogEvent, Error> { continuation in
+            continuation.yield(ServiceLogEvent(type: .stdout, data: textLine, exitCode: nil, timestamp: nil, logFiles: nil))
+            continuation.yield(ServiceLogEvent(type: .stdout, data: resultLine, exitCode: nil, timestamp: nil, logFiles: nil))
+            continuation.finish()
+        }
+        let mock = MockServiceLogsProvider(streams: [stream], statuses: ["stopped"])
+
+        #expect(vm.status == .idle)
+        await vm.runReconnectLoop(apiClient: mock, modelContext: ctx, serviceAlreadyStopped: true)
+        // Loop completed cleanly: reconnecting → streaming → idle
+        #expect(vm.status == .idle)
+    }
+
     // MARK: - addAttachedFile
 
     @Test func addAttachedFile_appendsWithLastPathComponent() throws {

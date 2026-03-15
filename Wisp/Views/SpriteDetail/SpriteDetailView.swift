@@ -185,7 +185,6 @@ struct SpriteDetailView: View {
                         } label: {
                             Image(systemName: "square.and.pencil")
                         }
-                        .disabled(chatViewModel?.status.isConnecting == true)
                     }
                 }
             } else if selectedTab == .overview {

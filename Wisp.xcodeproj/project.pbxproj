@@ -46,6 +46,7 @@
 		AA3400BB00CC00DD00EE0001 /* QuickChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA3400BB00CC00DD00EE0002 /* QuickChatView.swift */; };
 		AA3500BB00CC00DD00EE0001 /* BashQuickView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA3500BB00CC00DD00EE0002 /* BashQuickView.swift */; };
 		AA3700BB00CC00DD00EE0001 /* BashQuickViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA3700BB00CC00DD00EE0002 /* BashQuickViewModelTests.swift */; };
+		AA3800BB00CC00DD00EE0001 /* ChatSessionManagerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA3800BB00CC00DD00EE0002 /* ChatSessionManagerTests.swift */; };
 		FE9876543210ABCDEF987601 /* QuickChatViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FE9876543210ABCDEF987602 /* QuickChatViewModelTests.swift */; };
 		AA00BB11CC22DD3300000001 /* WispAskCard.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA00BB11CC22DD3300000002 /* WispAskCard.swift */; };
 		AA11BB22CC33DD44EE55FF02 /* GitHubDeviceFlowClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF01 /* GitHubDeviceFlowClient.swift */; };
@@ -251,6 +252,7 @@
 		AA3400BB00CC00DD00EE0002 /* QuickChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickChatView.swift; sourceTree = "<group>"; };
 		AA3500BB00CC00DD00EE0002 /* BashQuickView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BashQuickView.swift; sourceTree = "<group>"; };
 		AA3700BB00CC00DD00EE0002 /* BashQuickViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BashQuickViewModelTests.swift; sourceTree = "<group>"; };
+		AA3800BB00CC00DD00EE0002 /* ChatSessionManagerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ChatSessionManagerTests.swift; sourceTree = "<group>"; };
 		FE9876543210ABCDEF987602 /* QuickChatViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickChatViewModelTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
@@ -474,6 +476,7 @@
 				EE22FF334455AA66BB770001 /* ExecSessionURLTests.swift */,
 				CC11DD22EE33FF4400110005 /* FileEntryTests.swift */,
 				AA3700BB00CC00DD00EE0002 /* BashQuickViewModelTests.swift */,
+				AA3800BB00CC00DD00EE0002 /* ChatSessionManagerTests.swift */,
 				FE9876543210ABCDEF987602 /* QuickChatViewModelTests.swift */,
 			);
 			path = WispTests;
@@ -817,6 +820,7 @@
 				0DFF41BB14AC3922E95DF781 /* WorktreeTests.swift in Sources */,
 				CC11DD22EE33FF4400110006 /* FileEntryTests.swift in Sources */,
 				AA3700BB00CC00DD00EE0001 /* BashQuickViewModelTests.swift in Sources */,
+				AA3800BB00CC00DD00EE0001 /* ChatSessionManagerTests.swift in Sources */,
 				FE9876543210ABCDEF987601 /* QuickChatViewModelTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

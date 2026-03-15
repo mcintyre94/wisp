@@ -4,6 +4,7 @@ import SwiftData
 struct ChatSwitcherSheet: View {
     @Bindable var viewModel: SpriteChatListViewModel
     @Environment(SpritesAPIClient.self) private var apiClient
+    @Environment(ChatSessionManager.self) private var chatSessionManager
     @Environment(\.modelContext) private var modelContext
     @Environment(\.dismiss) private var dismiss
     @State private var chatToDelete: SpriteChat?
@@ -39,6 +40,7 @@ struct ChatSwitcherSheet: View {
                         }
                         if !chat.isClosed {
                             Button {
+                                chatSessionManager.remove(chatId: chat.id, modelContext: modelContext)
                                 viewModel.closeChat(chat, apiClient: apiClient, modelContext: modelContext)
                             } label: {
                                 Label("Close", systemImage: "xmark.circle")
@@ -71,6 +73,7 @@ struct ChatSwitcherSheet: View {
 
                         if !chat.isClosed {
                             Button {
+                                chatSessionManager.remove(chatId: chat.id, modelContext: modelContext)
                                 viewModel.closeChat(chat, apiClient: apiClient, modelContext: modelContext)
                             } label: {
                                 Label("Close", systemImage: "xmark.circle")
@@ -87,6 +90,7 @@ struct ChatSwitcherSheet: View {
                         titleVisibility: .visible
                     ) {
                         Button("Delete", role: .destructive) {
+                            chatSessionManager.remove(chatId: chat.id, modelContext: modelContext)
                             viewModel.deleteChat(chat, apiClient: apiClient, modelContext: modelContext)
                             chatToDelete = nil
                         }
