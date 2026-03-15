@@ -66,6 +66,14 @@ struct AssistantMessageView: View {
                             .foregroundStyle(.red)
                             .padding(10)
                             .background(Color.red.opacity(0.1), in: RoundedRectangle(cornerRadius: 12))
+                    case .systemNotice(let notice):
+                        Label(notice, systemImage: "arrow.triangle.2.circlepath")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 12)
+                            .padding(.vertical, 6)
+                            .background(.ultraThinMaterial, in: Capsule())
+                            .frame(maxWidth: .infinity)
                     }
                 }
             }

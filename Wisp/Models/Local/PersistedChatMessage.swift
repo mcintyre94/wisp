@@ -16,6 +16,7 @@ enum PersistedChatContent: Codable {
     case toolUse(PersistedToolUse)
     case toolResult(PersistedToolResult)
     case error(String)
+    case systemNotice(String)
 }
 
 struct PersistedToolUse: Codable {
@@ -70,6 +71,8 @@ extension ChatContent {
             ))
         case .error(let msg):
             return .error(msg)
+        case .systemNotice(let msg):
+            return .systemNotice(msg)
         }
     }
 }
@@ -112,6 +115,8 @@ extension ChatContent {
             ))
         case .error(let msg):
             self = .error(msg)
+        case .systemNotice(let msg):
+            self = .systemNotice(msg)
         }
     }
 }
