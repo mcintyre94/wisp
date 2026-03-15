@@ -47,21 +47,14 @@ final class DashboardViewModel {
         wakingSprites.insert(sprite.name)
         defer { wakingSprites.remove(sprite.name) }
 
-        // Fire a no-op exec to trigger the wake
-        Task {
-            _ = await apiClient.runExec(spriteName: sprite.name, command: "true", timeout: 60)
+        do {
+            _ = try await apiClient.wakeSpriteIfNeeded(name: sprite.name, timeout: 60)
+        } catch {
+            errorMessage = error.localizedDescription
         }
 
-        // Poll until running or timeout
-        let deadline = Date().addingTimeInterval(60)
-        while Date() < deadline {
-            try? await Task.sleep(for: .seconds(2))
-            if let updated = try? await apiClient.listSprites() {
-                sprites = updated
-                if updated.first(where: { $0.name == sprite.name })?.status == .running {
-                    return
-                }
-            }
+        if let updated = try? await apiClient.listSprites() {
+            sprites = updated
         }
     }
 

@@ -3,6 +3,115 @@ import os
 
 private let logger = Logger(subsystem: "com.wisp.app", category: "API")
 
+enum SpriteWakeOutcome: Equatable, CustomStringConvertible {
+    case alreadyRunning
+    case runningAfterWake
+    case timedOut
+
+    var description: String {
+        switch self {
+        case .alreadyRunning:
+            return "alreadyRunning"
+        case .runningAfterWake:
+            return "runningAfterWake"
+        case .timedOut:
+            return "timedOut"
+        }
+    }
+}
+
+@MainActor
+struct SpriteWakeCoordinator {
+    let fetchStatus: () async throws -> SpriteStatus
+    let triggerWake: () async -> Void
+    var sleep: (TimeInterval) async -> Void = { seconds in
+        try? await Task.sleep(for: .seconds(seconds))
+    }
+    var timeout: TimeInterval = 45
+    var pollInterval: TimeInterval = 2
+    var wakeRetryInterval: TimeInterval = 12
+    var maxConsecutiveNetworkFailures = 3
+
+    func waitUntilRunning() async throws -> SpriteWakeOutcome {
+        let pollCount = max(1, Int(ceil(timeout / pollInterval)))
+        let wakeRetryPolls = max(1, Int(ceil(wakeRetryInterval / pollInterval)))
+
+        var triggeredWake = false
+        var lastWakePoll: Int?
+        var consecutiveNetworkFailures = 0
+
+        for poll in 0..<pollCount {
+            do {
+                let status = try await fetchStatus()
+                consecutiveNetworkFailures = 0
+
+                if status == .running {
+                    return triggeredWake ? .runningAfterWake : .alreadyRunning
+                }
+            } catch {
+                if Self.isGenuineNetworkIssue(error) {
+                    consecutiveNetworkFailures += 1
+                    if consecutiveNetworkFailures >= maxConsecutiveNetworkFailures {
+                        throw error
+                    }
+                } else {
+                    consecutiveNetworkFailures = 0
+                }
+            }
+
+            if shouldTriggerWake(poll: poll, lastWakePoll: lastWakePoll, wakeRetryPolls: wakeRetryPolls) {
+                triggeredWake = true
+                lastWakePoll = poll
+                await triggerWake()
+            }
+
+            if poll < pollCount - 1 {
+                await sleep(pollInterval)
+            }
+        }
+
+        return .timedOut
+    }
+
+    private func shouldTriggerWake(poll: Int, lastWakePoll: Int?, wakeRetryPolls: Int) -> Bool {
+        guard let lastWakePoll else { return true }
+        return poll - lastWakePoll >= wakeRetryPolls
+    }
+
+    static func isGenuineNetworkIssue(_ error: Error) -> Bool {
+        if let appError = error as? AppError {
+            switch appError {
+            case .networkError(let underlying):
+                return isGenuineNetworkIssue(underlying)
+            default:
+                return false
+            }
+        }
+
+        let nsError = error as NSError
+        guard nsError.domain == NSURLErrorDomain else {
+            return false
+        }
+        let code = URLError.Code(rawValue: nsError.code)
+
+        switch code {
+        case .notConnectedToInternet,
+             .networkConnectionLost,
+             .cannotFindHost,
+             .cannotConnectToHost,
+             .dnsLookupFailed,
+             .internationalRoamingOff,
+             .callIsActive,
+             .dataNotAllowed,
+             .secureConnectionFailed,
+             .cannotLoadFromNetwork:
+            return true
+        default:
+            return false
+        }
+    }
+}
+
 @Observable
 @MainActor
 final class SpritesAPIClient {
@@ -56,6 +165,33 @@ final class SpritesAPIClient {
 
     func getSprite(name: String) async throws -> Sprite {
         return try await request(method: "GET", path: "/sprites/\(name)")
+    }
+
+    /// Best-effort wake helper for commands that work better against a running sprite.
+    /// Returns `.timedOut` for slow warm-ups so callers can continue when appropriate,
+    /// and only throws after repeated genuine connectivity failures.
+    @discardableResult
+    func wakeSpriteIfNeeded(name: String, timeout: TimeInterval = 25, pollInterval: TimeInterval = 2) async throws -> SpriteWakeOutcome {
+        let coordinator = SpriteWakeCoordinator(
+            fetchStatus: { [weak self] in
+                guard let self else { return .unknown }
+                return try await self.getSprite(name: name).status
+            },
+            triggerWake: { [weak self] in
+                guard let self else { return }
+                logger.info("Triggering wake ping for sprite \(name, privacy: .public)")
+                Task { @MainActor [weak self] in
+                    guard let self else { return }
+                    _ = await self.runExec(spriteName: name, command: "true", timeout: 20)
+                }
+            },
+            timeout: timeout,
+            pollInterval: pollInterval
+        )
+
+        let outcome = try await coordinator.waitUntilRunning()
+        logger.info("wakeSpriteIfNeeded(\(name, privacy: .public)) -> \(outcome.description, privacy: .public)")
+        return outcome
     }
 
     func deleteSprite(name: String) async throws {
