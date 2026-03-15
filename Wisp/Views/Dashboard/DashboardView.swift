@@ -7,6 +7,7 @@ enum SpriteSortOrder: String, CaseIterable {
 
 struct DashboardView: View {
     @Environment(SpritesAPIClient.self) private var apiClient
+    @Environment(ShareIntentCoordinator.self) private var shareIntentCoordinator
     @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var viewModel = DashboardViewModel()
     @State private var selectedSpriteID: String?
@@ -162,12 +163,17 @@ struct DashboardView: View {
         }
         .task {
             await viewModel.loadSprites(apiClient: apiClient)
+            applyPendingShareIntent()
         }
         .task {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(5))
                 await viewModel.refreshSprites(apiClient: apiClient)
             }
+        }
+        .onChange(of: shareIntentCoordinator.pendingIntent) { _, intent in
+            guard intent != nil else { return }
+            applyPendingShareIntent()
         }
         .sheet(isPresented: $viewModel.showCreateSheet) {
             CreateSpriteSheet()
@@ -196,9 +202,18 @@ struct DashboardView: View {
             }
         }
     }
+
+    private func applyPendingShareIntent() {
+        guard let intent = shareIntentCoordinator.pendingIntent,
+              let sprite = viewModel.sprites.first(where: { $0.name == intent.spriteName })
+        else { return }
+        selectedSpriteID = sprite.id
+        selectedTab = .chat
+    }
 }
 
 #Preview {
     DashboardView()
         .environment(SpritesAPIClient())
+        .environment(ShareIntentCoordinator())
 }

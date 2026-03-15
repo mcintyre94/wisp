@@ -18,13 +18,45 @@ targets:
     platform: iOS
     sources:
       - Wisp
+    info:
+      path: Wisp/Info.plist
+      properties:
+        CFBundleDisplayName: Wisp
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: false
+        UILaunchScreen: {}
+        CFBundleURLTypes:
+          - CFBundleURLName: com.wisp.app
+            CFBundleURLSchemes:
+              - wisp
     settings:
-      INFOPLIST_KEY_UIApplicationSceneManifest_Generation: true
-      INFOPLIST_KEY_UILaunchScreen_Generation: true
-      GENERATE_INFOPLIST_FILE: true
       PRODUCT_BUNDLE_IDENTIFIER: com.wisp.app
       MARKETING_VERSION: "1.0.0"
       CURRENT_PROJECT_VERSION: "1"
-      INFOPLIST_KEY_CFBundleDisplayName: Wisp
+    entitlements:
+      path: Wisp/Wisp.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.wisp.app
     dependencies:
       - package: MarkdownUI
+      - target: WispShareExtension
+        embed: true
+
+  WispShareExtension:
+    type: app-extension
+    platform: iOS
+    deploymentTarget: "17.0"
+    sources:
+      - WispShareExtension
+    settings:
+      PRODUCT_BUNDLE_IDENTIFIER: com.wisp.app.ShareExtension
+      GENERATE_INFOPLIST_FILE: false
+      INFOPLIST_FILE: WispShareExtension/Info.plist
+      SWIFT_VERSION: "6.0"
+      SWIFT_STRICT_CONCURRENCY: complete
+    entitlements:
+      path: WispShareExtension/WispShareExtension.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.wisp.app

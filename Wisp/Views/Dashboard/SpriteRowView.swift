@@ -65,14 +65,7 @@ struct SpriteRowView: View {
         }
     }
 
-    private var statusColor: Color {
-        switch sprite.status {
-        case .running: return .green
-        case .warm: return .orange
-        case .cold: return .blue
-        case .unknown: return .gray
-        }
-    }
+    private var statusColor: Color { sprite.status.color }
 }
 
 private func mockSprite(id: String = "s1", name: String, status: String) -> Sprite {

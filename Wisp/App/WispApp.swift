@@ -6,6 +6,7 @@ struct WispApp: App {
     @State private var apiClient = SpritesAPIClient()
     @State private var browserCoordinator = InAppBrowserCoordinator()
     @State private var chatSessionManager = ChatSessionManager()
+    @State private var shareIntentCoordinator = ShareIntentCoordinator()
     @AppStorage("theme") private var theme: String = "system"
 
     init() {
@@ -29,9 +30,14 @@ struct WispApp: App {
                 .environment(apiClient)
                 .environment(browserCoordinator)
                 .environment(chatSessionManager)
+                .environment(shareIntentCoordinator)
                 .preferredColorScheme(preferredColorScheme)
                 .onChange(of: apiClient.isAuthenticated, initial: true) {
                     browserCoordinator.authToken = apiClient.spritesToken
+                }
+                .onOpenURL { url in
+                    guard url.scheme == "wisp" else { return }
+                    shareIntentCoordinator.handleURL(url)
                 }
         }
         .modelContainer(for: [SpriteChat.self, SpriteSession.self])

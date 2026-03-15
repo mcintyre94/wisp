@@ -15,6 +15,7 @@ struct SpriteDetailView: View {
     @State private var spriteQuickActionsViewModel: QuickActionsViewModel?
     @Environment(SpritesAPIClient.self) private var apiClient
     @Environment(ChatSessionManager.self) private var chatSessionManager
+    @Environment(ShareIntentCoordinator.self) private var shareIntentCoordinator
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.horizontalSizeClass) private var sizeClass
@@ -217,6 +218,13 @@ struct SpriteDetailView: View {
             if let active = chatListViewModel.activeChat {
                 switchToChat(active)
             }
+
+            // Handle pending share intent — creates a fresh chat pre-loaded with the shared files
+            await applyShareIntentIfNeeded()
+        }
+        .onChange(of: shareIntentCoordinator.pendingIntent) { _, intent in
+            guard intent?.spriteName == sprite.name else { return }
+            Task { await applyShareIntentIfNeeded() }
         }
         .onChange(of: chatListViewModel.activeChatId) { oldId, newId in
             guard newId != oldId, let newId,
@@ -272,6 +280,14 @@ struct SpriteDetailView: View {
         } message: {
             Text("This will restore the Sprite to this checkpoint and create a new chat. Any changes since will be lost.")
         }
+    }
+
+    private func applyShareIntentIfNeeded() async {
+        guard let intent = shareIntentCoordinator.consume(forSprite: sprite.name) else { return }
+        let chat = chatListViewModel.createChat(modelContext: modelContext)
+        selectedTab = .chat
+        switchToChat(chat)
+        await chatViewModel?.uploadSharedFiles(intent.fileURLs, apiClient: apiClient)
     }
 
     private func openSpriteQuickActions() {

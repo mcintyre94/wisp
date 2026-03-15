@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 
 struct Sprite: Codable, Identifiable, Sendable, Hashable {
     let id: String
@@ -53,6 +54,15 @@ enum SpriteStatus: String, Codable, Sendable {
 
     var displayName: String {
         rawValue.capitalized
+    }
+
+    var color: Color {
+        switch self {
+        case .running: .green
+        case .warm: .orange
+        case .cold: .blue
+        case .unknown: .gray
+        }
     }
 }
 

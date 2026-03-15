@@ -116,6 +116,21 @@ final class ChatViewModel {
         attachedFiles.append(AttachedFile(name: name, path: remotePath))
     }
 
+    /// Uploads files shared from the iOS share sheet (stored in the App Group container),
+    /// adds them as draft attachments, and cleans up the temporary files.
+    func uploadSharedFiles(_ fileURLs: [URL], apiClient: SpritesAPIClient) async {
+        for fileURL in fileURLs {
+            if let remotePath = await uploadFileFromDevice(apiClient: apiClient, fileURL: fileURL) {
+                addAttachedFile(remotePath: remotePath)
+            }
+            try? FileManager.default.removeItem(at: fileURL)
+        }
+        // Clean up the session directory if it's now empty
+        if let sessionDir = fileURLs.first?.deletingLastPathComponent() {
+            try? FileManager.default.removeItem(at: sessionDir)
+        }
+    }
+
     func uploadFileFromDevice(apiClient: SpritesAPIClient, fileURL: URL) async -> String? {
         let accessing = fileURL.startAccessingSecurityScopedResource()
         defer { if accessing { fileURL.stopAccessingSecurityScopedResource() } }

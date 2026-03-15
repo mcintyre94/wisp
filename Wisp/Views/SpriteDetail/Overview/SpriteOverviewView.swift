@@ -439,12 +439,5 @@ struct SpriteOverviewView: View {
         UserDefaults.standard.set(workingDirectory, forKey: key)
     }
 
-    private var statusColor: Color {
-        switch viewModel.sprite.status {
-        case .running: return .green
-        case .warm: return .orange
-        case .cold: return .blue
-        case .unknown: return .gray
-        }
-    }
+    private var statusColor: Color { viewModel.sprite.status.color }
 }

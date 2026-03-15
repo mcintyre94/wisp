@@ -16,6 +16,7 @@ struct RootView: View {
             }
         }
         .environment(\.openURL, OpenURLAction { url in
+            guard url.scheme != "wisp" else { return .systemAction }
             browserCoordinator.open(url)
             return .handled
         })
