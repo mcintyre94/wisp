@@ -17,13 +17,22 @@ struct SpriteNavigationPanel: View {
     @State private var chatToRename: SpriteChat?
     @State private var renameText = ""
     @State private var chatToDelete: SpriteChat?
+    @State private var searchText = ""
+
+    private var filteredChats: [SpriteChat] {
+        guard !searchText.isEmpty else { return chatListViewModel.chats }
+        return chatListViewModel.chats.filter { chat in
+            chat.displayName.localizedCaseInsensitiveContains(searchText) ||
+            chat.fullTextContent?.localizedCaseInsensitiveContains(searchText) == true
+        }
+    }
 
     private var openChats: [SpriteChat] {
-        chatListViewModel.chats.filter { !$0.isClosed }
+        filteredChats.filter { !$0.isClosed }
     }
 
     private var closedChats: [SpriteChat] {
-        chatListViewModel.chats.filter { $0.isClosed }
+        filteredChats.filter { $0.isClosed }
     }
 
     var body: some View {
@@ -53,6 +62,7 @@ struct SpriteNavigationPanel: View {
             }
         }
         .listStyle(.sidebar)
+        .searchable(text: $searchText, prompt: "Search chats")
         .alert("Rename Chat", isPresented: Binding(
             get: { chatToRename != nil },
             set: { if !$0 { chatToRename = nil } }
