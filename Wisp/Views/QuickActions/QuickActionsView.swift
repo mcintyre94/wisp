@@ -5,6 +5,7 @@ struct QuickActionsView: View {
     @Environment(\.dismiss) private var dismiss
     let viewModel: QuickActionsViewModel
     var insertCallback: ((String) -> Void)? = nil
+    var startChatCallback: ((String) -> Void)? = nil
 
     @State private var selectedTab = 0
 
@@ -43,10 +44,15 @@ struct QuickActionsView: View {
 
     @ViewBuilder private var bashTab: some View {
         if let cb = insertCallback {
-            BashQuickView(viewModel: viewModel.bashViewModel) { text in
+            BashQuickView(viewModel: viewModel.bashViewModel, onInsert: { text in
                 cb(text)
                 dismiss()
-            }
+            })
+        } else if let cb = startChatCallback {
+            BashQuickView(viewModel: viewModel.bashViewModel, onStartChat: { text in
+                cb(text)
+                dismiss()
+            })
         } else {
             BashQuickView(viewModel: viewModel.bashViewModel)
         }
@@ -59,13 +65,37 @@ struct QuickActionsView: View {
     }
 }
 
-#Preview {
+#Preview("No callback") {
     QuickActionsView(
         viewModel: QuickActionsViewModel(
             spriteName: "my-sprite",
             sessionId: nil,
             workingDirectory: "/home/sprite/project"
         )
+    )
+    .environment(SpritesAPIClient())
+}
+
+#Preview("Insert into chat") {
+    QuickActionsView(
+        viewModel: QuickActionsViewModel(
+            spriteName: "my-sprite",
+            sessionId: nil,
+            workingDirectory: "/home/sprite/project"
+        ),
+        insertCallback: { _ in }
+    )
+    .environment(SpritesAPIClient())
+}
+
+#Preview("Start Chat") {
+    QuickActionsView(
+        viewModel: QuickActionsViewModel(
+            spriteName: "my-sprite",
+            sessionId: nil,
+            workingDirectory: "/home/sprite/project"
+        ),
+        startChatCallback: { _ in }
     )
     .environment(SpritesAPIClient())
 }
