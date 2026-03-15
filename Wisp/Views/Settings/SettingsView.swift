@@ -44,6 +44,7 @@ struct SettingsView: View {
             gitIdentitySection
             claudeSection
             instructionsSection
+            quickMessagesSection
             appearanceSection
             #if DEBUG
             developerSection
@@ -200,6 +201,16 @@ struct SettingsView: View {
             Text("Custom Instructions")
         } footer: {
             Text("Appended to Claude's system prompt for every message.")
+        }
+    }
+
+    private var quickMessagesSection: some View {
+        Section {
+            NavigationLink {
+                QuickMessagesSettingsView()
+            } label: {
+                Label("Quick Messages", systemImage: "text.bubble")
+            }
         }
     }
 

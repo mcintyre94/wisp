@@ -6,6 +6,7 @@ struct ChatAttachmentButton: View {
     let onBrowseSpriteFiles: () -> Void
     let onPickPhoto: () -> Void
     let onPickFile: () -> Void
+    var onQuickMessages: (() -> Void)? = nil
     var body: some View {
         if isUploading {
             ProgressView()
@@ -28,6 +29,14 @@ struct ChatAttachmentButton: View {
                     onPickFile()
                 } label: {
                     Label("Choose File", systemImage: "doc")
+                }
+
+                if let onQuickMessages {
+                    Button {
+                        onQuickMessages()
+                    } label: {
+                        Label("Quick Messages", systemImage: "text.bubble")
+                    }
                 }
 
             } label: {
