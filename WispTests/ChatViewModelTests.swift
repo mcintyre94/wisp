@@ -848,11 +848,12 @@ struct ChatViewModelTests {
         }
     }
 
-    @Test func reconnectToServiceLogs_givesUpAfterOneRetryWhenServiceStillStopped() async throws {
+    @Test func reconnectToServiceLogs_givesUpAfterThreeRetriesWhenServiceStillStopped() async throws {
         let ctx = try makeModelContext()
         let (vm, _) = makeChatViewModel(modelContext: ctx)
 
-        // Both streams return no result event, and the service stays stopped.
+        // All streams return no result event, and the service stays stopped.
+        // Initial attempt + 3 retries = 4 total streams.
         let systemLine = #"{"type":"system","session_id":"s1","model":"claude-sonnet-4-20250514"}"# + "\n"
         let makeStream = {
             AsyncThrowingStream<ServiceLogEvent, Error> { continuation in
@@ -861,12 +862,15 @@ struct ChatViewModelTests {
             }
         }
 
-        let mock = MockServiceLogsProvider(streams: [makeStream(), makeStream()], statuses: ["stopped", "stopped"])
+        let mock = MockServiceLogsProvider(
+            streams: [makeStream(), makeStream(), makeStream(), makeStream()],
+            statuses: ["stopped", "stopped", "stopped", "stopped"]
+        )
 
         await vm.runReconnectLoop(apiClient: mock, modelContext: ctx)
 
-        #expect(mock.streamCallCount == 2, "Should attempt exactly two replays: initial + one retry")
-        #expect(mock.statusCallCount == 2, "Should check status once per iteration that yields no result event")
+        #expect(mock.streamCallCount == 4, "Should attempt exactly four replays: initial + three retries")
+        #expect(mock.statusCallCount == 4, "Should check status once per iteration that yields no result event")
         guard case .idle = vm.status else {
             Issue.record("Expected idle status after giving up, got \(vm.status)")
             return
@@ -899,8 +903,8 @@ struct ChatViewModelTests {
 
         await vm.runReconnectLoop(apiClient: mock, modelContext: ctx)
 
-        // Content should be present after the loop
-        #expect(assistantMsg.content.count == 1)
+        // Content should be present after the loop (text + system notice)
+        #expect(assistantMsg.content.count == 2)
         if case .text(let text) = assistantMsg.content.first {
             #expect(text == "Hello")
         } else {
@@ -932,7 +936,7 @@ struct ChatViewModelTests {
 
         await vm.runReconnectLoop(apiClient: mock, modelContext: ctx)
 
-        #expect(assistantMsg.content.count == 2)
+        #expect(assistantMsg.content.count == 3)
         if case .toolUse(let card) = assistantMsg.content[0] {
             #expect(card.toolName == "Bash")
             #expect(card.result != nil, "Tool use should be linked to its result after replay")
@@ -979,12 +983,17 @@ struct ChatViewModelTests {
         let mock = MockServiceLogsProvider(streams: [stream1, stream2], statuses: ["stopped"])
         await vm.runReconnectLoop(apiClient: mock, modelContext: ctx)
 
-        // Should be one merged text entry, not two separate bubbles
-        #expect(assistantMsg.content.count == 1)
+        // Should be one merged text entry + a system notice, not two separate text bubbles
+        #expect(assistantMsg.content.count == 2)
         if case .text(let text) = assistantMsg.content.first {
             #expect(text == "Hello world")
         } else {
             Issue.record("Expected single merged text entry after two replay iterations")
+        }
+        if case .systemNotice = assistantMsg.content.last {
+            // Expected reconnect outcome notice
+        } else {
+            Issue.record("Expected system notice at end of reconnected message")
         }
     }
 
@@ -1028,7 +1037,8 @@ struct ChatViewModelTests {
         let systemLine = #"{"type":"system","session_id":"s1","model":"claude-sonnet-4-20250514"}"# + "\n"
         let textLine = #"{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Partial"}]}}"# + "\n"
 
-        // Two streams with no result event; stopped status forces the retry-then-break path.
+        // Four streams with no result event; stopped status forces the retry-then-break path
+        // (initial attempt + 3 retries after service stopped).
         let makeStream = {
             AsyncThrowingStream<ServiceLogEvent, Error> { continuation in
                 continuation.yield(ServiceLogEvent(type: .stdout, data: systemLine, exitCode: nil, timestamp: nil, logFiles: nil))
@@ -1036,7 +1046,10 @@ struct ChatViewModelTests {
                 continuation.finish()
             }
         }
-        let mock = MockServiceLogsProvider(streams: [makeStream(), makeStream()], statuses: ["stopped", "stopped"])
+        let mock = MockServiceLogsProvider(
+            streams: [makeStream(), makeStream(), makeStream(), makeStream()],
+            statuses: ["stopped", "stopped", "stopped", "stopped"]
+        )
 
         await vm.runReconnectLoop(apiClient: mock, modelContext: ctx)
 
@@ -1070,7 +1083,7 @@ struct ChatViewModelTests {
 
         await vm.runReconnectLoop(apiClient: mock, modelContext: ctx, serviceAlreadyStopped: false)
 
-        #expect(assistantMsg.content.count == 1)
+        #expect(assistantMsg.content.count == 2)
         if case .text(let text) = assistantMsg.content.first {
             #expect(text == "Hello")
         } else {
@@ -1109,7 +1122,7 @@ struct ChatViewModelTests {
         await vm.runReconnectLoop(apiClient: mock, modelContext: ctx, serviceAlreadyStopped: false)
 
         // New content lands even though a historical event was skipped first
-        #expect(assistantMsg.content.count == 1)
+        #expect(assistantMsg.content.count == 2)
         if case .text(let text) = assistantMsg.content.first {
             #expect(text == "New content")
         } else {

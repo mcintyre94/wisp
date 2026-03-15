@@ -38,6 +38,7 @@ enum ChatContent: Identifiable {
     case toolUse(ToolUseCard)
     case toolResult(ToolResultCard)
     case error(String)
+    case systemNotice(String)
 
     var id: String {
         switch self {
@@ -45,6 +46,7 @@ enum ChatContent: Identifiable {
         case .toolUse(let card): return "tool-\(card.toolUseId)"
         case .toolResult(let card): return "result-\(card.toolUseId)"
         case .error(let msg): return "error-\(msg.hashValue)"
+        case .systemNotice(let msg): return "notice-\(msg.hashValue)"
         }
     }
 }
