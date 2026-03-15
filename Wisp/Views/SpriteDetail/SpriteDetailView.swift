@@ -14,6 +14,7 @@ struct SpriteDetailView: View {
     @State private var showCopiedFeedback = false
     @State private var pendingFork: (checkpointId: String, messageId: UUID)? = nil
     @State private var isForking = false
+    @State private var spriteQuickActionsViewModel: QuickActionsViewModel?
     @Environment(SpritesAPIClient.self) private var apiClient
     @Environment(\.modelContext) private var modelContext
     @Environment(\.scenePhase) private var scenePhase
@@ -172,6 +173,20 @@ struct SpriteDetailView: View {
                             }
                         }
                     }
+                    .contextMenu {
+                        if selectedTab != .checkpoints {
+                            Button {
+                                openSpriteQuickActions()
+                            } label: {
+                                Label("Quick Actions", systemImage: "bolt")
+                            }
+                        }
+                        Button {
+                            UIPasteboard.general.string = sprite.name
+                        } label: {
+                            Label("Copy Name", systemImage: "doc.on.doc")
+                        }
+                    }
             }
             if selectedTab == .chat {
                 ToolbarItem(placement: .primaryAction) {
@@ -191,6 +206,14 @@ struct SpriteDetailView: View {
                             Image(systemName: "square.and.pencil")
                         }
                         .disabled(chatViewModel?.status.isConnecting == true)
+                    }
+                }
+            } else if selectedTab == .overview {
+                ToolbarItem(placement: .primaryAction) {
+                    Button {
+                        openSpriteQuickActions()
+                    } label: {
+                        Image(systemName: "bolt")
                     }
                 }
             }
@@ -233,6 +256,12 @@ struct SpriteDetailView: View {
         .sheet(isPresented: $showChatSwitcher) {
             ChatSwitcherSheet(viewModel: chatListViewModel)
         }
+        .sheet(item: $spriteQuickActionsViewModel) { vm in
+            QuickActionsView(viewModel: vm)
+                .environment(apiClient)
+                .presentationDetents([.medium, .large])
+                .presentationDragIndicator(.visible)
+        }
         .alert("Sprite Recreated", isPresented: $showStaleChatsAlert) {
             Button("Start Fresh", role: .destructive) {
                 chatListViewModel.clearAllChats(apiClient: apiClient, modelContext: modelContext)
@@ -258,6 +287,14 @@ struct SpriteDetailView: View {
         } message: {
             Text("This will restore the Sprite to this checkpoint and create a new chat. Any changes since will be lost.")
         }
+    }
+
+    private func openSpriteQuickActions() {
+        spriteQuickActionsViewModel = QuickActionsViewModel(
+            spriteName: sprite.name,
+            sessionId: nil,
+            workingDirectory: "/home/sprite/project"
+        )
     }
 
     private func switchToChat(_ chat: SpriteChat) {
