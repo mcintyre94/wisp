@@ -1,4 +1,5 @@
 import SwiftUI
+import UserNotifications
 
 struct SettingsView: View {
     @Environment(SpritesAPIClient.self) private var apiClient
@@ -16,11 +17,9 @@ struct SettingsView: View {
     @State private var showGitHubDisconnectConfirmation = false
     @State private var copiedTokenFlash = false
     #if DEBUG
-    @State private var copiedDeviceIDFlash = false
+    @AppStorage("apnsToken") private var apnsToken: String = ""
+    @State private var copiedPushTokenFlash = false
     @State private var copiedCommitFlash = false
-    private var deviceID: String {
-        UIDevice.current.identifierForVendor?.uuidString ?? "Unavailable"
-    }
     private var buildCommit: String {
         Bundle.main.infoDictionary?["GitCommitHash"] as? String ?? "unknown"
     }
@@ -54,6 +53,17 @@ struct SettingsView: View {
         .sheet(isPresented: $showGitHubConnect) {
             GitHubConnectSheet()
         }
+        #if DEBUG
+        .onAppear {
+            Task {
+                let center = UNUserNotificationCenter.current()
+                let granted = try? await center.requestAuthorization(options: [.alert, .badge, .sound])
+                if granted == true {
+                    await UIApplication.shared.registerForRemoteNotifications()
+                }
+            }
+        }
+        #endif
     }
 
     // MARK: - Sections
@@ -218,23 +228,24 @@ struct SettingsView: View {
     private var developerSection: some View {
         Section {
             HStack {
-                Label("Device ID", systemImage: "iphone")
+                Label("Push Token", systemImage: "bell.badge")
                 Spacer()
-                Text(copiedDeviceIDFlash ? "Copied!" : deviceID)
+                Text(copiedPushTokenFlash ? "Copied!" : (apnsToken.isEmpty ? "Unavailable" : apnsToken))
                     .font(.caption)
-                    .foregroundStyle(copiedDeviceIDFlash ? .green : .secondary)
+                    .foregroundStyle(copiedPushTokenFlash ? .green : .secondary)
                     .lineLimit(1)
                     .truncationMode(.middle)
                     .contentTransition(.numericText())
             }
             .onTapGesture {
-                UIPasteboard.general.string = deviceID
+                guard !apnsToken.isEmpty else { return }
+                UIPasteboard.general.string = apnsToken
                 withAnimation {
-                    copiedDeviceIDFlash = true
+                    copiedPushTokenFlash = true
                 }
                 DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
                     withAnimation {
-                        copiedDeviceIDFlash = false
+                        copiedPushTokenFlash = false
                     }
                 }
             }
