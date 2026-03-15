@@ -24,6 +24,7 @@ struct ChatView: View {
 
     // Quick Actions
     @State private var quickActionsViewModel: QuickActionsViewModel?
+    @State private var saveDraftTask: Task<Void, Never>?
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -39,8 +40,9 @@ struct ChatView: View {
                             viewModel.selectRemoteSession(entry, apiClient: apiClient, modelContext: modelContext)
                         }
                     }
+                    let lastAssistantId = viewModel.messages.last(where: { $0.role == .assistant })?.id
                     ForEach(viewModel.messages) { message in
-                        messageView(message)
+                        messageView(message, lastAssistantId: lastAssistantId)
                     }
                     if viewModel.isStreaming && !viewModel.status.isReconnecting && viewModel.pendingWispAskCard == nil {
                         ThinkingShimmerView(label: viewModel.status.isConnecting ? "Connecting…" : (viewModel.activeToolLabel ?? "Thinking…"))
@@ -135,7 +137,12 @@ struct ChatView: View {
             }
         }
         .onChange(of: viewModel.inputText) {
-            viewModel.saveDraft(modelContext: modelContext)
+            saveDraftTask?.cancel()
+            saveDraftTask = Task {
+                try? await Task.sleep(for: .milliseconds(500))
+                guard !Task.isCancelled else { return }
+                viewModel.saveDraft(modelContext: modelContext)
+            }
         }
         .onChange(of: viewModel.attachedFiles.count) {
             viewModel.saveDraft(modelContext: modelContext)
@@ -345,9 +352,8 @@ struct ChatView: View {
     }
 
     @ViewBuilder
-    private func messageView(_ message: ChatMessage) -> some View {
-        let isLastAssistant = message.role == .assistant
-            && message.id == viewModel.messages.last(where: { $0.role == .assistant })?.id
+    private func messageView(_ message: ChatMessage, lastAssistantId: UUID?) -> some View {
+        let isLastAssistant = message.role == .assistant && message.id == lastAssistantId
         ChatMessageView(
             message: message,
             isStreaming: viewModel.isStreaming && message.id == viewModel.currentAssistantMessageId,
