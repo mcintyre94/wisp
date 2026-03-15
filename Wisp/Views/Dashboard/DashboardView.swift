@@ -1,3 +1,4 @@
+import SwiftData
 import SwiftUI
 
 enum SpriteSortOrder: String, CaseIterable {
@@ -7,8 +8,11 @@ enum SpriteSortOrder: String, CaseIterable {
 
 struct DashboardView: View {
     @Environment(SpritesAPIClient.self) private var apiClient
+    @Environment(ChatSessionManager.self) private var chatSessionManager
+    @Environment(\.modelContext) private var modelContext
     @Environment(\.horizontalSizeClass) private var sizeClass
     @State private var viewModel = DashboardViewModel()
+    @Query(filter: #Predicate<SpriteChat> { $0.isUnread }) private var unreadChats: [SpriteChat]
     @State private var selectedSpriteID: String?
     @State private var selectedTab: SpriteTab = .chat
     @State private var sortOrder: SpriteSortOrder = .newest
@@ -29,7 +33,8 @@ struct DashboardView: View {
             SpriteRowView(
                 sprite: sprite,
                 isPlain: sizeClass == .regular,
-                isSelected: sizeClass != .regular && selectedSpriteID == sprite.id
+                isSelected: sizeClass != .regular && selectedSpriteID == sprite.id,
+                hasUnreadChats: unreadChats.contains { $0.spriteName == sprite.name }
             )
             .tag(sprite.id)
             .swipeActions(edge: .trailing) {
@@ -164,6 +169,23 @@ struct DashboardView: View {
             await viewModel.loadSprites(apiClient: apiClient)
         }
         .task {
+            // Reconnect any chats that were in-progress when the app was last closed.
+            // isActive stays false on these VMs so result events mark them unread.
+            let descriptor = FetchDescriptor<SpriteChat>(
+                predicate: #Predicate { !$0.lastSessionComplete }
+            )
+            let incomplete = (try? modelContext.fetch(descriptor)) ?? []
+            for chat in incomplete where chat.claudeSessionId != nil {
+                let vm = chatSessionManager.viewModel(
+                    for: chat,
+                    spriteName: chat.spriteName,
+                    apiClient: apiClient,
+                    modelContext: modelContext
+                )
+                vm.reconnectIfNeeded(apiClient: apiClient, modelContext: modelContext)
+            }
+        }
+        .task {
             while !Task.isCancelled {
                 try? await Task.sleep(for: .seconds(5))
                 await viewModel.refreshSprites(apiClient: apiClient)
@@ -201,4 +223,6 @@ struct DashboardView: View {
 #Preview {
     DashboardView()
         .environment(SpritesAPIClient())
+        .environment(ChatSessionManager())
+        .modelContainer(for: [SpriteChat.self, SpriteSession.self], inMemory: true)
 }
