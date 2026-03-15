@@ -223,4 +223,6 @@ struct DashboardView: View {
 #Preview {
     DashboardView()
         .environment(SpritesAPIClient())
+        .environment(ChatSessionManager())
+        .modelContainer(for: [SpriteChat.self, SpriteSession.self], inMemory: true)
 }
