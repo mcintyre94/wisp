@@ -48,6 +48,7 @@ final class ChatViewModel {
     var inputText = ""
     var status: ChatStatus = .idle
     var modelName: String?
+    var modelOverride: ClaudeModel?
     var remoteSessions: [ClaudeSessionEntry] = []
     var hasAnyRemoteSessions = false
     var isLoadingRemoteSessions = false
@@ -750,7 +751,7 @@ final class ChatViewModel {
             claudeCmd += " --mcp-config \(configPath)"
         }
 
-        let modelId = UserDefaults.standard.string(forKey: "claudeModel") ?? ClaudeModel.sonnet.rawValue
+        let modelId = modelOverride?.rawValue ?? UserDefaults.standard.string(forKey: "claudeModel") ?? ClaudeModel.sonnet.rawValue
         claudeCmd += " --model \(modelId)"
 
         let maxTurns = UserDefaults.standard.integer(forKey: "maxTurns")
