@@ -17,6 +17,7 @@ struct QuickChatView: View {
                                 .foregroundStyle(.secondary)
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding([.horizontal, .top])
+                                .copyContextMenu(viewModel.lastQuestion)
                         }
                         if !viewModel.response.isEmpty {
                             Markdown(viewModel.response)
@@ -25,6 +26,7 @@ struct QuickChatView: View {
                                 .frame(maxWidth: .infinity, alignment: .leading)
                                 .padding()
                                 .id("response")
+                                .copyContextMenu(viewModel.response)
                         }
 
                         if viewModel.isStreaming && viewModel.response.isEmpty {
