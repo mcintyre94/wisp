@@ -87,7 +87,7 @@ struct QuickChatView: View {
             .padding(.vertical, 8)
             .padding(.bottom, isRunningOnMac ? 12 : 0)
         }
-        .background(Color(.systemBackground))
+        .background(.clear)
     }
 }
 

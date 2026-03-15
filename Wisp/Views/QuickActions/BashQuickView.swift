@@ -138,7 +138,7 @@ struct BashQuickView: View {
                 }
             }
         }
-        .background(Color(.systemBackground))
+        .background(.clear)
     }
 }
 
