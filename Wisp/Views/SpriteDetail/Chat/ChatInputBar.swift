@@ -17,11 +17,9 @@ struct ChatInputBar: View {
     var onRemoveAttachment: ((AttachedFile) -> Void)? = nil
     var lastUploadedFileName: String? = nil
     var onStash: (() -> Void)? = nil
-    var onSideChat: (() -> Void)? = nil
     var isFocused: FocusState<Bool>.Binding
 
     @State private var showStopConfirmation = false
-    @State private var textInputHeight: CGFloat = 36
 
     private var isEmpty: Bool {
         text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && attachedFiles.isEmpty
@@ -62,24 +60,13 @@ struct ChatInputBar: View {
                     )
                 }
 
-                if let onSideChat {
-                    Button(action: onSideChat) {
-                        Image(systemName: "bubble.and.pencil")
-                            .font(.title3)
-                    }
-                    .buttonStyle(.glass)
-                    .help("Side chat")
-                }
-
                 PasteInterceptingTextInput(
                     text: $text,
                     isFocused: isFocused,
                     isDisabled: hasQueuedMessage,
                     placeholder: "Message...",
-                    onPasteNonText: onPasteFromClipboard,
-                    dynamicHeight: $textInputHeight
+                    onPasteNonText: onPasteFromClipboard
                 )
-                .frame(height: max(textInputHeight, 36))
                 .padding(.horizontal, 16)
                 .padding(.vertical, 8)
                 .glassEffect(in: .rect(cornerRadius: 20))
@@ -132,9 +119,6 @@ struct ChatInputBar: View {
                 .accessibilityLabel("Send message")
             }
         }
-        .onChange(of: text) { _, newValue in
-            if newValue.isEmpty { textInputHeight = 36 }
-        }
         .animation(.easeInOut(duration: 0.2), value: attachedFiles.count)
         .animation(.easeInOut(duration: 0.2), value: lastUploadedFileName)
         .padding(.horizontal)
@@ -152,19 +136,6 @@ struct ChatInputBar: View {
         isStreaming: false,
         onSend: {},
         onInterrupt: {},
-        isFocused: $isFocused
-    )
-}
-
-#Preview("With Side Chat") {
-    @Previewable @State var text = ""
-    @Previewable @FocusState var isFocused: Bool
-    ChatInputBar(
-        text: $text,
-        isStreaming: false,
-        onSend: {},
-        onInterrupt: {},
-        onSideChat: {},
         isFocused: $isFocused
     )
 }

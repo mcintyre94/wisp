@@ -10,25 +10,18 @@ struct QuickActionsView: View {
     @State private var selectedTab = 0
 
     var body: some View {
-        VStack(spacing: 0) {
-            headerBar
-            Divider()
+        NavigationStack {
             tabs
+                .navigationTitle(selectedTab == 0 ? "Quick Chat" : "Bash")
+                .navigationBarTitleDisplayMode(.inline)
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button(action: handleDone) {
+                            Image(systemName: "xmark")
+                        }
+                    }
+                }
         }
-    }
-
-    private var headerBar: some View {
-        ZStack(alignment: .center) {
-            Text(selectedTab == 0 ? "Quick Chat" : "Bash")
-                .font(.headline)
-            HStack {
-                Button("Done", action: handleDone)
-                    .padding(.leading)
-                Spacer()
-            }
-        }
-        .frame(height: 44)
-        .background(.ultraThinMaterial)
     }
 
     private var tabs: some View {
@@ -65,13 +58,37 @@ struct QuickActionsView: View {
     }
 }
 
-#Preview {
+#Preview("No callback") {
     QuickActionsView(
         viewModel: QuickActionsViewModel(
             spriteName: "my-sprite",
             sessionId: nil,
             workingDirectory: "/home/sprite/project"
         )
+    )
+    .environment(SpritesAPIClient())
+}
+
+#Preview("Insert into chat") {
+    QuickActionsView(
+        viewModel: QuickActionsViewModel(
+            spriteName: "my-sprite",
+            sessionId: nil,
+            workingDirectory: "/home/sprite/project"
+        ),
+        insertCallback: { _ in }
+    )
+    .environment(SpritesAPIClient())
+}
+
+#Preview("Start Chat") {
+    QuickActionsView(
+        viewModel: QuickActionsViewModel(
+            spriteName: "my-sprite",
+            sessionId: nil,
+            workingDirectory: "/home/sprite/project"
+        ),
+        startChatCallback: { _ in }
     )
     .environment(SpritesAPIClient())
 }

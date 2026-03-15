@@ -51,6 +51,7 @@ struct BashQuickView: View {
                     }
                     .frame(maxWidth: .infinity, minHeight: 100, alignment: .topLeading)
                 }
+                .background(.clear)
                 .defaultScrollAnchor(.bottom)
                 .onChange(of: viewModel.output) {
                     proxy.scrollTo("output", anchor: .bottom)
@@ -95,16 +96,27 @@ struct BashQuickView: View {
                     .glassEffect(in: .rect(cornerRadius: 20))
                     .disabled(viewModel.isRunning)
 
-                Button {
-                    isInputFocused = false
-                    viewModel.send(apiClient: apiClient)
-                } label: {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.title2)
+                if viewModel.isRunning {
+                    Button {
+                        viewModel.cancel(apiClient: apiClient)
+                    } label: {
+                        Image(systemName: "stop.circle.fill")
+                            .font(.title2)
+                    }
+                    .tint(.red)
+                    .buttonStyle(.glass)
+                } else {
+                    Button {
+                        isInputFocused = false
+                        viewModel.send(apiClient: apiClient)
+                    } label: {
+                        Image(systemName: "arrow.up.circle.fill")
+                            .font(.title2)
+                    }
+                    .tint(viewModel.command.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .gray : Color("AccentColor"))
+                    .disabled(viewModel.command.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .buttonStyle(.glass)
                 }
-                .tint(viewModel.command.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .gray : Color("AccentColor"))
-                .disabled(viewModel.command.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isRunning)
-                .buttonStyle(.glass)
             }
             .padding(.horizontal)
             .padding(.vertical, 8)
@@ -127,18 +139,37 @@ struct BashQuickView: View {
             }
         }
         .background(Color(.systemBackground))
-        .onAppear {
-            isInputFocused = true
-        }
     }
 }
 
-#Preview {
+#Preview("No callback") {
     BashQuickView(
         viewModel: BashQuickViewModel(
             spriteName: "my-sprite",
             workingDirectory: "/home/sprite/project"
         )
+    )
+    .environment(SpritesAPIClient())
+}
+
+#Preview("Insert into chat") {
+    BashQuickView(
+        viewModel: BashQuickViewModel(
+            spriteName: "my-sprite",
+            workingDirectory: "/home/sprite/project"
+        ),
+        onInsert: { _ in }
+    )
+    .environment(SpritesAPIClient())
+}
+
+#Preview("Start Chat") {
+    BashQuickView(
+        viewModel: BashQuickViewModel(
+            spriteName: "my-sprite",
+            workingDirectory: "/home/sprite/project"
+        ),
+        onStartChat: { _ in }
     )
     .environment(SpritesAPIClient())
 }
