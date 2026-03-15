@@ -27,7 +27,7 @@ struct QuickActionsView: View {
             }
         }
         .frame(height: 44)
-        .background(.bar)
+        .background(.ultraThinMaterial)
     }
 
     private var tabs: some View {
