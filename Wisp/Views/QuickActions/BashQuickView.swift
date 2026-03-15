@@ -4,6 +4,7 @@ struct BashQuickView: View {
     @Environment(SpritesAPIClient.self) private var apiClient
     @Bindable var viewModel: BashQuickViewModel
     var onInsert: ((String) -> Void)? = nil
+    var onStartChat: ((String) -> Void)? = nil
     @FocusState private var isInputFocused: Bool
 
     private let shellChars = ["/", "-", "|", ">", "~", "`", "$", "&", "*", "."]
@@ -109,12 +110,20 @@ struct BashQuickView: View {
             .padding(.vertical, 8)
             .padding(.bottom, isRunningOnMac ? 12 : 0)
 
-            if let onInsert, !viewModel.output.isEmpty, !viewModel.isRunning {
-                Button("Insert into chat") {
-                    onInsert(viewModel.insertFormatted())
+            if !viewModel.output.isEmpty, !viewModel.isRunning {
+                if let onInsert {
+                    Button("Insert into chat") {
+                        onInsert(viewModel.insertFormatted())
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .padding(.bottom, 8)
+                } else if let onStartChat {
+                    Button("Start Chat") {
+                        onStartChat(viewModel.insertFormatted())
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .padding(.bottom, 8)
                 }
-                .buttonStyle(.borderedProminent)
-                .padding(.bottom, 8)
             }
         }
         .background(Color(.systemBackground))
