@@ -103,8 +103,22 @@ final class ExecSession: Sendable {
                 }
             }
 
+            // Periodic ping to detect dead connections early
+            let pingTask = Task { [task] in
+                while !Task.isCancelled {
+                    try? await Task.sleep(for: .seconds(15))
+                    guard !Task.isCancelled else { break }
+                    task.sendPing { error in
+                        if let error {
+                            logger.warning("WebSocket ping failed: \(error.localizedDescription)")
+                        }
+                    }
+                }
+            }
+
             continuation.onTermination = { _ in
                 receiveTask.cancel()
+                pingTask.cancel()
             }
         }
     }

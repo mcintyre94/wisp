@@ -73,6 +73,7 @@ final class ChatViewModel {
     var stashedDraft: String?
     private var retriedAfterTimeout = false
     private var turnHasMutations = false
+    private var previousSessionDisconnected = false
     private var pendingForkContext: String?
     private var apiClient: SpritesAPIClient?
 
@@ -700,6 +701,10 @@ final class ChatViewModel {
         }
 
         var fullPrompt = prompt
+        if previousSessionDisconnected, sessionId != nil {
+            fullPrompt = "[Note: The previous response was interrupted by a network disconnect. Your last output may be incomplete — verify where you left off before continuing.]\n\n" + fullPrompt
+            previousSessionDisconnected = false
+        }
         if let forkCtx = pendingForkContext {
             fullPrompt = forkCtx + "\n\n---\n\n" + prompt
             pendingForkContext = nil
@@ -781,7 +786,8 @@ final class ChatViewModel {
         let stream = apiClient.streamService(
             spriteName: spriteName,
             serviceName: serviceName,
-            config: config
+            config: config,
+            maxRunAfterDisconnect: 300
         )
 
         let assistantMessage = ChatMessage(role: .assistant)
@@ -803,6 +809,9 @@ final class ChatViewModel {
         // Attempt reconnection on disconnect
         if case .disconnected = streamResult {
             logger.info("[Chat] Disconnected mid-stream, attempting reconnect via service logs")
+            if let msg = currentAssistantMessage ?? messages.last(where: { $0.role == .assistant }) {
+                msg.content.append(.systemNotice("Connection lost — reconnecting..."))
+            }
             await reconnectToServiceLogs(apiClient: apiClient, modelContext: modelContext, serviceAlreadyStopped: false)
             return
         }
@@ -891,9 +900,9 @@ final class ChatViewModel {
         var skippedCount = 0
 
         let timeoutTask = Task {
-            try await Task.sleep(for: .seconds(30))
+            try await Task.sleep(for: .seconds(45))
             if !receivedData {
-                logger.warning("No service data received in 30s")
+                logger.warning("No service data received in 45s")
             }
         }
 
@@ -1083,7 +1092,8 @@ final class ChatViewModel {
         // Replay loop — each iteration fetches full log history.
         // processServiceStream skips events whose UUID is already in
         // processedEventUUIDs, so content is never cleared mid-stream.
-        var retriedAfterServiceStopped = false
+        var retriesAfterServiceStopped = 0
+        var reconnectDelay: TimeInterval = 2
         while !Task.isCancelled {
             receivedSystemEvent = false
             receivedResultEvent = false
@@ -1097,6 +1107,7 @@ final class ChatViewModel {
                 rebuildToolUseIndex()
             }
 
+            let uuidCountBeforeStream = processedEventUUIDs.count
             let stream = apiClient.streamServiceLogs(
                 spriteName: spriteName,
                 serviceName: serviceName
@@ -1111,7 +1122,13 @@ final class ChatViewModel {
             applyReplayBuffer()
 
             let currentUUIDs = processedEventUUIDs.count
+            let receivedNewEvents = currentUUIDs > uuidCountBeforeStream
             logger.info("[Chat] Reconnect stream ended: result=\(streamResult), content=\(assistantMessage.content.count), uuids=\(currentUUIDs)")
+
+            // Reset backoff when we received new events
+            if receivedNewEvents {
+                reconnectDelay = 2
+            }
 
             guard !Task.isCancelled else { return }
 
@@ -1124,8 +1141,9 @@ final class ChatViewModel {
             // Check if service is still running before retrying
             if let serviceInfo = try? await apiClient.getServiceStatus(spriteName: spriteName, serviceName: serviceName),
                serviceInfo.state.status == "running" {
-                logger.info("[Chat] Service still running, will re-poll after delay")
-                try? await Task.sleep(for: .seconds(2))
+                logger.info("[Chat] Service still running, will re-poll after \(reconnectDelay)s")
+                try? await Task.sleep(for: .seconds(reconnectDelay))
+                reconnectDelay = min(reconnectDelay * 2, 30)
                 continue
             }
 
@@ -1133,15 +1151,25 @@ final class ChatViewModel {
             // may have been killed by iOS just as Claude finished writing its final events —
             // a race between the connection dying and the result arriving. Allow one extra
             // retry so we catch any events that landed in the log after the stream closed.
-            if !retriedAfterServiceStopped {
-                retriedAfterServiceStopped = true
-                logger.info("[Chat] Service stopped without result event — retrying once for final events")
-                try? await Task.sleep(for: .seconds(1))
+            if retriesAfterServiceStopped < 3 {
+                let delay = 1 << retriesAfterServiceStopped // 1s, 2s, 4s
+                retriesAfterServiceStopped += 1
+                logger.info("[Chat] Service stopped without result event — retry \(retriesAfterServiceStopped)/3 after \(delay)s")
+                try? await Task.sleep(for: .seconds(delay))
                 continue
             }
 
-            // Already retried after stop — give up
+            // Exhausted retries after stop — give up
             break
+        }
+
+        // Append reconnect outcome notice
+        if receivedResultEvent {
+            assistantMessage.content.append(.systemNotice("Reconnected — response complete"))
+            previousSessionDisconnected = false
+        } else if !Task.isCancelled {
+            assistantMessage.content.append(.systemNotice("Reconnection gave up — response may be incomplete"))
+            previousSessionDisconnected = true
         }
 
         // Finalize

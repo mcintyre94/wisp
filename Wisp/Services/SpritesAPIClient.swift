@@ -288,7 +288,8 @@ final class SpritesAPIClient {
         spriteName: String,
         serviceName: String,
         config: ServiceRequest,
-        duration: String = "3600s"
+        duration: String = "3600s",
+        maxRunAfterDisconnect: Int? = nil
     ) -> AsyncThrowingStream<ServiceLogEvent, Error> {
         AsyncThrowingStream { continuation in
             let task = Task {
@@ -298,7 +299,10 @@ final class SpritesAPIClient {
                         return
                     }
 
-                    let path = "\(baseURL)/sprites/\(spriteName)/services/\(serviceName)?duration=\(duration)"
+                    var path = "\(baseURL)/sprites/\(spriteName)/services/\(serviceName)?duration=\(duration)"
+                    if let maxRunAfterDisconnect {
+                        path += "&max_run_after_disconnect=\(maxRunAfterDisconnect)"
+                    }
                     guard let url = URL(string: path) else {
                         continuation.finish(throwing: AppError.invalidURL)
                         return
