@@ -11,6 +11,7 @@ struct ChatInputBar: View {
     var onPickPhoto: (() -> Void)? = nil
     var onPickFile: (() -> Void)? = nil
     var onPasteFromClipboard: (() -> Void)? = nil
+    var onLongPressSend: (() -> Void)? = nil
     var isUploading: Bool = false
     var attachedFiles: [AttachedFile] = []
     var onRemoveAttachment: ((AttachedFile) -> Void)? = nil
@@ -91,6 +92,11 @@ struct ChatInputBar: View {
                     if let onStash, !isEmpty {
                         Button("Stash Draft", systemImage: "tray.and.arrow.down") {
                             onStash()
+                        }
+                    }
+                    if let onLongPressSend, !isEmpty {
+                        Button("Create Loop", systemImage: "repeat") {
+                            onLongPressSend()
                         }
                     }
                 } label: {
