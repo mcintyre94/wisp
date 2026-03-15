@@ -1,8 +1,8 @@
 import Foundation
 
 enum ClaudeModel: String, CaseIterable, Identifiable {
-    case sonnet
-    case opus
+    case sonnet = "sonnet[1m]"
+    case opus = "opus[1m]"
     case haiku
 
     var id: String { rawValue }
