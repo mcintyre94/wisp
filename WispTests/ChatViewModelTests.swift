@@ -1296,4 +1296,53 @@ struct ChatViewModelTests {
         #expect(vm.attachedFiles.count == 1)
         #expect(vm.attachedFiles[0].name == "live.py")
     }
+
+    // MARK: - restoreUndeliveredDraft
+
+    @Test func restoreUndeliveredDraft_removesTrailingUserMessageAndRestoresInputText() throws {
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        vm.messages = [
+            ChatMessage(role: .user, content: [.text("first message")]),
+            ChatMessage(role: .assistant, content: [.text("response")]),
+            ChatMessage(role: .user, content: [.text("unsent message")]),
+        ]
+
+        vm.restoreUndeliveredDraft(modelContext: ctx)
+
+        #expect(vm.messages.count == 2)
+        #expect(vm.inputText == "unsent message")
+    }
+
+    @Test func restoreUndeliveredDraft_isNoopWhenLastMessageIsAssistant() throws {
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        vm.messages = [
+            ChatMessage(role: .user, content: [.text("hello")]),
+            ChatMessage(role: .assistant, content: [.text("hi there")]),
+        ]
+
+        vm.restoreUndeliveredDraft(modelContext: ctx)
+
+        #expect(vm.messages.count == 2)
+        #expect(vm.inputText == "")
+    }
+
+    @Test func restoreUndeliveredDraft_doesNotOverwriteExistingInputText() throws {
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        vm.messages = [
+            ChatMessage(role: .user, content: [.text("unsent message")]),
+        ]
+        vm.inputText = "already typing something"
+
+        vm.restoreUndeliveredDraft(modelContext: ctx)
+
+        // Message removed but inputText NOT overwritten
+        #expect(vm.messages.count == 0)
+        #expect(vm.inputText == "already typing something")
+    }
 }
