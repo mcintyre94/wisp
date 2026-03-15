@@ -106,6 +106,30 @@ struct QuickChatViewModelTests {
         #expect(vm.error == nil)
     }
 
+    @Test func handle_maxTurnsResult_setsSpecificErrorWhenResponseEmpty() {
+        let vm = makeViewModel()
+        let event = ClaudeStreamEvent.result(ClaudeResultEvent(
+            type: "result", subtype: "error_max_turns",
+            sessionId: "sess-abc", isError: false,
+            durationMs: 100, numTurns: 3, result: nil
+        ))
+        vm.handle(event)
+        #expect(vm.error?.contains("turn limit") == true)
+    }
+
+    @Test func handle_maxTurnsResult_doesNotSetErrorWhenResponseNonEmpty() {
+        let vm = makeViewModel()
+        vm.handle(assistantEvent("Some partial answer"))
+        let event = ClaudeStreamEvent.result(ClaudeResultEvent(
+            type: "result", subtype: "error_max_turns",
+            sessionId: "sess-abc", isError: false,
+            durationMs: 100, numTurns: 3, result: nil
+        ))
+        vm.handle(event)
+        #expect(vm.error == nil)
+        #expect(vm.response == "Some partial answer")
+    }
+
     @Test func send_withNilSessionId_setsIsStreamingTrue() {
         let vm = makeViewModel(sessionId: nil)
         vm.question = "What files are here?"
