@@ -46,17 +46,7 @@ struct ChatView: View {
                         messageView(message)
                     }
                     if viewModel.isStreaming && !viewModel.status.isReconnecting && viewModel.pendingWispAskCard == nil {
-                        ThinkingShimmerView(
-                            label: viewModel.status.isConnecting ? "Connecting…" : (viewModel.activeToolLabel ?? "Thinking…"),
-                            onTap: viewModel.sessionId != nil ? {
-                                sideChatViewModel = SideChatViewModel(
-                                    spriteName: viewModel.spriteName,
-                                    sessionId: viewModel.sessionId!,
-                                    workingDirectory: viewModel.workingDirectory
-                                )
-                                showSideChat = true
-                            } : nil
-                        )
+                        ThinkingShimmerView(label: viewModel.status.isConnecting ? "Connecting…" : (viewModel.activeToolLabel ?? "Thinking…"))
                         .transition(.opacity.combined(with: .move(edge: .bottom)))
                         .id("shimmer")
                     }

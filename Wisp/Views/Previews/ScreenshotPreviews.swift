@@ -95,7 +95,6 @@ private struct ChatScreenshot: View {
                 .toolUse(tool4), .toolResult(result4),
                 .toolUse(tool5),
             ],
-            isStreaming: true
         )
     }
 
