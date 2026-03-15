@@ -234,6 +234,12 @@ struct SpriteDetailView: View {
                   let chat = chatListViewModel.chats.first(where: { $0.id == newId }) else { return }
             switchToChat(chat)
         }
+        .onAppear {
+            chatViewModel?.isActive = true
+        }
+        .onDisappear {
+            chatViewModel?.isActive = false
+        }
         .onChange(of: scenePhase) { _, newPhase in
             if newPhase == .active {
                 chatSessionManager.resumeAllAfterBackground(apiClient: apiClient, modelContext: modelContext)
@@ -386,4 +392,20 @@ struct SpriteDetailView: View {
         return "Context from a previous conversation (filesystem was restored to an earlier checkpoint):\n\n"
             + lines.joined(separator: "\n\n")
     }
+}
+
+private func mockSprite(name: String = "my-sprite", status: String = "running") -> Sprite {
+    let decoder = JSONDecoder()
+    decoder.dateDecodingStrategy = .iso8601
+    return try! decoder.decode(Sprite.self, from: Data("""
+        {"id":"s1","name":"\(name)","status":"\(status)","created_at":"2025-01-15T10:30:00Z"}
+        """.utf8))
+}
+
+#Preview {
+    @Previewable @State var selectedTab: SpriteTab = .chat
+    SpriteDetailView(sprite: mockSprite(), selectedTab: $selectedTab)
+        .environment(SpritesAPIClient())
+        .environment(ChatSessionManager())
+        .modelContainer(for: [SpriteChat.self, SpriteSession.self], inMemory: true)
 }

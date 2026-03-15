@@ -166,3 +166,28 @@ struct SpriteNavigationPanel: View {
     }
 }
 
+private func mockSprite(name: String = "my-sprite", status: String = "running") -> Sprite {
+    let decoder = JSONDecoder()
+    decoder.dateDecodingStrategy = .iso8601
+    return try! decoder.decode(Sprite.self, from: Data("""
+        {"id":"s1","name":"\(name)","status":"\(status)","created_at":"2025-01-15T10:30:00Z"}
+        """.utf8))
+}
+
+#Preview {
+    @Previewable @State var selection: SpriteNavSelection? = .chat(UUID())
+    NavigationStack {
+        List {
+            SpriteNavigationPanel(
+                sprite: mockSprite(),
+                selection: $selection,
+                chatListViewModel: SpriteChatListViewModel(spriteName: "my-sprite"),
+                onCreateChat: {}
+            )
+        }
+    }
+    .environment(SpritesAPIClient())
+    .environment(ChatSessionManager())
+    .modelContainer(for: [SpriteChat.self, SpriteSession.self], inMemory: true)
+}
+
