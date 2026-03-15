@@ -1270,7 +1270,8 @@ final class ChatViewModel {
             if !isReplaying, turnHasMutations, autoCheckpointEnabled, let apiClient {
                 let assistantMsg = currentAssistantMessage
                 let sprite = spriteName
-                Task { [weak assistantMsg] in
+                Task { [weak self, weak assistantMsg] in
+                    guard let self else { return }
                     let comment = await Self.generateCheckpointComment(from: assistantMsg)
                     await self.createAutoCheckpoint(
                         apiClient: apiClient,
@@ -1330,14 +1331,14 @@ final class ChatViewModel {
         guard let apiClient else { return }
         let sprite = spriteName
         let sessionId = chatId.uuidString.lowercased()
-        Task {
+        Task { [weak self] in
             let jsonObject = ["answer": answer]
             guard let jsonData = try? JSONSerialization.data(withJSONObject: jsonObject) else { return }
             let path = ClaudeQuestionTool.responseFilePath(for: sessionId)
             do {
                 _ = try await apiClient.uploadFile(spriteName: sprite, remotePath: path, data: jsonData)
             } catch {
-                status = .error("Failed to send answer — try again")
+                self?.status = .error("Failed to send answer — try again")
             }
         }
     }
@@ -1348,8 +1349,9 @@ final class ChatViewModel {
         guard let apiClient, message.checkpointId == nil else { return }
         isCheckpointing = true
         let sprite = spriteName
-        Task { [weak message] in
-            defer { self.isCheckpointing = false }
+        Task { [weak self, weak message] in
+            defer { self?.isCheckpointing = false }
+            guard let self else { return }
             let comment = await Self.generateCheckpointComment(from: message)
             await self.createAutoCheckpoint(
                 apiClient: apiClient,
