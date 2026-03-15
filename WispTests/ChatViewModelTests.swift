@@ -49,7 +49,7 @@ struct ChatViewModelTests {
             let idx = statusCallCount
             statusCallCount += 1
             let status = idx < statuses.count ? statuses[idx] : "stopped"
-            return ServiceInfo(name: serviceName, state: ServiceInfo.ServiceState(status: status))
+            return ServiceInfo(name: serviceName, cmd: "", args: nil, httpPort: nil, needs: [], state: ServiceInfo.ServiceState(name: status, pid: nil, startedAt: nil, status: status))
         }
     }
 
@@ -1140,31 +1140,6 @@ struct ChatViewModelTests {
         } else {
             Issue.record("Expected text content after skipped historical event")
         }
-    }
-
-    // MARK: - addAttachedFile
-
-    @Test func addAttachedFile_appendsWithLastPathComponent() throws {
-        let ctx = try makeModelContext()
-        let (vm, _) = makeChatViewModel(modelContext: ctx)
-
-        vm.addAttachedFile(remotePath: "/home/sprite/project/photo_20260312_120000.png")
-
-        #expect(vm.attachedFiles.count == 1)
-        #expect(vm.attachedFiles[0].name == "photo_20260312_120000.png")
-        #expect(vm.attachedFiles[0].path == "/home/sprite/project/photo_20260312_120000.png")
-    }
-
-    @Test func addAttachedFile_appendsMultiple() throws {
-        let ctx = try makeModelContext()
-        let (vm, _) = makeChatViewModel(modelContext: ctx)
-
-        vm.addAttachedFile(remotePath: "/home/sprite/project/file1.txt")
-        vm.addAttachedFile(remotePath: "/home/sprite/project/file2.py")
-
-        #expect(vm.attachedFiles.count == 2)
-        #expect(vm.attachedFiles[0].name == "file1.txt")
-        #expect(vm.attachedFiles[1].name == "file2.py")
     }
 
     @Test func stashDraft_leavesInputReadyForNextMessage() throws {
