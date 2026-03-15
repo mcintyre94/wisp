@@ -51,6 +51,7 @@ struct BashQuickView: View {
                     }
                     .frame(maxWidth: .infinity, minHeight: 100, alignment: .topLeading)
                 }
+                .background(.clear)
                 .defaultScrollAnchor(.bottom)
                 .onChange(of: viewModel.output) {
                     proxy.scrollTo("output", anchor: .bottom)

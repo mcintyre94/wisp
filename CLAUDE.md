@@ -119,6 +119,17 @@ The app runs on iPhone, iPad, and Mac (Designed for iPad). Keep all three in min
 - Run `mkdir -p /home/sprite/project` on first chat message if no project dir exists
 - Settings captions: when a setting needs an explanation, wrap the control and caption text together in a `VStack(alignment: .leading, spacing: 8)` inside the `Section`, with the caption styled `.font(.subheadline).foregroundStyle(.secondary)`.
 
+### Sheet design
+
+Two sheet patterns in use — match the right one:
+
+- **Form sheets** (data entry, e.g. New Sprite, New Checkpoint): `NavigationStack` > `Form` > `.navigationTitle` + `.navigationBarTitleDisplayMode(.inline)` + `.toolbar` with text Cancel / action-name buttons (e.g. "Cancel" / "Create"). Keep text labels — they're more informative than icons for actions with consequences.
+- **Utility/panel sheets** (e.g. Quick Actions): `NavigationStack` > custom content > `.navigationTitle` + `.navigationBarTitleDisplayMode(.inline)` + `Image(systemName: "xmark")` in `.cancellationAction`. `TabView` is fine for tabs here. Note: if you ever need a transparent sheet background, `TabView` will block it — its UIKit-backed view hierarchy ignores SwiftUI `.background(.clear)` and would need replacing with a custom VStack + HStack tab bar.
+
+Both sheet types use opaque `Color(.systemBackground)` throughout — do **not** use material/transparent backgrounds on sheets. Materials suit bars and floating elements (popovers, context menus), not sheets.
+
+Avoid sandwiching a fixed element (e.g. input bar) between two `Divider`s. A divider above the input bar separating scrollable content from a fixed action area is standard; a second one below it is redundant.
+
 ## Testing
 
 - Run unit tests after making changes to verify nothing is broken
