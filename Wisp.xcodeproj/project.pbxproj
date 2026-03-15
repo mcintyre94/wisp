@@ -133,6 +133,22 @@
 		FF11AA22BB33CC44DD55EE02 /* ChatViewModelHelpersTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF11AA22BB33CC44DD55EE01 /* ChatViewModelHelpersTests.swift */; };
 		FF11AA22BB33CC44DD55EE04 /* ChatViewModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = FF11AA22BB33CC44DD55EE03 /* ChatViewModelTests.swift */; };
 		FFB48F025123550446943E29 /* SpriteDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 54C849AF5732774C39968056 /* SpriteDetailView.swift */; };
+		AA0011BB22CC33DD44EE0002 /* ShellEscaping.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0011BB22CC33DD44EE0001 /* ShellEscaping.swift */; };
+		AA0011BB22CC33DD44EE0004 /* LoopManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0011BB22CC33DD44EE0003 /* LoopManager.swift */; };
+		AA0011BB22CC33DD44EE0006 /* LiveActivityManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0011BB22CC33DD44EE0005 /* LiveActivityManager.swift */; };
+		AA0011BB22CC33DD44EE0008 /* NotificationService.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0011BB22CC33DD44EE0007 /* NotificationService.swift */; };
+		AA0011BB22CC33DD44EE000A /* LoopModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0011BB22CC33DD44EE0009 /* LoopModels.swift */; };
+		AA0011BB22CC33DD44EE000C /* WispActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0011BB22CC33DD44EE000B /* WispActivityAttributes.swift */; };
+		AA0011BB22CC33DD44EE000E /* ServicesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0011BB22CC33DD44EE000D /* ServicesViewModel.swift */; };
+		AA0011BB22CC33DD44EE0010 /* SideChatViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0011BB22CC33DD44EE000F /* SideChatViewModel.swift */; };
+		AA0011BB22CC33DD44EE0012 /* CreateLoopSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0011BB22CC33DD44EE0011 /* CreateLoopSheet.swift */; };
+		AA0011BB22CC33DD44EE0014 /* LoopDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0011BB22CC33DD44EE0013 /* LoopDetailView.swift */; };
+		AA0011BB22CC33DD44EE0016 /* LoopRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0011BB22CC33DD44EE0015 /* LoopRowView.swift */; };
+		AA0011BB22CC33DD44EE0018 /* ScreenshotPreviews.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0011BB22CC33DD44EE0017 /* ScreenshotPreviews.swift */; };
+		AA0011BB22CC33DD44EE001A /* SideChatView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0011BB22CC33DD44EE0019 /* SideChatView.swift */; };
+		AA0011BB22CC33DD44EE001C /* ServiceDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0011BB22CC33DD44EE001B /* ServiceDetailView.swift */; };
+		AA0011BB22CC33DD44EE001E /* ServiceRowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0011BB22CC33DD44EE001D /* ServiceRowView.swift */; };
+		AA0011BB22CC33DD44EE0020 /* ServicesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA0011BB22CC33DD44EE001F /* ServicesView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -250,6 +266,22 @@
 		AA3500BB00CC00DD00EE0002 /* BashQuickView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BashQuickView.swift; sourceTree = "<group>"; };
 		AA3700BB00CC00DD00EE0002 /* BashQuickViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BashQuickViewModelTests.swift; sourceTree = "<group>"; };
 		FE9876543210ABCDEF987602 /* QuickChatViewModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = QuickChatViewModelTests.swift; sourceTree = "<group>"; };
+		AA0011BB22CC33DD44EE0001 /* ShellEscaping.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ShellEscaping.swift; sourceTree = "<group>"; };
+		AA0011BB22CC33DD44EE0003 /* LoopManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoopManager.swift; sourceTree = "<group>"; };
+		AA0011BB22CC33DD44EE0005 /* LiveActivityManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityManager.swift; sourceTree = "<group>"; };
+		AA0011BB22CC33DD44EE0007 /* NotificationService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationService.swift; sourceTree = "<group>"; };
+		AA0011BB22CC33DD44EE0009 /* LoopModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoopModels.swift; sourceTree = "<group>"; };
+		AA0011BB22CC33DD44EE000B /* WispActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WispActivityAttributes.swift; sourceTree = "<group>"; };
+		AA0011BB22CC33DD44EE000D /* ServicesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServicesViewModel.swift; sourceTree = "<group>"; };
+		AA0011BB22CC33DD44EE000F /* SideChatViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SideChatViewModel.swift; sourceTree = "<group>"; };
+		AA0011BB22CC33DD44EE0011 /* CreateLoopSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CreateLoopSheet.swift; sourceTree = "<group>"; };
+		AA0011BB22CC33DD44EE0013 /* LoopDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoopDetailView.swift; sourceTree = "<group>"; };
+		AA0011BB22CC33DD44EE0015 /* LoopRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoopRowView.swift; sourceTree = "<group>"; };
+		AA0011BB22CC33DD44EE0017 /* ScreenshotPreviews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ScreenshotPreviews.swift; sourceTree = "<group>"; };
+		AA0011BB22CC33DD44EE0019 /* SideChatView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SideChatView.swift; sourceTree = "<group>"; };
+		AA0011BB22CC33DD44EE001B /* ServiceDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceDetailView.swift; sourceTree = "<group>"; };
+		AA0011BB22CC33DD44EE001D /* ServiceRowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServiceRowView.swift; sourceTree = "<group>"; };
+		AA0011BB22CC33DD44EE001F /* ServicesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ServicesView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -312,6 +344,9 @@
 				BB11CC22DD33EE44FF660A01 /* GitHubAPIClient.swift */,
 				AA11BB22CC33DD44EE55FF01 /* GitHubDeviceFlowClient.swift */,
 				15F643DCF84E0352A9F8D649 /* KeychainService.swift */,
+				AA0011BB22CC33DD44EE0005 /* LiveActivityManager.swift */,
+				AA0011BB22CC33DD44EE0003 /* LoopManager.swift */,
+				AA0011BB22CC33DD44EE0007 /* NotificationService.swift */,
 				E01E14B5D87751457C549C17 /* SpritesAPIClient.swift */,
 			);
 			path = Services;
@@ -331,6 +366,7 @@
 		2C8C6880DD6F72287E9A9520 /* Local */ = {
 			isa = PBXGroup;
 			children = (
+				AA0011BB22CC33DD44EE0009 /* LoopModels.swift */,
 				F1E2D3C4B5A60798192A3B4C /* PersistedChatMessage.swift */,
 				A1B2C3D4E5F60718293A4B5D /* SpriteChat.swift */,
 				D6BE6E0D68BBB35DE56600E1 /* SpriteSession.swift */,
@@ -354,6 +390,7 @@
 				C8C4C3A1F2B2D57313431E50 /* Extensions.swift */,
 				A1B2C3D4E5F6A7B8C9D0E1F2 /* InAppBrowserCoordinator.swift */,
 				3893EEF3ADDA05DF7A9C0909 /* JSONValue.swift */,
+				AA0011BB22CC33DD44EE0001 /* ShellEscaping.swift */,
 				B2C3D4E5F6A70819304B5C6D /* SpriteChatMigration.swift */,
 			);
 			path = Utilities;
@@ -386,6 +423,7 @@
 				24E8A35CDF01641213F1A07B /* API */,
 				8535398E5809478EF63F4879 /* Claude */,
 				2C8C6880DD6F72287E9A9520 /* Local */,
+				AA0011BB22CC33DD44EE000B /* WispActivityAttributes.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -410,6 +448,7 @@
 				B22C752D93810C377FF981DD /* Chat */,
 				13541EF56061CE5B4A38DDFA /* Checkpoints */,
 				C7EC091CA8E532B96108719F /* Overview */,
+				AA0011BB22CC33DD44EE0023 /* Services */,
 			);
 			path = SpriteDetail;
 			sourceTree = "<group>";
@@ -418,14 +457,16 @@
 			isa = PBXGroup;
 			children = (
 				241DA350F74EECF3A998A903 /* AuthViewModel.swift */,
+				AA3200BB00CC00DD00EE0002 /* BashQuickViewModel.swift */,
 				540685D9D567596E24E4EF82 /* ChatViewModel.swift */,
 				D0AD6D912964E32FC8685EA3 /* CheckpointsViewModel.swift */,
 				EF49F7E0F4AC02FDF496D379 /* DashboardViewModel.swift */,
+				AA3100BB00CC00DD00EE0002 /* QuickActionsViewModel.swift */,
+				AA10BB20CC30DD40EE50FF02 /* QuickChatViewModel.swift */,
+				AA0011BB22CC33DD44EE000D /* ServicesViewModel.swift */,
+				AA0011BB22CC33DD44EE000F /* SideChatViewModel.swift */,
 				C3D4E5F6A7B80920415C6D7E /* SpriteChatListViewModel.swift */,
 				AC9BFD0F0AC39C136C9E828A /* SpriteOverviewViewModel.swift */,
-				AA3200BB00CC00DD00EE0002 /* BashQuickViewModel.swift */,
-				AA10BB20CC30DD40EE50FF02 /* QuickChatViewModel.swift */,
-				AA3100BB00CC00DD00EE0002 /* QuickActionsViewModel.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -482,9 +523,11 @@
 				A64C131D52B17EA7B36B1BE6 /* RootView.swift */,
 				8490ECAE9626FBAD9E65EA49 /* Auth */,
 				902EF50E1CB6723AF748F886 /* Dashboard */,
+				AA0011BB22CC33DD44EE0021 /* Loop */,
+				AA0011BB22CC33DD44EE0022 /* Previews */,
+				AA3600BB00CC00DD00EE0001 /* QuickActions */,
 				A5E41B8F9DACBEC637F8192A /* Settings */,
 				90D05FE8D8DC0D59A74BAD85 /* SpriteDetail */,
-				AA3600BB00CC00DD00EE0001 /* QuickActions */,
 				A7B8C9D0E1F2A3B4C5D6E7F8 /* WebView */,
 			);
 			path = Views;
@@ -524,6 +567,7 @@
 				8A278B4716095105A7024CF8 /* ToolUseCardView.swift */,
 				E1F2A3B4C5D6E7F800000003 /* UnifiedDiffView.swift */,
 				45BC8CB419377B55A1D1F896 /* UserBubbleView.swift */,
+				AA0011BB22CC33DD44EE0019 /* SideChatView.swift */,
 				AA00BB11CC22DD3300000002 /* WispAskCard.swift */,
 				E1F2A3B4C5D6E7F800000001 /* WispCodeHighlighter.swift */,
 				E1F2A3B4C5D6E7F800000002 /* WispMarkdownTheme.swift */,
@@ -570,6 +614,34 @@
 				AFC390C3D284C1E02E68458F /* Views */,
 			);
 			path = Wisp;
+			sourceTree = "<group>";
+		};
+		AA0011BB22CC33DD44EE0021 /* Loop */ = {
+			isa = PBXGroup;
+			children = (
+				AA0011BB22CC33DD44EE0011 /* CreateLoopSheet.swift */,
+				AA0011BB22CC33DD44EE0013 /* LoopDetailView.swift */,
+				AA0011BB22CC33DD44EE0015 /* LoopRowView.swift */,
+			);
+			path = Loop;
+			sourceTree = "<group>";
+		};
+		AA0011BB22CC33DD44EE0022 /* Previews */ = {
+			isa = PBXGroup;
+			children = (
+				AA0011BB22CC33DD44EE0017 /* ScreenshotPreviews.swift */,
+			);
+			path = Previews;
+			sourceTree = "<group>";
+		};
+		AA0011BB22CC33DD44EE0023 /* Services */ = {
+			isa = PBXGroup;
+			children = (
+				AA0011BB22CC33DD44EE001B /* ServiceDetailView.swift */,
+				AA0011BB22CC33DD44EE001D /* ServiceRowView.swift */,
+				AA0011BB22CC33DD44EE001F /* ServicesView.swift */,
+			);
+			path = Services;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -786,6 +858,22 @@
 				AA10BB20CC30DD40EE50FF01 /* QuickChatViewModel.swift in Sources */,
 				E1F2A3B4C5D6E7F800000012 /* WispCodeHighlighter.swift in Sources */,
 				E1F2A3B4C5D6E7F800000013 /* WispMarkdownTheme.swift in Sources */,
+				AA0011BB22CC33DD44EE0002 /* ShellEscaping.swift in Sources */,
+				AA0011BB22CC33DD44EE0004 /* LoopManager.swift in Sources */,
+				AA0011BB22CC33DD44EE0006 /* LiveActivityManager.swift in Sources */,
+				AA0011BB22CC33DD44EE0008 /* NotificationService.swift in Sources */,
+				AA0011BB22CC33DD44EE000A /* LoopModels.swift in Sources */,
+				AA0011BB22CC33DD44EE000C /* WispActivityAttributes.swift in Sources */,
+				AA0011BB22CC33DD44EE000E /* ServicesViewModel.swift in Sources */,
+				AA0011BB22CC33DD44EE0010 /* SideChatViewModel.swift in Sources */,
+				AA0011BB22CC33DD44EE0012 /* CreateLoopSheet.swift in Sources */,
+				AA0011BB22CC33DD44EE0014 /* LoopDetailView.swift in Sources */,
+				AA0011BB22CC33DD44EE0016 /* LoopRowView.swift in Sources */,
+				AA0011BB22CC33DD44EE0018 /* ScreenshotPreviews.swift in Sources */,
+				AA0011BB22CC33DD44EE001A /* SideChatView.swift in Sources */,
+				AA0011BB22CC33DD44EE001C /* ServiceDetailView.swift in Sources */,
+				AA0011BB22CC33DD44EE001E /* ServiceRowView.swift in Sources */,
+				AA0011BB22CC33DD44EE0020 /* ServicesView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -954,7 +1042,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 50;
 				DEVELOPMENT_TEAM = 79X2Z5TT45;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Wisp;
@@ -967,7 +1055,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = app.callum.wisp;
+				PRODUCT_BUNDLE_IDENTIFIER = io.iqlusion.wisp;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -978,7 +1066,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 50;
 				DEVELOPMENT_TEAM = 79X2Z5TT45;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_CFBundleDisplayName = Wisp;
@@ -991,7 +1079,7 @@
 					"@executable_path/Frameworks",
 				);
 				MARKETING_VERSION = 1.0.0;
-				PRODUCT_BUNDLE_IDENTIFIER = app.callum.wisp;
+				PRODUCT_BUNDLE_IDENTIFIER = io.iqlusion.wisp;
 				SDKROOT = iphoneos;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
@@ -1002,7 +1090,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 50;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0.0;
@@ -1019,7 +1107,7 @@
 			buildSettings = {
 				BUNDLE_LOADER = "$(TEST_HOST)";
 				CODE_SIGN_IDENTITY = "iPhone Developer";
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 50;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 26.0;
 				MARKETING_VERSION = 1.0.0;
