@@ -76,9 +76,6 @@ struct QuickChatView: View {
             .padding(.bottom, isRunningOnMac ? 12 : 0)
         }
         .background(Color(.systemBackground))
-        .onAppear {
-            isInputFocused = true
-        }
     }
 }
 

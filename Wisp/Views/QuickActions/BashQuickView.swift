@@ -118,9 +118,6 @@ struct BashQuickView: View {
             }
         }
         .background(Color(.systemBackground))
-        .onAppear {
-            isInputFocused = true
-        }
     }
 }
 
