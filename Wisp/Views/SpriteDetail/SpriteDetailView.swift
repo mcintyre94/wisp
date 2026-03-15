@@ -234,10 +234,17 @@ struct SpriteDetailView: View {
             ChatSwitcherSheet(viewModel: chatListViewModel)
         }
         .sheet(item: $spriteQuickActionsViewModel) { vm in
-            QuickActionsView(viewModel: vm)
-                .environment(apiClient)
-                .presentationDetents([.medium, .large])
-                .presentationDragIndicator(.visible)
+            QuickActionsView(
+                viewModel: vm,
+                startChatCallback: { text in
+                    chatViewModel?.inputText += (chatViewModel?.inputText.isEmpty == true ? "" : "\n") + text
+                    selectedTab = .chat
+                    spriteQuickActionsViewModel = nil
+                }
+            )
+            .environment(apiClient)
+            .presentationDetents([.medium, .large])
+            .presentationDragIndicator(.visible)
         }
         .alert("Sprite Recreated", isPresented: $showStaleChatsAlert) {
             Button("Start Fresh", role: .destructive) {
