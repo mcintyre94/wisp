@@ -90,13 +90,13 @@ struct ChatStatusBar: View {
         } label: {
             HStack(spacing: 4) {
                 Image(systemName: "sparkle")
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.primary)
                     .font(.system(size: 9))
                 Text(effectiveModel.displayName)
                     .font(.caption2)
-                    .foregroundStyle(.secondary)
+                    .foregroundStyle(.primary)
                 Image(systemName: "chevron.up.chevron.down")
-                    .foregroundStyle(.tertiary)
+                    .foregroundStyle(.secondary)
                     .font(.system(size: 8))
             }
         }
