@@ -32,6 +32,6 @@ struct WispApp: App {
                     browserCoordinator.authToken = apiClient.spritesToken
                 }
         }
-        .modelContainer(for: [SpriteChat.self, SpriteSession.self])
+        .modelContainer(for: [SpriteChat.self, SpriteSession.self, QuickMessage.self])
     }
 }
