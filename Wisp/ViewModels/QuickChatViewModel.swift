@@ -60,7 +60,7 @@ final class QuickChatViewModel {
 
         var claudeCmd = "claude -p --verbose --output-format stream-json --dangerously-skip-permissions"
         claudeCmd += " --disallowedTools \"Bash,Write,Edit,MultiEdit,WebSearch,WebFetch\""
-        claudeCmd += " --max-turns 3"
+        claudeCmd += " --max-turns 5"
         claudeCmd += " --model \(modelId)"
         if let sid = sessionId {
             claudeCmd += " --resume \(sid)"
@@ -155,8 +155,13 @@ final class QuickChatViewModel {
                 }
             }
         case .result(let resultEvent):
-            if resultEvent.isError == true, response.isEmpty {
-                error = "Claude returned an error"
+            let isErrorResult = resultEvent.isError == true || (resultEvent.subtype != nil && resultEvent.subtype != "success")
+            if isErrorResult, response.isEmpty {
+                if resultEvent.subtype == "error_max_turns" {
+                    error = "Claude hit the turn limit without responding — try a simpler question"
+                } else {
+                    error = "Claude returned an error"
+                }
             }
         default:
             break
