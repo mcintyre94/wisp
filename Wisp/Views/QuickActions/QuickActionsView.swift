@@ -65,13 +65,37 @@ struct QuickActionsView: View {
     }
 }
 
-#Preview {
+#Preview("No callback") {
     QuickActionsView(
         viewModel: QuickActionsViewModel(
             spriteName: "my-sprite",
             sessionId: nil,
             workingDirectory: "/home/sprite/project"
         )
+    )
+    .environment(SpritesAPIClient())
+}
+
+#Preview("Insert into chat") {
+    QuickActionsView(
+        viewModel: QuickActionsViewModel(
+            spriteName: "my-sprite",
+            sessionId: nil,
+            workingDirectory: "/home/sprite/project"
+        ),
+        insertCallback: { _ in }
+    )
+    .environment(SpritesAPIClient())
+}
+
+#Preview("Start Chat") {
+    QuickActionsView(
+        viewModel: QuickActionsViewModel(
+            spriteName: "my-sprite",
+            sessionId: nil,
+            workingDirectory: "/home/sprite/project"
+        ),
+        startChatCallback: { _ in }
     )
     .environment(SpritesAPIClient())
 }

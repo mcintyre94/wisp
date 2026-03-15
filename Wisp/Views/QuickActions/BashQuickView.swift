@@ -133,12 +133,34 @@ struct BashQuickView: View {
     }
 }
 
-#Preview {
+#Preview("No callback") {
     BashQuickView(
         viewModel: BashQuickViewModel(
             spriteName: "my-sprite",
             workingDirectory: "/home/sprite/project"
         )
+    )
+    .environment(SpritesAPIClient())
+}
+
+#Preview("Insert into chat") {
+    BashQuickView(
+        viewModel: BashQuickViewModel(
+            spriteName: "my-sprite",
+            workingDirectory: "/home/sprite/project"
+        ),
+        onInsert: { _ in }
+    )
+    .environment(SpritesAPIClient())
+}
+
+#Preview("Start Chat") {
+    BashQuickView(
+        viewModel: BashQuickViewModel(
+            spriteName: "my-sprite",
+            workingDirectory: "/home/sprite/project"
+        ),
+        onStartChat: { _ in }
     )
     .environment(SpritesAPIClient())
 }

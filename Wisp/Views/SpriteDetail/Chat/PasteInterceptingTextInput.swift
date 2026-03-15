@@ -84,7 +84,9 @@ struct PasteInterceptingTextInput: UIViewRepresentable {
     var isDisabled: Bool
     var placeholder: String
     var onPasteNonText: (() -> Void)?
-    @Binding var dynamicHeight: CGFloat
+
+    private static let maxHeight: CGFloat = 120
+    private static let minHeight: CGFloat = 36
 
     func makeUIView(context: Context) -> PasteTextView {
         let textView = PasteTextView()
@@ -100,10 +102,22 @@ struct PasteInterceptingTextInput: UIViewRepresentable {
         return textView
     }
 
+    func sizeThatFits(_ proposal: ProposedViewSize, uiView: PasteTextView, context: Context) -> CGSize? {
+        let width = proposal.width ?? uiView.frame.width
+        guard width > 0 else { return nil }
+        let fits = uiView.sizeThatFits(CGSize(width: width, height: .infinity))
+        let height = max(min(fits.height, Self.maxHeight), Self.minHeight)
+        uiView.isScrollEnabled = fits.height > Self.maxHeight
+        return CGSize(width: width, height: height)
+    }
+
     func updateUIView(_ textView: PasteTextView, context: Context) {
+        context.coordinator.parent = self
         if textView.text != text {
             textView.text = text
             textView.updatePlaceholderVisibility()
+            // Invalidate so SwiftUI calls sizeThatFits again with the updated text
+            textView.invalidateIntrinsicContentSize()
         }
         textView.isUserInteractionEnabled = !isDisabled
         textView.placeholder = placeholder
@@ -128,7 +142,6 @@ struct PasteInterceptingTextInput: UIViewRepresentable {
     final class Coordinator: NSObject, UITextViewDelegate {
         var parent: PasteInterceptingTextInput
         var isEditing = false
-        private let maxHeight: CGFloat = 120
 
         init(_ parent: PasteInterceptingTextInput) {
             self.parent = parent
@@ -137,13 +150,8 @@ struct PasteInterceptingTextInput: UIViewRepresentable {
         func textViewDidChange(_ textView: UITextView) {
             parent.text = textView.text
             (textView as? PasteTextView)?.updatePlaceholderVisibility()
-
-            let fitsSize = textView.sizeThatFits(CGSize(width: textView.frame.width, height: .infinity))
-            let newHeight = min(fitsSize.height, maxHeight)
-            if newHeight != parent.dynamicHeight {
-                parent.dynamicHeight = newHeight
-            }
-            textView.isScrollEnabled = fitsSize.height > maxHeight
+            // Signal SwiftUI to re-query sizeThatFits with the new content
+            textView.invalidateIntrinsicContentSize()
         }
 
         func textViewDidBeginEditing(_ textView: UITextView) {
@@ -160,16 +168,13 @@ struct PasteInterceptingTextInput: UIViewRepresentable {
 
 #Preview {
     @Previewable @State var text = ""
-    @Previewable @State var height: CGFloat = 36
     @Previewable @FocusState var focused: Bool
     PasteInterceptingTextInput(
         text: $text,
         isFocused: $focused,
         isDisabled: false,
-        placeholder: "Message...",
-        dynamicHeight: $height
+        placeholder: "Message..."
     )
-    .frame(height: max(height, 36))
     .padding(.horizontal, 16)
     .padding(.vertical, 8)
     .glassEffect(in: .rect(cornerRadius: 20))
