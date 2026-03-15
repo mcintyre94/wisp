@@ -54,7 +54,7 @@ final class ChatViewModel {
     var isLoadingHistory = false
 
     private var serviceName: String
-    private var sessionId: String?
+    private(set) var sessionId: String?
     var workingDirectory: String
     private(set) var worktreePath: String?
     /// True when any chat for this sprite has had a worktree created, indicating the
