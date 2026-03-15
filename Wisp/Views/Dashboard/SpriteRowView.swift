@@ -34,6 +34,7 @@ struct SpriteRowView: View {
                         : .default,
                     value: isPulsing
                 )
+                .accessibilityLabel("\(sprite.status.displayName) status")
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(sprite.name)
