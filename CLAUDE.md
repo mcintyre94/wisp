@@ -124,9 +124,9 @@ The app runs on iPhone, iPad, and Mac (Designed for iPad). Keep all three in min
 Two sheet patterns in use — match the right one:
 
 - **Form sheets** (data entry, e.g. New Sprite, New Checkpoint): `NavigationStack` > `Form` > `.navigationTitle` + `.navigationBarTitleDisplayMode(.inline)` + `.toolbar` with text Cancel / action-name buttons (e.g. "Cancel" / "Create"). Keep text labels — they're more informative than icons for actions with consequences.
-- **Utility/panel sheets** (e.g. Quick Actions): `NavigationStack` > custom content > `.navigationTitle` + `.navigationBarTitleDisplayMode(.inline)` + `Image(systemName: "xmark")` in `.cancellationAction`. `TabView` is fine for tabs here. Note: if you ever need a transparent sheet background, `TabView` will block it — its UIKit-backed view hierarchy ignores SwiftUI `.background(.clear)` and would need replacing with a custom VStack + HStack tab bar.
+- **Utility/panel sheets** (e.g. Quick Actions): `NavigationStack` > custom content > `.navigationBarTitleDisplayMode(.inline)` + `Image(systemName: "xmark")` in `.cancellationAction`. For tabs, use a segmented `Picker` in `ToolbarItem(placement: .principal)` + `Group { switch selectedTab }` for content — do **not** use `TabView`. TabView consumes bottom bar space, breaks transparent backgrounds, and its swipe gesture conflicts with any horizontal scroll content inside tabs.
 
-Both sheet types use opaque `Color(.systemBackground)` throughout — do **not** use material/transparent backgrounds on sheets. Materials suit bars and floating elements (popovers, context menus), not sheets.
+Both sheet types use `.background(.clear)` on inner content views so the system sheet material shows through. Do **not** force `Color(.systemBackground)` on sheet content — let the sheet's natural material handle the background.
 
 Avoid sandwiching a fixed element (e.g. input bar) between two `Divider`s. A divider above the input bar separating scrollable content from a fixed action area is standard; a second one below it is redundant.
 

@@ -1,5 +1,9 @@
 import SwiftUI
 
+private enum QuickActionsTab {
+    case chat, bash
+}
+
 struct QuickActionsView: View {
     @Environment(SpritesAPIClient.self) private var apiClient
     @Environment(\.dismiss) private var dismiss
@@ -7,31 +11,34 @@ struct QuickActionsView: View {
     var insertCallback: ((String) -> Void)? = nil
     var startChatCallback: ((String) -> Void)? = nil
 
-    @State private var selectedTab = 0
+    @State private var selectedTab: QuickActionsTab = .chat
 
     var body: some View {
         NavigationStack {
-            tabs
-                .navigationTitle(selectedTab == 0 ? "Quick Chat" : "Bash")
-                .navigationBarTitleDisplayMode(.inline)
-                .toolbar {
-                    ToolbarItem(placement: .cancellationAction) {
-                        Button(action: handleDone) {
-                            Image(systemName: "xmark")
-                        }
+            Group {
+                switch selectedTab {
+                case .chat:
+                    QuickChatView(viewModel: viewModel.quickChatViewModel)
+                case .bash:
+                    bashTab
+                }
+            }
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbar {
+                ToolbarItem(placement: .principal) {
+                    Picker("Tab", selection: $selectedTab) {
+                        Text("Quick Chat").tag(QuickActionsTab.chat)
+                        Text("Bash").tag(QuickActionsTab.bash)
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 200)
+                }
+                ToolbarItem(placement: .cancellationAction) {
+                    Button(action: handleDone) {
+                        Image(systemName: "xmark")
                     }
                 }
-        }
-    }
-
-    private var tabs: some View {
-        TabView(selection: $selectedTab) {
-            QuickChatView(viewModel: viewModel.quickChatViewModel)
-                .tabItem { Label("Quick Chat", systemImage: "bubble.left") }
-                .tag(0)
-            bashTab
-                .tabItem { Label("Bash", systemImage: "terminal") }
-                .tag(1)
+            }
         }
     }
 
