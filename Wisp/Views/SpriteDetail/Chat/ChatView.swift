@@ -168,13 +168,6 @@ struct ChatView: View {
                     },
                     lastUploadedFileName: viewModel.lastUploadedFileName,
                     onStash: { viewModel.stashDraft() },
-                    onSideChat: {
-                        quickActionsViewModel = QuickActionsViewModel(
-                            spriteName: viewModel.spriteName,
-                            sessionId: viewModel.sessionId,
-                            workingDirectory: viewModel.workingDirectory
-                        )
-                    },
                     isFocused: $isInputFocused
                 )
             }
