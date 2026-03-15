@@ -41,6 +41,7 @@ struct QuickChatView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                 }
+                .background(.clear)
                 .defaultScrollAnchor(.bottom)
                 .onChange(of: viewModel.response) {
                     proxy.scrollTo("response", anchor: .bottom)
