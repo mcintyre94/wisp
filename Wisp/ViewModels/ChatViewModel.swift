@@ -1,3 +1,4 @@
+import ActivityKit
 import Foundation
 import FoundationModels
 import os
@@ -91,6 +92,14 @@ final class ChatViewModel {
     /// on the first new event so live events stream in incrementally rather than
     /// being batched until the connection drops.
     private var isReplayingLiveService = false
+
+    // Live Activity tracking state
+    private var liveActivityBottomText: String = "Thinking..."
+    private var liveActivityYellowIntent: String?
+    private var liveActivityGreyIntent: String?
+    private var liveActivityStepNumber: Int = 1
+    private var liveActivitySubject: String?
+    private var liveActivityCurrentIcon: String?
 
     init(spriteName: String, chatId: UUID, currentServiceName: String?, workingDirectory: String, worktreePath: String? = nil) {
         self.spriteName = spriteName
@@ -784,6 +793,12 @@ final class ChatViewModel {
         processedEventUUIDs = []
         hasPlayedFirstTextHaptic = false
 
+        resetLiveActivityState()
+        let activityStarted = LiveActivityManager.shared.startActivity(spriteName: spriteName, userTask: prompt)
+        if !activityStarted, let error = LiveActivityManager.shared.lastError {
+            logger.warning("Live Activity not started: \(error)")
+        }
+
         logger.info("Service command: \(Self.sanitize(fullCommand))")
 
         let config = ServiceRequest(
@@ -1077,6 +1092,7 @@ final class ChatViewModel {
         logger.info("[Chat] Reconnecting to service logs (\(priorUUIDs) prior UUIDs)")
 
         hasPlayedFirstTextHaptic = false
+        resetLiveActivityState()
 
         // Ensure we have an assistant message to append into.
         // Only clear content if we have no prior events to skip (cold reconnect).
@@ -1212,6 +1228,8 @@ final class ChatViewModel {
                     if !isReplaying && !hasPlayedFirstTextHaptic {
                         hasPlayedFirstTextHaptic = true
                         fireHaptic(.medium)
+                        // Live Activity: Claude started responding = task done
+                        LiveActivityManager.shared.endActivity()
                     }
                     // Merge consecutive text blocks
                     if isReplaying {
@@ -1250,6 +1268,11 @@ final class ChatViewModel {
                     if ["Write", "Edit"].contains(toolUse.name) {
                         turnHasMutations = true
                     }
+                    // Live Activity: update with new tool step
+                    liveActivityBottomText = card.activityLabel
+                    liveActivityCurrentIcon = card.iconName
+                    liveActivityStepNumber += 1
+                    pushLiveActivityUpdate()
                 case .unknown:
                     break
                 }
@@ -1282,6 +1305,11 @@ final class ChatViewModel {
                     for item in message.content {
                         if case .toolUse(let toolCard) = item, toolCard.toolUseId == result.toolUseId {
                             toolCard.result = resultCard
+                            // Live Activity: tool completed, shift intent stack
+                            shiftThinkingIntent(toolCard.activityLabel)
+                            liveActivityBottomText = "Thinking..."
+                            liveActivityCurrentIcon = nil
+                            pushLiveActivityUpdate()
                             break
                         }
                     }
@@ -1296,6 +1324,8 @@ final class ChatViewModel {
             receivedResultEvent = true
             sessionId = resultEvent.sessionId
             saveSession(modelContext: modelContext, isComplete: true)
+            // Live Activity: fallback end if text block didn't end it
+            LiveActivityManager.shared.endActivity()
 
             let autoCheckpointEnabled = UserDefaults.standard.bool(forKey: "autoCheckpoint")
             if !isReplaying, turnHasMutations, autoCheckpointEnabled, let apiClient {
@@ -1688,6 +1718,38 @@ final class ChatViewModel {
 
     private func fireHaptic(_ style: UIImpactFeedbackGenerator.FeedbackStyle) {
         UIImpactFeedbackGenerator(style: style).impactOccurred()
+    }
+
+    // MARK: - Live Activity Helpers
+
+    private func shiftThinkingIntent(_ newIntent: String) {
+        // Shift: yellow -> grey, new -> yellow
+        liveActivityGreyIntent = liveActivityYellowIntent
+        liveActivityYellowIntent = newIntent
+        // Latch first intent as subject
+        if liveActivitySubject == nil {
+            liveActivitySubject = newIntent
+        }
+    }
+
+    private func pushLiveActivityUpdate() {
+        LiveActivityManager.shared.update(
+            subject: liveActivitySubject,
+            currentIntent: liveActivityBottomText,
+            currentIntentIcon: liveActivityCurrentIcon,
+            previousIntent: liveActivityYellowIntent,
+            secondPreviousIntent: liveActivityGreyIntent,
+            stepNumber: liveActivityStepNumber
+        )
+    }
+
+    private func resetLiveActivityState() {
+        liveActivityBottomText = "Thinking..."
+        liveActivityYellowIntent = nil
+        liveActivityGreyIntent = nil
+        liveActivityStepNumber = 1
+        liveActivitySubject = nil
+        liveActivityCurrentIcon = nil
     }
 
     #if DEBUG
