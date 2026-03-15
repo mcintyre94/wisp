@@ -169,7 +169,6 @@ struct ChatView: View {
                     },
                     lastUploadedFileName: viewModel.lastUploadedFileName,
                     onStash: { viewModel.stashDraft() },
-                    onQuickMessages: { showingQuickMessages = true },
                     onSideChat: {
                         quickActionsViewModel = QuickActionsViewModel(
                             spriteName: viewModel.spriteName,
@@ -177,6 +176,7 @@ struct ChatView: View {
                             workingDirectory: viewModel.workingDirectory
                         )
                     },
+                    onQuickMessages: { showingQuickMessages = true },
                     isFocused: $isInputFocused
                 )
             }
