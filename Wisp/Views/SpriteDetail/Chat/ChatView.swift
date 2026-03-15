@@ -27,6 +27,7 @@ struct ChatView: View {
 
     // Quick Actions
     @State private var quickActionsViewModel: QuickActionsViewModel?
+    @State private var showingQuickMessages = false
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -168,6 +169,14 @@ struct ChatView: View {
                     },
                     lastUploadedFileName: viewModel.lastUploadedFileName,
                     onStash: { viewModel.stashDraft() },
+                    onQuickMessages: { showingQuickMessages = true },
+                    onSideChat: {
+                        quickActionsViewModel = QuickActionsViewModel(
+                            spriteName: viewModel.spriteName,
+                            sessionId: viewModel.sessionId,
+                            workingDirectory: viewModel.workingDirectory
+                        )
+                    },
                     isFocused: $isInputFocused
                 )
             }
@@ -183,6 +192,11 @@ struct ChatView: View {
                 } label: {
                     Image(systemName: "bolt")
                 }
+            }
+        }
+        .sheet(isPresented: $showingQuickMessages) {
+            QuickMessagePickerSheet { text in
+                viewModel.inputText += (viewModel.inputText.isEmpty ? "" : "\n") + text
             }
         }
         .sheet(item: $quickActionsViewModel) { vm in
@@ -414,6 +428,6 @@ struct ChatView: View {
     NavigationStack {
         ChatView(viewModel: viewModel)
             .environment(SpritesAPIClient())
-            .modelContainer(for: [SpriteChat.self, SpriteSession.self], inMemory: true)
+            .modelContainer(for: [SpriteChat.self, SpriteSession.self, QuickMessage.self], inMemory: true)
     }
 }

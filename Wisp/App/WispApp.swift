@@ -13,7 +13,7 @@ struct WispApp: App {
 
     init() {
         do {
-            sharedModelContainer = try ModelContainer(for: SpriteChat.self, SpriteSession.self, SpriteLoop.self)
+            sharedModelContainer = try ModelContainer(for: SpriteChat.self, SpriteSession.self, SpriteLoop.self, QuickMessage.self)
         } catch {
             fatalError("Failed to initialize model container: \(error)")
         }

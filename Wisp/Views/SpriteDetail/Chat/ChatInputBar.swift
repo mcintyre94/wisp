@@ -17,6 +17,8 @@ struct ChatInputBar: View {
     var onRemoveAttachment: ((AttachedFile) -> Void)? = nil
     var lastUploadedFileName: String? = nil
     var onStash: (() -> Void)? = nil
+    var onSideChat: (() -> Void)? = nil
+    var onQuickMessages: (() -> Void)? = nil
     var isFocused: FocusState<Bool>.Binding
 
     @State private var showStopConfirmation = false
@@ -56,7 +58,8 @@ struct ChatInputBar: View {
                         isDisabled: hasQueuedMessage,
                         onBrowseSpriteFiles: onBrowseSpriteFiles,
                         onPickPhoto: onPickPhoto,
-                        onPickFile: onPickFile
+                        onPickFile: onPickFile,
+                        onQuickMessages: onQuickMessages
                     )
                 }
 
