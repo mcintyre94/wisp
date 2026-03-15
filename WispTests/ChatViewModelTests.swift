@@ -1117,6 +1117,53 @@ struct ChatViewModelTests {
         }
     }
 
+    // MARK: - runReconnectLoop: assistant message placement
+
+    @Test func runReconnectLoop_appendsAssistantAfterLatestUserMessage() async throws {
+        // Regression: messages.last(where: .assistant) would find a *previous* exchange's
+        // assistant message and write the new response into it, placing it before the latest
+        // user message. The fix checks messages.last only, so a new assistant message is
+        // always created after the most recent user message.
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        // Simulate a completed prior exchange already in messages
+        let prevUser = ChatMessage(role: .user, content: [.text("first question")])
+        let prevAssistant = ChatMessage(role: .assistant, content: [.text("first answer")])
+        let newUser = ChatMessage(role: .user, content: [.text("second question")])
+        vm.messages = [prevUser, prevAssistant, newUser]
+
+        let textLine = #"{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"second answer"}]}}"# + "\n"
+        let resultLine = #"{"type":"result","session_id":"s1","subtype":"success"}"# + "\n"
+        let stream = AsyncThrowingStream<ServiceLogEvent, Error> { continuation in
+            continuation.yield(ServiceLogEvent(type: .stdout, data: textLine, exitCode: nil, timestamp: nil, logFiles: nil))
+            continuation.yield(ServiceLogEvent(type: .stdout, data: resultLine, exitCode: nil, timestamp: nil, logFiles: nil))
+            continuation.finish()
+        }
+        let mock = MockServiceLogsProvider(streams: [stream], statuses: ["stopped"])
+
+        await vm.runReconnectLoop(apiClient: mock, modelContext: ctx, serviceAlreadyStopped: true)
+
+        // Should have 4 messages: prevUser, prevAssistant, newUser, newAssistant
+        #expect(vm.messages.count == 4)
+        #expect(vm.messages[0].role == .user)
+        #expect(vm.messages[1].role == .assistant)
+        #expect(vm.messages[2].role == .user)
+        #expect(vm.messages[3].role == .assistant)
+        // New response lands in the new assistant message, not the previous one
+        if case .text(let text) = vm.messages[3].content.first {
+            #expect(text == "second answer")
+        } else {
+            Issue.record("Expected text in new assistant message")
+        }
+        // Prior assistant message content is untouched
+        if case .text(let text) = vm.messages[1].content.first {
+            #expect(text == "first answer")
+        } else {
+            Issue.record("Expected prior assistant message to be unchanged")
+        }
+    }
+
     // MARK: - reconnecting → streaming status transition
 
     @Test func runReconnectLoop_transitionsReconnectingToStreamingOnStdoutData() async throws {

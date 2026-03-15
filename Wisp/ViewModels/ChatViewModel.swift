@@ -1063,7 +1063,11 @@ final class ChatViewModel {
         if let existing = currentAssistantMessage {
             assistantMessage = existing
             if !hasPriorEvents { assistantMessage.content = [] }
-        } else if let last = messages.last(where: { $0.role == .assistant }) {
+        } else if let last = messages.last, last.role == .assistant {
+            // Only reuse an assistant message if it's already at the tail — meaning
+            // the last exchange ended with a partial response that needs replaying.
+            // If the last message is a user message, fall through to create a new
+            // assistant message after it (each service is scoped to one user message).
             assistantMessage = last
             if !hasPriorEvents { assistantMessage.content = [] }
             currentAssistantMessage = last
