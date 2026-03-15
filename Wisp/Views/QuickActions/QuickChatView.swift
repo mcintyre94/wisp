@@ -60,16 +60,27 @@ struct QuickChatView: View {
                     .glassEffect(in: .rect(cornerRadius: 20))
                     .disabled(viewModel.isStreaming)
 
-                Button {
-                    isInputFocused = false
-                    viewModel.send(apiClient: apiClient)
-                } label: {
-                    Image(systemName: "arrow.up.circle.fill")
-                        .font(.title2)
+                if viewModel.isStreaming {
+                    Button {
+                        viewModel.cancel(apiClient: apiClient)
+                    } label: {
+                        Image(systemName: "stop.circle.fill")
+                            .font(.title2)
+                    }
+                    .tint(.red)
+                    .buttonStyle(.glass)
+                } else {
+                    Button {
+                        isInputFocused = false
+                        viewModel.send(apiClient: apiClient)
+                    } label: {
+                        Image(systemName: "arrow.up.circle.fill")
+                            .font(.title2)
+                    }
+                    .tint(viewModel.question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .gray : Color("AccentColor"))
+                    .disabled(viewModel.question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                    .buttonStyle(.glass)
                 }
-                .tint(viewModel.question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty ? .gray : Color("AccentColor"))
-                .disabled(viewModel.question.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty || viewModel.isStreaming)
-                .buttonStyle(.glass)
             }
             .padding(.horizontal)
             .padding(.vertical, 8)
