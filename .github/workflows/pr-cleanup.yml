@@ -1,0 +1,23 @@
+name: PR Cleanup
+
+on:
+  pull_request:
+    branches: [main]
+    types: [closed]
+
+jobs:
+  delete-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Delete PR release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          gh release delete "pr-${PR_NUMBER}" \
+            --repo mcintyre94/wisp \
+            --cleanup-tag \
+            --yes 2>/dev/null || echo "No release to clean up"
