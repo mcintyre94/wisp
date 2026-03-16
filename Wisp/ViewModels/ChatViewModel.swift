@@ -1056,9 +1056,19 @@ final class ChatViewModel {
             currentAssistantMessage = nil
         }
 
-        // If disconnected and exec session is gone (sprite slept), restore from session file
-        if case .disconnected = streamResult, sessionId != nil {
-            logger.info("[Chat] Exec session gone — restoring from session file")
+        // If exec session is gone (sprite slept, exec expired, or connection error),
+        // restore from Claude's session file. Both .disconnected (WebSocket closed cleanly
+        // with no data) and .timedOut (connection error / no data received) indicate the
+        // exec session no longer exists when reattaching.
+        let shouldRestoreFromFile: Bool
+        switch streamResult {
+        case .timedOut, .disconnected: shouldRestoreFromFile = sessionId != nil
+        default: shouldRestoreFromFile = false
+        }
+        if shouldRestoreFromFile {
+            // Clear any error status set by processExecStream before restoring
+            if case .error = status { status = .reconnecting }
+            logger.info("[Chat] Exec session gone (result=\(streamResult)) — restoring from session file")
             await restoreFromSessionFile(apiClient: apiClient, modelContext: modelContext)
         }
 
