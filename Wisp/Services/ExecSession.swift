@@ -5,8 +5,10 @@ private let logger = Logger(subsystem: "com.wisp.app", category: "Exec")
 
 /// Events yielded by an exec session stream
 enum ExecEvent: Sendable {
-    /// Stdout/stderr data from the process
-    case data(Data)
+    /// Stdout data from the process (stream ID 1) — Claude NDJSON
+    case stdout(Data)
+    /// Stderr data from the process (stream ID 2) — debug/heartbeat noise
+    case stderr(Data)
     /// Exec session ID from the session_info control frame
     case sessionInfo(id: String)
     /// Process exit code from the exec stream
@@ -74,10 +76,10 @@ final class ExecSession: Sendable {
 
                             switch streamId {
                             case 1: // stdout
-                                continuation.yield(.data(Data(payload)))
+                                continuation.yield(.stdout(Data(payload)))
                             case 2: // stderr — also yield for visibility
                                 logger.warning("stderr: \(preview)")
-                                continuation.yield(.data(Data(payload)))
+                                continuation.yield(.stderr(Data(payload)))
                             case 3: // exit
                                 let exitCode = payload.first.map { Int($0) } ?? -1
                                 logger.info("Exit frame received, code=\(exitCode)")

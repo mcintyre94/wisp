@@ -5,51 +5,6 @@ import Foundation
 @Suite("ChatViewModel Helpers")
 struct ChatViewModelHelpersTests {
 
-    // MARK: - stripLogTimestamps
-
-    @Test func stripLogTimestamps_stdoutPrefix() {
-        let input = "2026-02-19T09:13:24.665Z [stdout] {\"type\":\"system\"}\n"
-        let result = ChatViewModel.stripLogTimestamps(input)
-        #expect(result == "{\"type\":\"system\"}\n")
-    }
-
-    @Test func stripLogTimestamps_stderrPrefix() {
-        let input = "2026-02-19T09:13:24.665Z [stderr] some error\n"
-        let result = ChatViewModel.stripLogTimestamps(input)
-        #expect(result == "some error\n")
-    }
-
-    @Test func stripLogTimestamps_noPrefix() {
-        let input = "{\"type\":\"system\"}\n"
-        let result = ChatViewModel.stripLogTimestamps(input)
-        #expect(result == "{\"type\":\"system\"}\n")
-    }
-
-    @Test func stripLogTimestamps_multiLine() {
-        let input = """
-        2026-02-19T09:13:24.665Z [stdout] line1
-        2026-02-19T09:13:25.000Z [stdout] line2
-        """
-        let result = ChatViewModel.stripLogTimestamps(input)
-        #expect(result == "line1\nline2")
-    }
-
-    @Test func stripLogTimestamps_mixed() {
-        let input = "2026-02-19T09:13:24.665Z [stdout] json\nplain line\n"
-        let result = ChatViewModel.stripLogTimestamps(input)
-        #expect(result == "json\nplain line\n")
-    }
-
-    @Test func stripLogTimestamps_empty() {
-        #expect(ChatViewModel.stripLogTimestamps("") == "")
-    }
-
-    @Test func stripLogTimestamps_trailingNewline() {
-        let input = "2026-02-19T09:13:24.665Z [stdout] data\n"
-        let result = ChatViewModel.stripLogTimestamps(input)
-        #expect(result == "data\n")
-    }
-
     // MARK: - sanitize
 
     @Test func sanitize_equalsSignToken() {

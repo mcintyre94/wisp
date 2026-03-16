@@ -20,7 +20,6 @@ struct ChatNameTests {
         let vm = ChatViewModel(
             spriteName: "test",
             chatId: chat.id,
-            currentServiceName: nil,
             workingDirectory: chat.workingDirectory
         )
         return (vm, chat)

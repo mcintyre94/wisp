@@ -104,7 +104,6 @@ struct WispAskTests {
         let vm = ChatViewModel(
             spriteName: "test",
             chatId: UUID(),
-            currentServiceName: nil,
             workingDirectory: "/tmp"
         )
         #expect(vm.pendingWispAskCard == nil)
@@ -115,7 +114,6 @@ struct WispAskTests {
         let vm = ChatViewModel(
             spriteName: "test",
             chatId: UUID(),
-            currentServiceName: nil,
             workingDirectory: "/tmp"
         )
         let card = ToolUseCard(
@@ -134,7 +132,6 @@ struct WispAskTests {
         let vm = ChatViewModel(
             spriteName: "test",
             chatId: UUID(),
-            currentServiceName: nil,
             workingDirectory: "/tmp"
         )
         let card = ToolUseCard(
@@ -152,7 +149,6 @@ struct WispAskTests {
         let vm = ChatViewModel(
             spriteName: "test",
             chatId: UUID(),
-            currentServiceName: nil,
             workingDirectory: "/tmp"
         )
         let card = ToolUseCard(

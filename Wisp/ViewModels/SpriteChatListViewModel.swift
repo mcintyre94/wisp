@@ -60,14 +60,6 @@ final class SpriteChatListViewModel {
         chat.isClosed = true
         try? modelContext.save()
 
-        // Delete the service if one exists
-        if let serviceName = chat.currentServiceName {
-            let sName = spriteName
-            Task {
-                try? await apiClient.deleteService(spriteName: sName, serviceName: serviceName)
-            }
-        }
-
         // Remove worktree (best-effort, fire-and-forget)
         if let path = chat.worktreePath {
             let sName = spriteName
@@ -82,14 +74,6 @@ final class SpriteChatListViewModel {
 
     func deleteChat(_ chat: SpriteChat, apiClient: SpritesAPIClient, modelContext: ModelContext) {
         let wasActive = activeChatId == chat.id
-
-        // Delete the service if one exists
-        if let serviceName = chat.currentServiceName {
-            let sName = spriteName
-            Task {
-                try? await apiClient.deleteService(spriteName: sName, serviceName: serviceName)
-            }
-        }
 
         // Remove worktree (best-effort, fire-and-forget)
         if let path = chat.worktreePath {
@@ -118,11 +102,6 @@ final class SpriteChatListViewModel {
     func clearAllChats(apiClient: SpritesAPIClient, modelContext: ModelContext) {
         let sName = spriteName
         for chat in chats {
-            if let serviceName = chat.currentServiceName {
-                Task {
-                    try? await apiClient.deleteService(spriteName: sName, serviceName: serviceName)
-                }
-            }
             if let path = chat.worktreePath {
                 Task { await Self.removeWorktree(path: path, spriteName: sName, apiClient: apiClient) }
             }

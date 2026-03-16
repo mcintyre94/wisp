@@ -21,7 +21,6 @@ struct WorktreeTests {
         return ChatViewModel(
             spriteName: "test",
             chatId: chat.id,
-            currentServiceName: nil,
             workingDirectory: workingDirectory,
             worktreePath: worktreePath
         )

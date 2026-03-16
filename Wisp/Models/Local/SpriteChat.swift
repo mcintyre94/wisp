@@ -8,6 +8,7 @@ final class SpriteChat {
     var chatNumber: Int
     var customName: String?
     var currentServiceName: String?
+    var execSessionId: String?
     var claudeSessionId: String?
     var workingDirectory: String
     var createdAt: Date

@@ -1,5 +1,6 @@
 import Foundation
 import os
+import SwiftData
 
 private let logger = Logger(subsystem: "com.wisp.app", category: "API")
 
@@ -139,171 +140,79 @@ final class SpritesAPIClient {
         return ExecSession(url: components.url!, token: spritesToken ?? "")
     }
 
-    // MARK: - Services
+    func killExecSession(spriteName: String, execSessionId: String) async throws {
+        let _: EmptyResponse = try await request(
+            method: "POST",
+            path: "/sprites/\(spriteName)/exec/\(execSessionId)/kill"
+        )
+    }
 
-    /// Create or update a service and stream log events via NDJSON.
-    func streamService(
-        spriteName: String,
-        serviceName: String,
-        config: ServiceRequest,
-        duration: String = "3600s"
-    ) -> AsyncThrowingStream<ServiceLogEvent, Error> {
-        AsyncThrowingStream { continuation in
-            let task = Task {
-                do {
-                    guard let token = spritesToken else {
-                        continuation.finish(throwing: AppError.noToken)
-                        return
-                    }
+    // MARK: - Legacy service cleanup
 
-                    let path = "\(baseURL)/sprites/\(spriteName)/services/\(serviceName)?duration=\(duration)"
-                    guard let url = URL(string: path) else {
-                        continuation.finish(throwing: AppError.invalidURL)
-                        return
-                    }
+    private func deleteService(spriteName: String, serviceName: String) async {
+        let _: EmptyResponse? = try? await request(
+            method: "DELETE",
+            path: "/sprites/\(spriteName)/services/\(serviceName)",
+            timeout: 5
+        )
+    }
 
-                    var urlRequest = URLRequest(url: url)
-                    urlRequest.httpMethod = "PUT"
-                    urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-                    urlRequest.setValue("application/json", forHTTPHeaderField: "Content-Type")
-                    // Idle timeout: if no data arrives for 120s, assume connection dropped.
-                    // The reconnect logic will re-establish from service logs.
-                    urlRequest.timeoutInterval = 120
-                    urlRequest.httpBody = try encoder.encode(config)
+    private func listServices(spriteName: String) async throws -> [ServiceInfo] {
+        return try await request(method: "GET", path: "/sprites/\(spriteName)/services")
+    }
 
-                    let (bytes, response) = try await URLSession.shared.bytes(for: urlRequest)
+    /// One-time migration: delete `wisp-claude-*` and `wisp-quick-*` services left by
+    /// the old service-based execution model. They restart on every sprite wake and
+    /// re-execute stale prompts / burn Claude tokens.
+    ///
+    /// - Stored names (`currentServiceName` in SpriteChat) are cleared immediately so
+    ///   this is a true one-time operation for the claude services.
+    /// - `spriteNames` drives a live sweep to also catch `wisp-quick-*` and any
+    ///   services whose names weren't persisted.
+    ///
+    /// TODO: Remove this function (and its call in DashboardView, and `listServices`,
+    /// `deleteService`, `ServiceTypes.swift`, and `SpriteChat.currentServiceName`) once
+    /// enough time has passed that no users are still running the service-based version.
+    func cleanupLegacyServices(spriteNames: [String] = [], modelContext: ModelContext) {
+        // Only run while there are chats that still have a stored service name.
+        // Once all are cleared (after first run post-migration), this becomes a no-op
+        // and no sprite API calls are made on subsequent launches.
+        let descriptor = FetchDescriptor<SpriteChat>(
+            predicate: #Predicate { $0.currentServiceName != nil }
+        )
+        guard let chats = try? modelContext.fetch(descriptor), !chats.isEmpty else { return }
 
-                    guard let httpResponse = response as? HTTPURLResponse else {
-                        continuation.finish(throwing: AppError.networkError(URLError(.badServerResponse)))
-                        return
-                    }
-
-                    guard (200...299).contains(httpResponse.statusCode) else {
-                        switch httpResponse.statusCode {
-                        case 401: continuation.finish(throwing: AppError.unauthorized)
-                        case 404: continuation.finish(throwing: AppError.notFound)
-                        case 409: continuation.finish(throwing: AppError.serverError(statusCode: 409, message: "Service conflict"))
-                        default: continuation.finish(throwing: AppError.serverError(statusCode: httpResponse.statusCode, message: nil))
-                        }
-                        return
-                    }
-
-                    let decoder = JSONDecoder()
-                    for try await line in bytes.lines {
-                        guard !line.isEmpty, let data = line.data(using: .utf8) else { continue }
-                        do {
-                            let event = try decoder.decode(ServiceLogEvent.self, from: data)
-                            continuation.yield(event)
-                        } catch {
-                            logger.warning("Failed to decode service event: \(error.localizedDescription, privacy: .public) line: \(line.prefix(200), privacy: .public)")
-                        }
-                    }
-                    continuation.finish()
-                } catch {
-                    logger.error("streamService error: \(error.localizedDescription, privacy: .public)")
-                    continuation.finish(throwing: error)
-                }
+        // 1. Delete stored wisp-claude-* service names and clear them from the model
+        logger.info("Cleaning up \(chats.count) stored legacy service(s)")
+        for chat in chats {
+            guard let serviceName = chat.currentServiceName else { continue }
+            let sName = chat.spriteName
+            chat.currentServiceName = nil
+            Task {
+                await deleteService(spriteName: sName, serviceName: serviceName)
+                logger.info("Deleted legacy service \(serviceName) on \(sName)")
             }
+        }
+        try? modelContext.save()
 
-            continuation.onTermination = { _ in
-                task.cancel()
+        // 2. Sweep known sprites for any remaining wisp-* services (catches wisp-quick-*)
+        for spriteName in spriteNames {
+            let sName = spriteName
+            Task {
+                guard let services = try? await listServices(spriteName: sName) else { return }
+                let wispServices = services.filter { $0.name.hasPrefix("wisp-") }
+                guard !wispServices.isEmpty else { return }
+                logger.info("Sweeping \(wispServices.count) wisp-* service(s) on \(sName)")
+                for service in wispServices {
+                    await deleteService(spriteName: sName, serviceName: service.name)
+                }
             }
         }
     }
 
-    /// Reconnect to service logs (full history + continued streaming).
-    func streamServiceLogs(
-        spriteName: String,
-        serviceName: String,
-        duration: String = "3600s"
-    ) -> AsyncThrowingStream<ServiceLogEvent, Error> {
-        AsyncThrowingStream { continuation in
-            let task = Task {
-                do {
-                    guard let token = spritesToken else {
-                        continuation.finish(throwing: AppError.noToken)
-                        return
-                    }
-
-                    let path = "\(baseURL)/sprites/\(spriteName)/services/\(serviceName)/logs?duration=\(duration)"
-                    guard let url = URL(string: path) else {
-                        continuation.finish(throwing: AppError.invalidURL)
-                        return
-                    }
-
-                    var urlRequest = URLRequest(url: url)
-                    urlRequest.httpMethod = "GET"
-                    urlRequest.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-                    urlRequest.timeoutInterval = 120
-
-                    let (bytes, response) = try await URLSession.shared.bytes(for: urlRequest)
-
-                    guard let httpResponse = response as? HTTPURLResponse else {
-                        continuation.finish(throwing: AppError.networkError(URLError(.badServerResponse)))
-                        return
-                    }
-
-                    guard (200...299).contains(httpResponse.statusCode) else {
-                        switch httpResponse.statusCode {
-                        case 401: continuation.finish(throwing: AppError.unauthorized)
-                        case 404: continuation.finish(throwing: AppError.notFound)
-                        default: continuation.finish(throwing: AppError.serverError(statusCode: httpResponse.statusCode, message: nil))
-                        }
-                        return
-                    }
-
-                    let decoder = JSONDecoder()
-                    for try await line in bytes.lines {
-                        guard !line.isEmpty, let data = line.data(using: .utf8) else { continue }
-                        do {
-                            let event = try decoder.decode(ServiceLogEvent.self, from: data)
-                            continuation.yield(event)
-                        } catch {
-                            logger.warning("Failed to decode service log event: \(error.localizedDescription, privacy: .public) line: \(line.prefix(200), privacy: .public)")
-                        }
-                    }
-                    continuation.finish()
-                } catch {
-                    logger.error("streamServiceLogs error: \(error.localizedDescription, privacy: .public)")
-                    continuation.finish(throwing: error)
-                }
-            }
-
-            continuation.onTermination = { _ in
-                task.cancel()
-            }
-        }
-    }
-
-    /// Check the status of a service.
-    func getServiceStatus(spriteName: String, serviceName: String) async throws -> ServiceInfo {
-        return try await request(method: "GET", path: "/sprites/\(spriteName)/services/\(serviceName)")
-    }
-
-    // ServiceLogsProvider conformance — bridges the default-argument version to the protocol signature.
-    func streamServiceLogs(spriteName: String, serviceName: String) -> AsyncThrowingStream<ServiceLogEvent, Error> {
-        streamServiceLogs(spriteName: spriteName, serviceName: serviceName, duration: "3600s")
-    }
 }
-
-// MARK: - ServiceLogsProvider
-
-/// Minimal protocol covering the two API calls used by the reconnect loop,
-/// allowing the loop to be tested without a live network connection.
-@MainActor
-protocol ServiceLogsProvider {
-    func streamServiceLogs(spriteName: String, serviceName: String) -> AsyncThrowingStream<ServiceLogEvent, Error>
-    func getServiceStatus(spriteName: String, serviceName: String) async throws -> ServiceInfo
-}
-
-extension SpritesAPIClient: ServiceLogsProvider {}
 
 extension SpritesAPIClient {
-
-    /// Delete a service (5s timeout to avoid blocking callers if sprite is unresponsive).
-    func deleteService(spriteName: String, serviceName: String) async throws {
-        let _: EmptyResponse = try await request(method: "DELETE", path: "/sprites/\(spriteName)/services/\(serviceName)", timeout: 5)
-    }
 
     // MARK: - File Upload
 
@@ -421,7 +330,9 @@ extension SpritesAPIClient {
 
         do {
             for try await event in session.events() {
-                if case .data(let chunk) = event {
+                if case .stdout(let chunk) = event {
+                    output.append(chunk)
+                } else if case .stderr(let chunk) = event {
                     output.append(chunk)
                 } else if case .exit(let code) = event {
                     exitCode = code

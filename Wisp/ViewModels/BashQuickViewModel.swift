@@ -55,25 +55,20 @@ final class BashQuickViewModel {
 
     private func executeCommand(_ cmd: String, apiClient: SpritesAPIClient) async {
         let fullCommand = "cd \(workingDirectory) 2>/dev/null || true; \(cmd)"
-        let serviceName = "wisp-quick-\(UUID().uuidString.prefix(8).lowercased())"
-        let config = ServiceRequest(cmd: "bash", args: ["-c", fullCommand], needs: nil, httpPort: nil)
-        let stream = apiClient.streamService(spriteName: spriteName, serviceName: serviceName, config: config)
+        let session = apiClient.createExecSession(spriteName: spriteName, command: fullCommand)
+        session.connect()
 
         do {
-            streamLoop: for try await event in stream {
+            streamLoop: for try await event in session.events() {
                 guard !Task.isCancelled else { break streamLoop }
-                switch event.type {
-                case .stdout, .stderr:
-                    if let text = event.data {
+                switch event {
+                case .stdout(let data), .stderr(let data):
+                    if let text = String(data: data, encoding: .utf8) {
                         output += text
                     }
-                case .error:
-                    if output.isEmpty {
-                        error = event.data ?? "Service error"
-                    }
-                case .complete:
+                case .exit:
                     break streamLoop
-                default:
+                case .sessionInfo:
                     break
                 }
             }
@@ -84,9 +79,7 @@ final class BashQuickViewModel {
             }
         }
 
-        Task {
-            try? await apiClient.deleteService(spriteName: spriteName, serviceName: serviceName)
-        }
+        session.disconnect()
 
         if !Task.isCancelled {
             isRunning = false
