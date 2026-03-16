@@ -571,6 +571,9 @@ final class ChatViewModel {
         let worktreeEnabled = UserDefaults.standard.bool(forKey: "worktreePerChat")
         let needsWorktreeSetup = isFirstMessage && worktreePath == nil && worktreeEnabled
         status = .connecting
+        // Cancel any orphaned reconnect task (e.g., reconnectIfNeeded fired in the same
+        // run-loop turn before the task body had a chance to set .reconnecting).
+        streamTask?.cancel()
         streamTask = Task {
             var claudePrompt = prompt
             if needsWorktreeSetup {
@@ -594,7 +597,10 @@ final class ChatViewModel {
     }
 
     func resumeAfterBackground(apiClient: SpritesAPIClient, modelContext: ModelContext) {
-        guard isStreaming else { return }
+        // Only interrupt genuine PUT streams (.streaming / .connecting).
+        // If the VM is already reconnecting via GET logs (e.g., from the startup
+        // reconnect in DashboardView), leave it alone — it's already doing the right thing.
+        guard status == .streaming || status == .connecting else { return }
         // Cancel the stale stream and reconnect via service logs
         streamTask?.cancel()
         streamTask = Task {
@@ -653,14 +659,22 @@ final class ChatViewModel {
             return
         }
 
+        // Cancel any orphaned task that may still be running (e.g., from a concurrent
+        // call to reconnectIfNeeded triggered by both DashboardView startup and
+        // resumeAllAfterBackground before the first task had a chance to set .reconnecting).
+        streamTask?.cancel()
         streamTask = Task {
+            // If this task was pre-cancelled (e.g. superseded by a second reconnectIfNeeded
+            // call in the same run-loop turn), bail out before touching any state.
+            guard !Task.isCancelled else { return }
+
             // Only reconnect if the service exists (running or stopped with logs)
             guard let serviceInfo = try? await apiClient.getServiceStatus(spriteName: spriteName, serviceName: serviceName)
             else {
                 // Service was never created (e.g. app killed before the service call).
                 // Restore any trailing user message as a draft rather than leaving a
                 // stale bubble with no response.
-                restoreUndeliveredDraft(modelContext: modelContext)
+                if !Task.isCancelled { restoreUndeliveredDraft(modelContext: modelContext) }
                 return
             }
 
