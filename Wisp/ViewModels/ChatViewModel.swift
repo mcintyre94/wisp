@@ -61,7 +61,7 @@ final class ChatViewModel {
     /// True when any chat for this sprite has had a worktree created, indicating the
     /// sprite has a git repo. Used to suppress session-resume UI on new chats.
     private(set) var spriteUsesWorktrees = false
-    private var streamTask: Task<Void, Never>?
+    var streamTask: Task<Void, Never>?
     var namingTask: Task<String, Never>?
     private let parser = ClaudeStreamParser()
     private var currentAssistantMessage: ChatMessage?
