@@ -3,6 +3,8 @@
 Wisp is an iOS app for using Claude Code on [Sprites](https://sprites.dev/) on
 mobile.
 
+> **Wisp now has a public TestFlight! Please [Join the beta](https://testflight.apple.com/join/hPf7KzC9) and provide feedback if you'd like to try Wisp!**
+
 <p align="center">
   <img src="readme-images/overview.jpg" width="300" />
   <img src="readme-images/chat.jpg" width="300" />
