@@ -1345,4 +1345,72 @@ struct ChatViewModelTests {
         #expect(vm.messages.count == 0)
         #expect(vm.inputText == "already typing something")
     }
+
+    // MARK: - resumeAfterBackground / reconnectIfNeeded guards
+
+    /// resumeAfterBackground must not interrupt a VM that is already reconnecting via
+    /// GET logs — it should only cancel genuine PUT streams (.streaming / .connecting).
+    @Test func resumeAfterBackground_doesNotInterruptReconnecting() throws {
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        vm.status = .reconnecting
+        vm.resumeAfterBackground(apiClient: SpritesAPIClient(), modelContext: ctx)
+
+        #expect(vm.status == .reconnecting)
+    }
+
+    @Test func resumeAfterBackground_doesNotInterruptIdle() throws {
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        vm.status = .idle
+        vm.resumeAfterBackground(apiClient: SpritesAPIClient(), modelContext: ctx)
+
+        #expect(vm.status == .idle)
+        #expect(vm.streamTask == nil)
+    }
+
+    /// reconnectIfNeeded must be a no-op when the VM is already in a streaming/
+    /// connecting/reconnecting state — prevents creating a second concurrent task.
+    @Test func reconnectIfNeeded_isNoopWhenAlreadyStreaming() throws {
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        vm.messages = [ChatMessage(role: .user, content: [.text("hello")])]
+        vm.status = .reconnecting
+        vm.reconnectIfNeeded(apiClient: SpritesAPIClient(), modelContext: ctx)
+
+        #expect(vm.status == .reconnecting)
+    }
+
+    /// When reconnectIfNeeded is called twice in the same run-loop turn (e.g. from
+    /// DashboardView startup AND resumeAllAfterBackground), the first task must be
+    /// pre-cancelled so it never calls restoreUndeliveredDraft and the draft is
+    /// only restored once by the surviving second task.
+    @Test func reconnectIfNeeded_concurrentCallPrecancelsFirst() async throws {
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        // Two trailing user messages so we can distinguish "restored once" (count=1)
+        // from "restored twice" (count=0) if the pre-cancel guard were missing.
+        vm.messages = [
+            ChatMessage(role: .user, content: [.text("earlier message")]),
+            ChatMessage(role: .user, content: [.text("draft message")]),
+        ]
+
+        // Both calls happen synchronously, so Task A is cancelled before its body
+        // ever runs. Only Task B should call restoreUndeliveredDraft.
+        vm.reconnectIfNeeded(apiClient: SpritesAPIClient(), modelContext: ctx)
+        vm.reconnectIfNeeded(apiClient: SpritesAPIClient(), modelContext: ctx)
+
+        // Wait for Task B to finish (getServiceStatus will fail with a network error,
+        // which is the expected fast-fail path in a test environment).
+        await vm.streamTask?.value
+
+        // restoreUndeliveredDraft called exactly once: removes "draft message".
+        // If Task A were not pre-cancelled it would have also popped "earlier message".
+        #expect(vm.messages.count == 1)
+        #expect(vm.inputText == "draft message")
+    }
 }
