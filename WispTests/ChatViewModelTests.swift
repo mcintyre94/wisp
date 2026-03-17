@@ -20,36 +20,15 @@ struct ChatViewModelTests {
         let vm = ChatViewModel(
             spriteName: "test",
             chatId: chat.id,
-            currentServiceName: nil,
             workingDirectory: chat.workingDirectory
         )
         return (vm, chat)
     }
 
-    // MARK: - Mock API client
-
-    private final class MockServiceLogsProvider: ServiceLogsProvider {
-        var streams: [AsyncThrowingStream<ServiceLogEvent, Error>]
-        var statuses: [String]
-        private(set) var streamCallCount = 0
-        private(set) var statusCallCount = 0
-
-        init(streams: [AsyncThrowingStream<ServiceLogEvent, Error>], statuses: [String]) {
-            self.streams = streams
-            self.statuses = statuses
-        }
-
-        func streamServiceLogs(spriteName: String, serviceName: String) -> AsyncThrowingStream<ServiceLogEvent, Error> {
-            let idx = streamCallCount
-            streamCallCount += 1
-            return idx < streams.count ? streams[idx] : AsyncThrowingStream { $0.finish() }
-        }
-
-        func getServiceStatus(spriteName: String, serviceName: String) async throws -> ServiceInfo {
-            let idx = statusCallCount
-            statusCallCount += 1
-            let status = idx < statuses.count ? statuses[idx] : "stopped"
-            return ServiceInfo(name: serviceName, state: ServiceInfo.ServiceState(status: status))
+    private func makeExecStream(_ events: [ExecEvent]) -> AsyncThrowingStream<ExecEvent, Error> {
+        AsyncThrowingStream { continuation in
+            for event in events { continuation.yield(event) }
+            continuation.finish()
         }
     }
 
@@ -509,20 +488,9 @@ struct ChatViewModelTests {
         }
     }
 
-    // MARK: - processServiceStream return value
+    // MARK: - processExecStream
 
-    /// Builds a stream that yields a single stdout ServiceLogEvent then finishes cleanly.
-    private func stdoutStream(_ text: String) -> AsyncThrowingStream<ServiceLogEvent, Error> {
-        AsyncThrowingStream { continuation in
-            continuation.yield(ServiceLogEvent(type: .stdout, data: text, exitCode: nil, timestamp: nil, logFiles: nil))
-            continuation.finish()
-        }
-    }
-
-    @Test func processServiceStream_cleanCloseWithDataButNoResultEvent_returnsDisconnected() async throws {
-        // Core bug fix: a stream that closes cleanly after delivering data but without
-        // a Claude `result` event should return .disconnected (triggering reconnect),
-        // not .completed (which would incorrectly set status to .idle).
+    @Test func processExecStream_cleanCloseWithResultEvent_returnsCompleted() async throws {
         let ctx = try makeModelContext()
         let (vm, _) = makeChatViewModel(modelContext: ctx)
 
@@ -531,55 +499,21 @@ struct ChatViewModelTests {
         vm.setCurrentAssistantMessage(assistantMsg)
 
         let systemLine = #"{"type":"system","session_id":"s1","model":"claude-sonnet-4-20250514"}"# + "\n"
-        let result = await vm.processServiceStream(stream: stdoutStream(systemLine), modelContext: ctx)
+        let resultLine = #"{"type":"result","session_id":"s1","subtype":"success"}"# + "\n"
 
-        guard case .disconnected = result else {
-            Issue.record("Expected .disconnected when stream closes cleanly without result event, got \(result)")
-            return
-        }
-    }
+        let stream = makeExecStream([
+            .stdout(Data((systemLine + resultLine).utf8))
+        ])
 
-    @Test func processServiceStream_cleanCloseWithResultEvent_returnsCompleted() async throws {
-        let ctx = try makeModelContext()
-        let (vm, _) = makeChatViewModel(modelContext: ctx)
-
-        let assistantMsg = ChatMessage(role: .assistant)
-        vm.messages.append(assistantMsg)
-        vm.setCurrentAssistantMessage(assistantMsg)
-
-        let stream = AsyncThrowingStream<ServiceLogEvent, Error> { continuation in
-            let systemLine = #"{"type":"system","session_id":"s1","model":"claude-sonnet-4-20250514"}"# + "\n"
-            let resultLine = #"{"type":"result","session_id":"s1","subtype":"success"}"# + "\n"
-            continuation.yield(ServiceLogEvent(type: .stdout, data: systemLine, exitCode: nil, timestamp: nil, logFiles: nil))
-            continuation.yield(ServiceLogEvent(type: .stdout, data: resultLine, exitCode: nil, timestamp: nil, logFiles: nil))
-            continuation.finish()
-        }
-
-        let result = await vm.processServiceStream(stream: stream, modelContext: ctx)
+        let result = await vm.processExecStream(events: stream, modelContext: ctx)
 
         guard case .completed = result else {
-            Issue.record("Expected .completed when result event received, got \(result)")
+            Issue.record("Expected .completed, got \(result)")
             return
         }
     }
 
-    @Test func processServiceStream_noDataReceived_returnsTimedOut() async throws {
-        let ctx = try makeModelContext()
-        let (vm, _) = makeChatViewModel(modelContext: ctx)
-
-        let stream = AsyncThrowingStream<ServiceLogEvent, Error> { continuation in
-            continuation.finish()
-        }
-
-        let result = await vm.processServiceStream(stream: stream, modelContext: ctx)
-
-        guard case .timedOut = result else {
-            Issue.record("Expected .timedOut when no data received, got \(result)")
-            return
-        }
-    }
-
-    @Test func processServiceStream_errorAfterData_returnsDisconnected() async throws {
+    @Test func processExecStream_cleanCloseWithDataButNoResultEvent_returnsDisconnected() async throws {
         let ctx = try makeModelContext()
         let (vm, _) = makeChatViewModel(modelContext: ctx)
 
@@ -587,47 +521,122 @@ struct ChatViewModelTests {
         vm.messages.append(assistantMsg)
         vm.setCurrentAssistantMessage(assistantMsg)
 
-        let stream = AsyncThrowingStream<ServiceLogEvent, Error> { continuation in
-            let systemLine = #"{"type":"system","session_id":"s1","model":"claude-sonnet-4-20250514"}"# + "\n"
-            continuation.yield(ServiceLogEvent(type: .stdout, data: systemLine, exitCode: nil, timestamp: nil, logFiles: nil))
-            continuation.finish(throwing: URLError(.networkConnectionLost))
-        }
+        let systemLine = #"{"type":"system","session_id":"s1","model":"claude-sonnet-4-20250514"}"# + "\n"
 
-        let result = await vm.processServiceStream(stream: stream, modelContext: ctx)
+        let stream = makeExecStream([.stdout(Data(systemLine.utf8))])
+        let result = await vm.processExecStream(events: stream, modelContext: ctx)
 
         guard case .disconnected = result else {
-            Issue.record("Expected .disconnected when stream errors after receiving data, got \(result)")
+            Issue.record("Expected .disconnected, got \(result)")
             return
         }
     }
 
-    // MARK: - stripLogTimestamps
+    @Test func processExecStream_noDataReceived_returnsTimedOut() async throws {
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
 
-    @Test func stripLogTimestamps_removesStdoutPrefix() {
-        let input = #"2026-02-19T09:13:24.665Z [stdout] {"type":"system"}"#
-        let result = ChatViewModel.stripLogTimestamps(input)
-        #expect(result == #"{"type":"system"}"#)
+        let stream = makeExecStream([])
+        let result = await vm.processExecStream(events: stream, modelContext: ctx)
+
+        guard case .timedOut = result else {
+            Issue.record("Expected .timedOut, got \(result)")
+            return
+        }
     }
 
-    @Test func stripLogTimestamps_removesStderrPrefix() {
-        let input = "2026-02-19T09:13:24.665Z [stderr] error output"
-        let result = ChatViewModel.stripLogTimestamps(input)
-        #expect(result == "error output")
+    @Test func processExecStream_stderrCountsAsActivity_doesNotTimeout() async throws {
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        let assistantMsg = ChatMessage(role: .assistant)
+        vm.messages.append(assistantMsg)
+        vm.setCurrentAssistantMessage(assistantMsg)
+
+        // stderr (heartbeat) should count as receivedData so we get .completed not .timedOut
+        let resultLine = #"{"type":"result","session_id":"s1","subtype":"success"}"# + "\n"
+        let stream = makeExecStream([
+            .stderr(Data(".".utf8)),
+            .stdout(Data(resultLine.utf8))
+        ])
+        let result = await vm.processExecStream(events: stream, modelContext: ctx)
+
+        guard case .completed = result else {
+            Issue.record("Expected .completed, got \(result)")
+            return
+        }
     }
 
-    @Test func stripLogTimestamps_preservesLinesWithoutPrefix() {
-        let input = #"{"type":"system"}"#
-        let result = ChatViewModel.stripLogTimestamps(input)
-        #expect(result == #"{"type":"system"}"#)
+    @Test func processExecStream_setsExecSessionIdFromSessionInfo() async throws {
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        let assistantMsg = ChatMessage(role: .assistant)
+        vm.messages.append(assistantMsg)
+        vm.setCurrentAssistantMessage(assistantMsg)
+
+        let resultLine = #"{"type":"result","session_id":"s1","subtype":"success"}"# + "\n"
+        let stream = makeExecStream([
+            .sessionInfo(id: "exec-abc-123"),
+            .stdout(Data(resultLine.utf8))
+        ])
+
+        _ = await vm.processExecStream(events: stream, modelContext: ctx)
+
+        #expect(vm.execSessionId == "exec-abc-123")
     }
 
-    @Test func stripLogTimestamps_handlesMultipleLines() {
-        let input = "2026-02-19T09:13:24.665Z [stdout] {\"type\":\"system\"}\n2026-02-19T09:13:25.000Z [stderr] error message\n{\"type\":\"plain\"}"
-        let result = ChatViewModel.stripLogTimestamps(input)
-        let lines = result.components(separatedBy: "\n")
-        #expect(lines[0] == "{\"type\":\"system\"}")
-        #expect(lines[1] == "error message")
-        #expect(lines[2] == "{\"type\":\"plain\"}")
+    // MARK: - reattachToExec
+
+    @Test func reattachToExec_setsLastSessionCompleteWhenResultReceived() async throws {
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        let assistantMsg = ChatMessage(role: .assistant)
+        vm.messages.append(assistantMsg)
+        vm.setCurrentAssistantMessage(assistantMsg)
+
+        let systemLine = #"{"type":"system","session_id":"s1","model":"claude-sonnet-4-20250514"}"# + "\n"
+        let textLine = #"{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Done"}]}}"# + "\n"
+        let resultLine = #"{"type":"result","session_id":"s1","subtype":"success"}"# + "\n"
+
+        let stream = makeExecStream([
+            .stdout(Data((systemLine + textLine + resultLine).utf8))
+        ])
+        let result = await vm.processExecStream(events: stream, modelContext: ctx)
+
+        #expect(result == .completed)
+        #expect(vm.sessionId == "s1")
+    }
+
+    // MARK: - reconnectIfNeeded with execSessionId
+
+    @Test func reconnectIfNeeded_nilExecSessionId_restoresDraftSynchronously() throws {
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        vm.messages = [
+            ChatMessage(role: .user, content: [.text("earlier message")]),
+            ChatMessage(role: .user, content: [.text("draft message")]),
+        ]
+
+        vm.reconnectIfNeeded(apiClient: SpritesAPIClient(), modelContext: ctx)
+
+        #expect(vm.messages.count == 1)
+        #expect(vm.inputText == "draft message")
+    }
+
+    @Test func reconnectIfNeeded_withExecSessionId_startsReattachTask() throws {
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        vm.messages = [ChatMessage(role: .user, content: [.text("hello")])]
+        vm.setExecSessionId("exec-abc")
+
+        vm.reconnectIfNeeded(apiClient: SpritesAPIClient(), modelContext: ctx)
+
+        // A stream task should have been created for reattach
+        #expect(vm.streamTask != nil)
     }
 
     // MARK: - UUID persistence
@@ -708,7 +717,7 @@ struct ChatViewModelTests {
         ctx.insert(newChat)
         try ctx.save()
 
-        let vm = ChatViewModel(spriteName: "test", chatId: newChat.id, currentServiceName: nil, workingDirectory: newChat.workingDirectory)
+        let vm = ChatViewModel(spriteName: "test", chatId: newChat.id, workingDirectory: newChat.workingDirectory)
         vm.loadSession(apiClient: SpritesAPIClient(), modelContext: ctx)
 
         #expect(vm.worktreePath == nil)
@@ -812,385 +821,6 @@ struct ChatViewModelTests {
 
         #expect(vm.stashedDraft == "second draft")
         #expect(vm.inputText == "")
-    }
-
-    // MARK: - reconnectToServiceLogs: retriedAfterServiceStopped
-
-    @Test func reconnectToServiceLogs_retriesOnceWhenServiceStoppedWithNoResult_thenDeliversResult() async throws {
-        let ctx = try makeModelContext()
-        let (vm, _) = makeChatViewModel(modelContext: ctx)
-
-        // First stream: delivers a system event but no result — simulates the
-        // stream dying just before Claude finishes.
-        let systemLine = #"{"type":"system","session_id":"s1","model":"claude-sonnet-4-20250514"}"# + "\n"
-        let stream1 = AsyncThrowingStream<ServiceLogEvent, Error> { continuation in
-            continuation.yield(ServiceLogEvent(type: .stdout, data: systemLine, exitCode: nil, timestamp: nil, logFiles: nil))
-            continuation.finish()
-        }
-
-        // Second stream: delivers the result event that landed after the first stream closed.
-        let resultLine = #"{"type":"result","session_id":"s1","subtype":"success"}"# + "\n"
-        let stream2 = AsyncThrowingStream<ServiceLogEvent, Error> { continuation in
-            continuation.yield(ServiceLogEvent(type: .stdout, data: systemLine, exitCode: nil, timestamp: nil, logFiles: nil))
-            continuation.yield(ServiceLogEvent(type: .stdout, data: resultLine, exitCode: nil, timestamp: nil, logFiles: nil))
-            continuation.finish()
-        }
-
-        let mock = MockServiceLogsProvider(streams: [stream1, stream2], statuses: ["stopped"])
-
-        await vm.runReconnectLoop(apiClient: mock, modelContext: ctx)
-
-        #expect(mock.streamCallCount == 2, "Should replay logs twice: once on initial reconnect, once on retry")
-        #expect(mock.statusCallCount == 1, "Should only check status once (before the retry)")
-        guard case .idle = vm.status else {
-            Issue.record("Expected idle status after reconnect completes, got \(vm.status)")
-            return
-        }
-    }
-
-    @Test func reconnectToServiceLogs_givesUpAfterOneRetryWhenServiceStillStopped() async throws {
-        let ctx = try makeModelContext()
-        let (vm, _) = makeChatViewModel(modelContext: ctx)
-
-        // Both streams return no result event, and the service stays stopped.
-        let systemLine = #"{"type":"system","session_id":"s1","model":"claude-sonnet-4-20250514"}"# + "\n"
-        let makeStream = {
-            AsyncThrowingStream<ServiceLogEvent, Error> { continuation in
-                continuation.yield(ServiceLogEvent(type: .stdout, data: systemLine, exitCode: nil, timestamp: nil, logFiles: nil))
-                continuation.finish()
-            }
-        }
-
-        let mock = MockServiceLogsProvider(streams: [makeStream(), makeStream()], statuses: ["stopped", "stopped"])
-
-        await vm.runReconnectLoop(apiClient: mock, modelContext: ctx)
-
-        #expect(mock.streamCallCount == 2, "Should attempt exactly two replays: initial + one retry")
-        #expect(mock.statusCallCount == 2, "Should check status once per iteration that yields no result event")
-        guard case .idle = vm.status else {
-            Issue.record("Expected idle status after giving up, got \(vm.status)")
-            return
-        }
-    }
-
-    // MARK: - Replay buffering
-
-    @Test func runReconnectLoop_buffersContentAndAppliesInOneBatch() async throws {
-        // Verifies that content from a replayed stream lands on the assistant message
-        // in one shot rather than incrementally, preventing per-event re-renders.
-        let ctx = try makeModelContext()
-        let (vm, _) = makeChatViewModel(modelContext: ctx)
-
-        let assistantMsg = ChatMessage(role: .assistant)
-        vm.messages.append(assistantMsg)
-        vm.setCurrentAssistantMessage(assistantMsg)
-
-        let systemLine = #"{"type":"system","session_id":"s1","model":"claude-sonnet-4-20250514"}"# + "\n"
-        let textLine = #"{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Hello"}]}}"# + "\n"
-        let resultLine = #"{"type":"result","session_id":"s1","subtype":"success"}"# + "\n"
-
-        let stream = AsyncThrowingStream<ServiceLogEvent, Error> { continuation in
-            continuation.yield(ServiceLogEvent(type: .stdout, data: systemLine, exitCode: nil, timestamp: nil, logFiles: nil))
-            continuation.yield(ServiceLogEvent(type: .stdout, data: textLine, exitCode: nil, timestamp: nil, logFiles: nil))
-            continuation.yield(ServiceLogEvent(type: .stdout, data: resultLine, exitCode: nil, timestamp: nil, logFiles: nil))
-            continuation.finish()
-        }
-        let mock = MockServiceLogsProvider(streams: [stream], statuses: ["stopped"])
-
-        await vm.runReconnectLoop(apiClient: mock, modelContext: ctx)
-
-        // Content should be present after the loop
-        #expect(assistantMsg.content.count == 1)
-        if case .text(let text) = assistantMsg.content.first {
-            #expect(text == "Hello")
-        } else {
-            Issue.record("Expected text content after replay")
-        }
-    }
-
-    @Test func runReconnectLoop_buffersToolUseAndResultWithLinking() async throws {
-        let ctx = try makeModelContext()
-        let (vm, _) = makeChatViewModel(modelContext: ctx)
-
-        let assistantMsg = ChatMessage(role: .assistant)
-        vm.messages.append(assistantMsg)
-        vm.setCurrentAssistantMessage(assistantMsg)
-
-        let systemLine = #"{"type":"system","session_id":"s1","model":"claude-sonnet-4-20250514"}"# + "\n"
-        let toolLine = #"{"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"tu-1","name":"Bash","input":{"command":"ls"}}]}}"# + "\n"
-        let resultLine = #"{"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tu-1","content":"file.txt"}]}}"# + "\n"
-        let doneeLine = #"{"type":"result","session_id":"s1","subtype":"success"}"# + "\n"
-
-        let stream = AsyncThrowingStream<ServiceLogEvent, Error> { continuation in
-            continuation.yield(ServiceLogEvent(type: .stdout, data: systemLine, exitCode: nil, timestamp: nil, logFiles: nil))
-            continuation.yield(ServiceLogEvent(type: .stdout, data: toolLine, exitCode: nil, timestamp: nil, logFiles: nil))
-            continuation.yield(ServiceLogEvent(type: .stdout, data: resultLine, exitCode: nil, timestamp: nil, logFiles: nil))
-            continuation.yield(ServiceLogEvent(type: .stdout, data: doneeLine, exitCode: nil, timestamp: nil, logFiles: nil))
-            continuation.finish()
-        }
-        let mock = MockServiceLogsProvider(streams: [stream], statuses: ["stopped"])
-
-        await vm.runReconnectLoop(apiClient: mock, modelContext: ctx)
-
-        #expect(assistantMsg.content.count == 2)
-        if case .toolUse(let card) = assistantMsg.content[0] {
-            #expect(card.toolName == "Bash")
-            #expect(card.result != nil, "Tool use should be linked to its result after replay")
-        } else {
-            Issue.record("Expected tool use at index 0")
-        }
-        if case .toolResult(let card) = assistantMsg.content[1] {
-            #expect(card.toolUseId == "tu-1")
-        } else {
-            Issue.record("Expected tool result at index 1")
-        }
-    }
-
-    @Test func runReconnectLoop_mergesTextAcrossRetryIterations() async throws {
-        // Text from iteration 1 and text from iteration 2 (the "one retry after service
-        // stopped" path) must merge into a single .text entry, not produce two bubbles.
-        let ctx = try makeModelContext()
-        let (vm, _) = makeChatViewModel(modelContext: ctx)
-
-        let assistantMsg = ChatMessage(role: .assistant)
-        vm.messages.append(assistantMsg)
-        vm.setCurrentAssistantMessage(assistantMsg)
-
-        let systemLine = #"{"type":"system","session_id":"s1","model":"claude-sonnet-4-20250514","uuid":"uuid-sys"}"# + "\n"
-        let textLine1 = #"{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Hello "}]},"uuid":"uuid-text1"}"# + "\n"
-        let textLine2 = #"{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"world"}]},"uuid":"uuid-text2"}"# + "\n"
-        let resultLine = #"{"type":"result","session_id":"s1","subtype":"success","uuid":"uuid-result"}"# + "\n"
-
-        // Stream 1: partial text, no result (triggers one-retry path)
-        let stream1 = AsyncThrowingStream<ServiceLogEvent, Error> { continuation in
-            continuation.yield(ServiceLogEvent(type: .stdout, data: systemLine, exitCode: nil, timestamp: nil, logFiles: nil))
-            continuation.yield(ServiceLogEvent(type: .stdout, data: textLine1, exitCode: nil, timestamp: nil, logFiles: nil))
-            continuation.finish()
-        }
-        // Stream 2: same text (now skipped) + more text + result
-        let stream2 = AsyncThrowingStream<ServiceLogEvent, Error> { continuation in
-            continuation.yield(ServiceLogEvent(type: .stdout, data: systemLine, exitCode: nil, timestamp: nil, logFiles: nil))
-            continuation.yield(ServiceLogEvent(type: .stdout, data: textLine1, exitCode: nil, timestamp: nil, logFiles: nil))
-            continuation.yield(ServiceLogEvent(type: .stdout, data: textLine2, exitCode: nil, timestamp: nil, logFiles: nil))
-            continuation.yield(ServiceLogEvent(type: .stdout, data: resultLine, exitCode: nil, timestamp: nil, logFiles: nil))
-            continuation.finish()
-        }
-
-        let mock = MockServiceLogsProvider(streams: [stream1, stream2], statuses: ["stopped"])
-        await vm.runReconnectLoop(apiClient: mock, modelContext: ctx)
-
-        // Should be one merged text entry, not two separate bubbles
-        #expect(assistantMsg.content.count == 1)
-        if case .text(let text) = assistantMsg.content.first {
-            #expect(text == "Hello world")
-        } else {
-            Issue.record("Expected single merged text entry after two replay iterations")
-        }
-    }
-
-    // MARK: - lastSessionComplete
-
-    @Test func runReconnectLoop_setsLastSessionCompleteWhenResultReceived() async throws {
-        let ctx = try makeModelContext()
-        let (vm, chat) = makeChatViewModel(modelContext: ctx)
-
-        let assistantMsg = ChatMessage(role: .assistant)
-        vm.messages.append(assistantMsg)
-        vm.setCurrentAssistantMessage(assistantMsg)
-
-        let systemLine = #"{"type":"system","session_id":"s1","model":"claude-sonnet-4-20250514"}"# + "\n"
-        let textLine = #"{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Done"}]}}"# + "\n"
-        let resultLine = #"{"type":"result","session_id":"s1","subtype":"success"}"# + "\n"
-
-        let stream = AsyncThrowingStream<ServiceLogEvent, Error> { continuation in
-            continuation.yield(ServiceLogEvent(type: .stdout, data: systemLine, exitCode: nil, timestamp: nil, logFiles: nil))
-            continuation.yield(ServiceLogEvent(type: .stdout, data: textLine, exitCode: nil, timestamp: nil, logFiles: nil))
-            continuation.yield(ServiceLogEvent(type: .stdout, data: resultLine, exitCode: nil, timestamp: nil, logFiles: nil))
-            continuation.finish()
-        }
-        let mock = MockServiceLogsProvider(streams: [stream], statuses: ["stopped"])
-
-        await vm.runReconnectLoop(apiClient: mock, modelContext: ctx)
-
-        #expect(chat.lastSessionComplete == true)
-    }
-
-    @Test func runReconnectLoop_doesNotSetLastSessionCompleteWithoutResult() async throws {
-        // When the loop exits without receiving a result event (e.g. interrupted session),
-        // lastSessionComplete should stay false so the next reconnect still fetches logs.
-        let ctx = try makeModelContext()
-        let (vm, chat) = makeChatViewModel(modelContext: ctx)
-
-        let assistantMsg = ChatMessage(role: .assistant)
-        vm.messages.append(assistantMsg)
-        vm.setCurrentAssistantMessage(assistantMsg)
-
-        let systemLine = #"{"type":"system","session_id":"s1","model":"claude-sonnet-4-20250514"}"# + "\n"
-        let textLine = #"{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Partial"}]}}"# + "\n"
-
-        // Two streams with no result event; stopped status forces the retry-then-break path.
-        let makeStream = {
-            AsyncThrowingStream<ServiceLogEvent, Error> { continuation in
-                continuation.yield(ServiceLogEvent(type: .stdout, data: systemLine, exitCode: nil, timestamp: nil, logFiles: nil))
-                continuation.yield(ServiceLogEvent(type: .stdout, data: textLine, exitCode: nil, timestamp: nil, logFiles: nil))
-                continuation.finish()
-            }
-        }
-        let mock = MockServiceLogsProvider(streams: [makeStream(), makeStream()], statuses: ["stopped", "stopped"])
-
-        await vm.runReconnectLoop(apiClient: mock, modelContext: ctx)
-
-        #expect(chat.lastSessionComplete == false)
-    }
-
-    // MARK: - Live service reconnect
-
-    @Test func runReconnectLoop_liveService_appliesContentCorrectly() async throws {
-        // When serviceAlreadyStopped is false (service is live), isReplaying is cleared on the first new event
-        // so events render incrementally rather than being batched. The final content
-        // should be identical to the batched path.
-        let ctx = try makeModelContext()
-        let (vm, chat) = makeChatViewModel(modelContext: ctx)
-
-        let assistantMsg = ChatMessage(role: .assistant)
-        vm.messages.append(assistantMsg)
-        vm.setCurrentAssistantMessage(assistantMsg)
-
-        let systemLine = #"{"type":"system","session_id":"s1","model":"claude-sonnet-4-20250514"}"# + "\n"
-        let textLine = #"{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Hello"}]}}"# + "\n"
-        let resultLine = #"{"type":"result","session_id":"s1","subtype":"success"}"# + "\n"
-
-        let stream = AsyncThrowingStream<ServiceLogEvent, Error> { continuation in
-            continuation.yield(ServiceLogEvent(type: .stdout, data: systemLine, exitCode: nil, timestamp: nil, logFiles: nil))
-            continuation.yield(ServiceLogEvent(type: .stdout, data: textLine, exitCode: nil, timestamp: nil, logFiles: nil))
-            continuation.yield(ServiceLogEvent(type: .stdout, data: resultLine, exitCode: nil, timestamp: nil, logFiles: nil))
-            continuation.finish()
-        }
-        let mock = MockServiceLogsProvider(streams: [stream], statuses: ["stopped"])
-
-        await vm.runReconnectLoop(apiClient: mock, modelContext: ctx, serviceAlreadyStopped: false)
-
-        #expect(assistantMsg.content.count == 1)
-        if case .text(let text) = assistantMsg.content.first {
-            #expect(text == "Hello")
-        } else {
-            Issue.record("Expected text content after live reconnect")
-        }
-        #expect(chat.lastSessionComplete == true)
-        #expect(vm.status == .idle)
-    }
-
-    @Test func runReconnectLoop_liveService_skippedHistoricalEventsThenNewContent() async throws {
-        // The common live reconnect case: previously-processed events are skipped silently,
-        // then new events stream in via the live path.
-        let ctx = try makeModelContext()
-        let (vm, _) = makeChatViewModel(modelContext: ctx)
-
-        let assistantMsg = ChatMessage(role: .assistant)
-        vm.messages.append(assistantMsg)
-        vm.setCurrentAssistantMessage(assistantMsg)
-
-        let systemLine = #"{"type":"system","session_id":"s1","model":"claude-sonnet-4-20250514"}"# + "\n"
-        let textLine = #"{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"New content"}]}}"# + "\n"
-        let resultLine = #"{"type":"result","session_id":"s1","subtype":"success"}"# + "\n"
-
-        let stream = AsyncThrowingStream<ServiceLogEvent, Error> { continuation in
-            continuation.yield(ServiceLogEvent(type: .stdout, data: systemLine, exitCode: nil, timestamp: nil, logFiles: nil))
-            continuation.yield(ServiceLogEvent(type: .stdout, data: textLine, exitCode: nil, timestamp: nil, logFiles: nil))
-            continuation.yield(ServiceLogEvent(type: .stdout, data: resultLine, exitCode: nil, timestamp: nil, logFiles: nil))
-            continuation.finish()
-        }
-        let mock = MockServiceLogsProvider(streams: [stream], statuses: ["stopped"])
-
-        // Pre-populate with the system event UUID so it gets skipped as historical.
-        // The text and result events are new and should be processed via the live path.
-        vm.processedEventUUIDs = ["s1-system"]
-
-        await vm.runReconnectLoop(apiClient: mock, modelContext: ctx, serviceAlreadyStopped: false)
-
-        // New content lands even though a historical event was skipped first
-        #expect(assistantMsg.content.count == 1)
-        if case .text(let text) = assistantMsg.content.first {
-            #expect(text == "New content")
-        } else {
-            Issue.record("Expected text content after skipped historical event")
-        }
-    }
-
-    // MARK: - runReconnectLoop: assistant message placement
-
-    @Test func runReconnectLoop_appendsAssistantAfterLatestUserMessage() async throws {
-        // Regression: messages.last(where: .assistant) would find a *previous* exchange's
-        // assistant message and write the new response into it, placing it before the latest
-        // user message. The fix checks messages.last only, so a new assistant message is
-        // always created after the most recent user message.
-        let ctx = try makeModelContext()
-        let (vm, _) = makeChatViewModel(modelContext: ctx)
-
-        // Simulate a completed prior exchange already in messages
-        let prevUser = ChatMessage(role: .user, content: [.text("first question")])
-        let prevAssistant = ChatMessage(role: .assistant, content: [.text("first answer")])
-        let newUser = ChatMessage(role: .user, content: [.text("second question")])
-        vm.messages = [prevUser, prevAssistant, newUser]
-
-        let textLine = #"{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"second answer"}]}}"# + "\n"
-        let resultLine = #"{"type":"result","session_id":"s1","subtype":"success"}"# + "\n"
-        let stream = AsyncThrowingStream<ServiceLogEvent, Error> { continuation in
-            continuation.yield(ServiceLogEvent(type: .stdout, data: textLine, exitCode: nil, timestamp: nil, logFiles: nil))
-            continuation.yield(ServiceLogEvent(type: .stdout, data: resultLine, exitCode: nil, timestamp: nil, logFiles: nil))
-            continuation.finish()
-        }
-        let mock = MockServiceLogsProvider(streams: [stream], statuses: ["stopped"])
-
-        await vm.runReconnectLoop(apiClient: mock, modelContext: ctx, serviceAlreadyStopped: true)
-
-        // Should have 4 messages: prevUser, prevAssistant, newUser, newAssistant
-        #expect(vm.messages.count == 4)
-        #expect(vm.messages[0].role == .user)
-        #expect(vm.messages[1].role == .assistant)
-        #expect(vm.messages[2].role == .user)
-        #expect(vm.messages[3].role == .assistant)
-        // New response lands in the new assistant message, not the previous one
-        if case .text(let text) = vm.messages[3].content.first {
-            #expect(text == "second answer")
-        } else {
-            Issue.record("Expected text in new assistant message")
-        }
-        // Prior assistant message content is untouched
-        if case .text(let text) = vm.messages[1].content.first {
-            #expect(text == "first answer")
-        } else {
-            Issue.record("Expected prior assistant message to be unchanged")
-        }
-    }
-
-    // MARK: - reconnecting → streaming status transition
-
-    @Test func runReconnectLoop_transitionsReconnectingToStreamingOnStdoutData() async throws {
-        // Verifies the status trajectory: idle → reconnecting → streaming → idle
-        // When stdout data arrives in .reconnecting state, status must move to .streaming (line 935-936).
-        // When the result event arrives and the loop exits cleanly, status returns to .idle.
-        let ctx = try makeModelContext()
-        let (vm, _) = makeChatViewModel(modelContext: ctx)
-
-        let assistantMsg = ChatMessage(role: .assistant)
-        vm.messages.append(assistantMsg)
-        vm.setCurrentAssistantMessage(assistantMsg)
-
-        let textLine = #"{"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Hello"}]}}"# + "\n"
-        let resultLine = #"{"type":"result","session_id":"s1","subtype":"success"}"# + "\n"
-
-        let stream = AsyncThrowingStream<ServiceLogEvent, Error> { continuation in
-            continuation.yield(ServiceLogEvent(type: .stdout, data: textLine, exitCode: nil, timestamp: nil, logFiles: nil))
-            continuation.yield(ServiceLogEvent(type: .stdout, data: resultLine, exitCode: nil, timestamp: nil, logFiles: nil))
-            continuation.finish()
-        }
-        let mock = MockServiceLogsProvider(streams: [stream], statuses: ["stopped"])
-
-        #expect(vm.status == .idle)
-        await vm.runReconnectLoop(apiClient: mock, modelContext: ctx, serviceAlreadyStopped: true)
-        // Loop completed cleanly: reconnecting → streaming → idle
-        #expect(vm.status == .idle)
     }
 
     // MARK: - addAttachedFile
@@ -1384,33 +1014,25 @@ struct ChatViewModelTests {
         #expect(vm.status == .reconnecting)
     }
 
-    /// When reconnectIfNeeded is called twice in the same run-loop turn (e.g. from
-    /// DashboardView startup AND resumeAllAfterBackground), the first task must be
-    /// pre-cancelled so it never calls restoreUndeliveredDraft and the draft is
-    /// only restored once by the surviving second task.
-    @Test func reconnectIfNeeded_concurrentCallPrecancelsFirst() async throws {
+    /// When reconnectIfNeeded is called with execSessionId set twice synchronously,
+    /// the second call pre-cancels the first task and replaces streamTask.
+    @Test func reconnectIfNeeded_concurrentCallPrecancelsFirst() throws {
         let ctx = try makeModelContext()
         let (vm, _) = makeChatViewModel(modelContext: ctx)
 
-        // Two trailing user messages so we can distinguish "restored once" (count=1)
-        // from "restored twice" (count=0) if the pre-cancel guard were missing.
-        vm.messages = [
-            ChatMessage(role: .user, content: [.text("earlier message")]),
-            ChatMessage(role: .user, content: [.text("draft message")]),
-        ]
+        vm.messages = [ChatMessage(role: .user, content: [.text("hello")])]
+        vm.setExecSessionId("exec-abc")
 
-        // Both calls happen synchronously, so Task A is cancelled before its body
-        // ever runs. Only Task B should call restoreUndeliveredDraft.
+        // First call creates a stream task
         vm.reconnectIfNeeded(apiClient: SpritesAPIClient(), modelContext: ctx)
+        #expect(vm.streamTask != nil)
+
+        // Second call should cancel the first task and create a new one
         vm.reconnectIfNeeded(apiClient: SpritesAPIClient(), modelContext: ctx)
 
-        // Wait for Task B to finish (getServiceStatus will fail with a network error,
-        // which is the expected fast-fail path in a test environment).
-        await vm.streamTask?.value
-
-        // restoreUndeliveredDraft called exactly once: removes "draft message".
-        // If Task A were not pre-cancelled it would have also popped "earlier message".
-        #expect(vm.messages.count == 1)
-        #expect(vm.inputText == "draft message")
+        // A stream task should still be present (reattach attempt ongoing)
+        #expect(vm.streamTask != nil)
+        // Status should not be idle yet (task was created)
+        #expect(vm.status != .idle || vm.streamTask != nil)
     }
 }

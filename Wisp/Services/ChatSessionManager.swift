@@ -22,7 +22,6 @@ final class ChatSessionManager {
         let vm = ChatViewModel(
             spriteName: spriteName,
             chatId: chat.id,
-            currentServiceName: chat.currentServiceName,
             workingDirectory: chat.workingDirectory
         )
         vm.loadSession(apiClient: apiClient, modelContext: modelContext)

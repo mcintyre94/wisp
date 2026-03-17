@@ -54,7 +54,7 @@ final class ChatViewModel {
     var isLoadingRemoteSessions = false
     var isLoadingHistory = false
 
-    private var serviceName: String
+    private(set) var execSessionId: String?
     private(set) var sessionId: String?
     var workingDirectory: String
     private(set) var worktreePath: String?
@@ -96,10 +96,9 @@ final class ChatViewModel {
     /// being batched until the connection drops.
     private var isReplayingLiveService = false
 
-    init(spriteName: String, chatId: UUID, currentServiceName: String?, workingDirectory: String, worktreePath: String? = nil) {
+    init(spriteName: String, chatId: UUID, workingDirectory: String, worktreePath: String? = nil) {
         self.spriteName = spriteName
         self.chatId = chatId
-        self.serviceName = currentServiceName ?? "wisp-claude-\(UUID().uuidString.prefix(8).lowercased())"
         self.workingDirectory = workingDirectory
         self.worktreePath = worktreePath
     }
@@ -205,11 +204,9 @@ final class ChatViewModel {
         guard let chat = fetchChat(modelContext: modelContext) else { return }
 
         sessionId = chat.claudeSessionId
+        execSessionId = chat.execSessionId
         workingDirectory = chat.workingDirectory
         worktreePath = chat.worktreePath
-        if let svcName = chat.currentServiceName {
-            serviceName = svcName
-        }
 
         // Check if any chat on this sprite has ever had a worktree — if so the sprite
         // has git and new chats should suppress the session-resume UI.
@@ -597,15 +594,14 @@ final class ChatViewModel {
     }
 
     func resumeAfterBackground(apiClient: SpritesAPIClient, modelContext: ModelContext) {
-        // Only interrupt genuine PUT streams (.streaming / .connecting).
-        // If the VM is already reconnecting via GET logs (e.g., from the startup
-        // reconnect in DashboardView), leave it alone — it's already doing the right thing.
+        // Only interrupt genuine exec streams (.streaming / .connecting).
+        // If the VM is already reconnecting, leave it alone.
         guard status == .streaming || status == .connecting else { return }
-        // Cancel the stale stream and reconnect via service logs
+        // Cancel the stale stream — exec session stays alive on server for max_run_after_disconnect
         streamTask?.cancel()
-        streamTask = Task {
-            await reconnectToServiceLogs(apiClient: apiClient, modelContext: modelContext, serviceAlreadyStopped: false)
-        }
+        streamTask = nil
+        status = .idle
+        reconnectIfNeeded(apiClient: apiClient, modelContext: modelContext)
     }
 
     /// Stop streaming without deleting the service (used when switching away from a chat).
@@ -634,18 +630,19 @@ final class ChatViewModel {
         // Note: we keep sessionId intact so the next message can resume the session.
         // If the session turns out to be stale, the stale-session retry logic handles it.
 
-        // Delete the service to stop it
-        if let apiClient {
+        // Kill the exec session to stop it; clear execSessionId to prevent reconnect
+        let execId = execSessionId
+        execSessionId = nil
+        if let apiClient, let execId {
             let sName = spriteName
-            let svcName = serviceName
             Task {
-                try? await apiClient.deleteService(spriteName: sName, serviceName: svcName)
+                try? await apiClient.killExecSession(spriteName: sName, execSessionId: execId)
             }
         }
     }
 
-    /// Attempt to reconnect to an existing service when switching back to this chat.
-    /// Called after loadSession — checks if service logs might have new content.
+    /// Attempt to reconnect to a running exec session when switching back to this chat.
+    /// Called after loadSession — reattaches to the exec WebSocket if one exists.
     func reconnectIfNeeded(apiClient: SpritesAPIClient, modelContext: ModelContext) {
         guard !isStreaming, !messages.isEmpty else { return }
 
@@ -654,7 +651,15 @@ final class ChatViewModel {
         if let chat = fetchChat(modelContext: modelContext), chat.lastSessionComplete {
             // Edge case: app killed between persistMessages and saveSession(isComplete:false).
             // The session was previously complete but a new user message was appended and
-            // persisted before the service was created. Restore it as a draft.
+            // persisted before the exec session was created. Restore it as a draft.
+            restoreUndeliveredDraft(modelContext: modelContext)
+            return
+        }
+
+        guard let execId = execSessionId else {
+            // No exec session ID: message was never sent, or legacy service-based chat.
+            // Restore any trailing user message as a draft rather than leaving a
+            // stale bubble with no response.
             restoreUndeliveredDraft(modelContext: modelContext)
             return
         }
@@ -667,19 +672,7 @@ final class ChatViewModel {
             // If this task was pre-cancelled (e.g. superseded by a second reconnectIfNeeded
             // call in the same run-loop turn), bail out before touching any state.
             guard !Task.isCancelled else { return }
-
-            // Only reconnect if the service exists (running or stopped with logs)
-            guard let serviceInfo = try? await apiClient.getServiceStatus(spriteName: spriteName, serviceName: serviceName)
-            else {
-                // Service was never created (e.g. app killed before the service call).
-                // Restore any trailing user message as a draft rather than leaving a
-                // stale bubble with no response.
-                if !Task.isCancelled { restoreUndeliveredDraft(modelContext: modelContext) }
-                return
-            }
-
-            let alreadyStopped = serviceInfo.state.status != "running"
-            await reconnectToServiceLogs(apiClient: apiClient, modelContext: modelContext, serviceAlreadyStopped: alreadyStopped)
+            await reattachToExec(execSessionId: execId, apiClient: apiClient, modelContext: modelContext)
         }
     }
 
@@ -704,12 +697,7 @@ final class ChatViewModel {
     ) async {
         status = .connecting
 
-        // Delete old service, then use a fresh name so logs start clean
-        let oldServiceName = serviceName
-        serviceName = "wisp-claude-\(UUID().uuidString.prefix(8).lowercased())"
-        try? await apiClient.deleteService(spriteName: spriteName, serviceName: oldServiceName)
-
-        // Install question tool after service cleanup (sprite is awake at this point)
+        // Install question tool before connecting (sprite is awake at this point)
         if UserDefaults.standard.bool(forKey: "claudeQuestionTool") {
             let toolReady = await installClaudeQuestionToolIfNeeded(apiClient: apiClient)
             if !toolReady {
@@ -718,7 +706,7 @@ final class ChatViewModel {
             }
         }
 
-        // Persist the new service name immediately for reconnect; clear any prior completion flag
+        // Persist the new session immediately; clear any prior completion flag
         saveSession(modelContext: modelContext, isComplete: false)
 
         guard let claudeToken = apiClient.claudeToken else {
@@ -802,41 +790,38 @@ final class ChatViewModel {
         processedEventUUIDs = []
         hasPlayedFirstTextHaptic = false
 
-        logger.info("Service command: \(Self.sanitize(fullCommand))")
+        logger.info("Exec command: \(Self.sanitize(fullCommand))")
 
-        let config = ServiceRequest(
-            cmd: "bash",
-            args: ["-c", fullCommand],
-            needs: nil,
-            httpPort: nil
-        )
-
-        let stream = apiClient.streamService(
+        let session = apiClient.createExecSession(
             spriteName: spriteName,
-            serviceName: serviceName,
-            config: config
+            command: fullCommand,
+            maxRunAfterDisconnect: 3600
         )
+        session.connect()
 
         let assistantMessage = ChatMessage(role: .assistant)
         messages.append(assistantMessage)
         currentAssistantMessage = assistantMessage
 
-        let streamResult = await processServiceStream(stream: stream, modelContext: modelContext, breakOnComplete: true)
+        let streamResult = await processExecStream(events: session.events(), modelContext: modelContext)
+        session.disconnect()
+
         let uuidCount = processedEventUUIDs.count
-        logger.info("[Chat] Main stream ended: result=\(streamResult), cancelled=\(Task.isCancelled), uuids=\(uuidCount)")
+        logger.info("[Chat] Exec stream ended: result=\(streamResult), cancelled=\(Task.isCancelled), uuids=\(uuidCount)")
 
         // If cancelled (e.g. by resumeAfterBackground), bail out immediately.
-        // The reconnect task now owns the assistant message and shared state.
         guard !Task.isCancelled else { return }
 
         if currentAssistantMessage?.id == assistantMessage.id {
             currentAssistantMessage = nil
         }
 
-        // Attempt reconnection on disconnect
+        // On disconnect, exec session is still alive on the server (max_run_after_disconnect).
+        // Go idle — reconnectIfNeeded will reattach when user returns.
         if case .disconnected = streamResult {
-            logger.info("[Chat] Disconnected mid-stream, attempting reconnect via service logs")
-            await reconnectToServiceLogs(apiClient: apiClient, modelContext: modelContext, serviceAlreadyStopped: false)
+            logger.info("[Chat] Disconnected mid-stream, exec session preserved for reattach")
+            status = .idle
+            persistMessages(modelContext: modelContext)
             return
         }
 
@@ -889,7 +874,7 @@ final class ChatViewModel {
     }
 
     /// Result of processing a service stream
-    enum StreamResult: CustomStringConvertible {
+    enum StreamResult: Equatable, CustomStringConvertible {
         case completed
         case timedOut
         case disconnected
@@ -905,36 +890,26 @@ final class ChatViewModel {
         }
     }
 
-    /// Process events from a service log stream (two-level NDJSON parsing).
-    /// `breakOnComplete`: when true, exit the loop on a `.complete` event. Used for the
-    /// initial PUT stream where `.complete` means the service process ended. For GET logs
-    /// reconnection, `.complete` just means the log replay finished and the stream ends
-    /// naturally, so we leave it as false.
+    /// Process events from an exec WebSocket stream.
     /// Events whose UUID is in `processedEventUUIDs` are skipped (but system/result
     /// flags are still tracked). New event UUIDs are added to `processedEventUUIDs`
-    /// as they are handled, so reconnect replays never duplicate content.
-    func processServiceStream(
-        stream: AsyncThrowingStream<ServiceLogEvent, Error>,
-        modelContext: ModelContext,
-        breakOnComplete: Bool = false
+    /// as they are handled, so reattach replays never duplicate content.
+    func processExecStream(
+        events: AsyncThrowingStream<ExecEvent, Error>,
+        modelContext: ModelContext
     ) async -> StreamResult {
         var receivedData = false
         var lastPersistTime = Date.distantPast
-        var eventCount = 0
-        var skippedCount = 0
 
         let timeoutTask = Task {
             try await Task.sleep(for: .seconds(30))
             if !receivedData {
-                logger.warning("No service data received in 30s")
+                logger.warning("No exec data received in 30s")
             }
         }
 
         func handleOrSkip(_ parsedEvent: ClaudeStreamEvent) {
-            // Deduplicate by UUID — skip events we've already processed
             if let uuid = parsedEvent.uuid, processedEventUUIDs.contains(uuid) {
-                skippedCount += 1
-                // Still track critical flags on skipped events
                 switch parsedEvent {
                 case .system(let se):
                     receivedSystemEvent = true
@@ -950,9 +925,6 @@ final class ChatViewModel {
             if let uuid = parsedEvent.uuid {
                 processedEventUUIDs.insert(uuid)
             }
-            // First new event after skipping historical ones on a live-service reconnect:
-            // flush the replay buffer (empty, since skipped events don't buffer anything)
-            // and switch to incremental rendering so live events stream in as they arrive.
             if isReplayingLiveService {
                 applyReplayBuffer()
                 isReplaying = false
@@ -963,35 +935,29 @@ final class ChatViewModel {
         }
 
         do {
-            streamLoop: for try await event in stream {
+            streamLoop: for try await event in events {
                 guard !Task.isCancelled else { break streamLoop }
-                eventCount += 1
 
-                switch event.type {
-                case .stdout:
-                    guard let text = event.data else { continue }
+                switch event {
+                case .sessionInfo(let id):
+                    execSessionId = id
+                    saveSession(modelContext: modelContext, isComplete: false)
+                    if case .connecting = status { status = .streaming }
+                    else if case .reconnecting = status { status = .streaming }
+
+                case .stdout(let data):
                     receivedData = true
                     timeoutTask.cancel()
                     if case .connecting = status { status = .streaming }
                     else if case .reconnecting = status { status = .streaming }
 
-                    // Two-level NDJSON: ServiceLogEvent.data contains Claude NDJSON.
-                    // The logs endpoint prefixes each line with a timestamp
-                    // (e.g. "2026-02-19T09:13:24.665Z [stdout] {...}"), so strip it.
-                    var dataStr = Self.stripLogTimestamps(text)
-                    if !dataStr.hasSuffix("\n") {
-                        dataStr += "\n"
-                    }
-                    let data = Data(dataStr.utf8)
-                    let events = await parser.parse(data: data)
-                    for parsedEvent in events {
+                    let parsedEvents = await parser.parse(data: data)
+                    for parsedEvent in parsedEvents {
                         handleOrSkip(parsedEvent)
                     }
 
-                    // Result event means Claude is done — stop waiting for more
                     if receivedResultEvent { break streamLoop }
 
-                    // Periodic persistence
                     let now = Date()
                     if now.timeIntervalSince(lastPersistTime) > 1 {
                         lastPersistTime = now
@@ -999,54 +965,23 @@ final class ChatViewModel {
                     }
 
                 case .stderr:
+                    // Heartbeat noise — count as activity to avoid timeout but discard
                     receivedData = true
                     timeoutTask.cancel()
                     if case .connecting = status { status = .streaming }
                     else if case .reconnecting = status { status = .streaming }
-                    if let text = event.data {
-                        logger.warning("Service stderr: \(text.prefix(500), privacy: .public)")
-                    }
 
-                case .exit:
+                case .exit(let code):
                     timeoutTask.cancel()
-                    let code = event.exitCode ?? -1
-                    logger.info("Service exit: code=\(code)")
-                    // Flush any remaining buffered data
+                    logger.info("Exec exit: code=\(code)")
                     let remaining = await parser.flush()
                     for e in remaining {
                         handleOrSkip(e)
                     }
-
-                case .error:
-                    timeoutTask.cancel()
-                    logger.error("Service error: \(event.data ?? "unknown", privacy: .public)")
-                    if !receivedData {
-                        status = .error(event.data ?? "Service error")
-                    }
-
-                case .complete:
-                    timeoutTask.cancel()
-                    if breakOnComplete {
-                        let flushed = await parser.flush()
-                        for e in flushed {
-                            handleOrSkip(e)
-                        }
-                        break streamLoop
-                    }
-
-                case .started:
-                    if case .connecting = status { status = .streaming }
-                    else if case .reconnecting = status { status = .streaming }
-
-                case .stopping, .stopped:
-                    break
-
-                case .unknown:
-                    break
+                    break streamLoop
                 }
             }
 
-            // Flush parser on stream end
             let remaining = await parser.flush()
             for e in remaining {
                 handleOrSkip(e)
@@ -1054,15 +989,13 @@ final class ChatViewModel {
             timeoutTask.cancel()
 
             let uuidCount = processedEventUUIDs.count
-            logger.info("Stream ended: events=\(eventCount) receivedData=\(receivedData) skipped=\(skippedCount) uuids=\(uuidCount) gotResult=\(self.receivedResultEvent)")
+            logger.info("Exec stream ended: receivedData=\(receivedData) uuids=\(uuidCount) gotResult=\(self.receivedResultEvent)")
             if Task.isCancelled { return .cancelled }
             if !receivedData { return .timedOut }
-            // A clean stream close without the result event means Claude is still running —
-            // treat it as a disconnect so the caller reconnects rather than going idle.
             return receivedResultEvent ? .completed : .disconnected
         } catch {
             timeoutTask.cancel()
-            logger.error("Stream error after \(eventCount) events: \(Self.sanitize(error.localizedDescription), privacy: .public)")
+            logger.error("Exec stream error: \(Self.sanitize(error.localizedDescription), privacy: .public)")
             if Task.isCancelled { return .cancelled }
             if receivedData { return .disconnected }
             status = .error("No response from Claude — try again")
@@ -1070,44 +1003,32 @@ final class ChatViewModel {
         }
     }
 
-    /// Reconnect to a running service via GET logs (provides full history).
-    /// Skips already-processed Claude events (tracked by `totalClaudeEventsProcessed`)
-    /// so existing content stays on screen with no flash. Only genuinely new events
-    /// are appended. If the service is still running after a replay, polls and
-    /// re-replays until the service stops or a result event arrives.
-    /// Core reconnect loop — fetches full log history on repeat until a result event
-    /// arrives or the service is confirmed stopped. Separated from
-    /// `reconnectToServiceLogs` so it can be tested against a mock API client.
-    func runReconnectLoop(
-        apiClient: some ServiceLogsProvider,
-        modelContext: ModelContext,
-        serviceAlreadyStopped: Bool = false
+    /// Reattach to a running exec session after disconnect (e.g. app backgrounded).
+    /// Replays scrollback from the exec session, then streams live events.
+    /// If the exec session is gone (sprite slept), falls back to restoreFromSessionFile.
+    private func reattachToExec(
+        execSessionId: String,
+        apiClient: SpritesAPIClient,
+        modelContext: ModelContext
     ) async {
+        status = .reconnecting
         isReplaying = true
-        isReplayingLiveService = !serviceAlreadyStopped
+        isReplayingLiveService = true
         defer {
             applyReplayBuffer()
             isReplaying = false
             isReplayingLiveService = false
         }
-        status = .reconnecting
-        let priorUUIDs = processedEventUUIDs.count
-        logger.info("[Chat] Reconnecting to service logs (\(priorUUIDs) prior UUIDs)")
 
         hasPlayedFirstTextHaptic = false
 
         // Ensure we have an assistant message to append into.
-        // Only clear content if we have no prior events to skip (cold reconnect).
         let assistantMessage: ChatMessage
         let hasPriorEvents = !processedEventUUIDs.isEmpty
         if let existing = currentAssistantMessage {
             assistantMessage = existing
             if !hasPriorEvents { assistantMessage.content = [] }
         } else if let last = messages.last, last.role == .assistant {
-            // Only reuse an assistant message if it's already at the tail — meaning
-            // the last exchange ended with a partial response that needs replaying.
-            // If the last message is a user message, fall through to create a new
-            // assistant message after it (each service is scoped to one user message).
             assistantMessage = last
             if !hasPriorEvents { assistantMessage.content = [] }
             currentAssistantMessage = last
@@ -1117,73 +1038,38 @@ final class ChatViewModel {
             currentAssistantMessage = assistantMessage
         }
 
-        // Replay loop — each iteration fetches full log history.
-        // processServiceStream skips events whose UUID is already in
-        // processedEventUUIDs, so content is never cleared mid-stream.
-        var retriedAfterServiceStopped = false
-        while !Task.isCancelled {
-            receivedSystemEvent = false
-            receivedResultEvent = false
-
-            // Reset parser for new HTTP stream (buffer may have stale partial data)
-            await parser.reset()
-
-            if !hasPriorEvents {
-                // Cold start — clear tool index for fresh replay
-                toolUseIndex = [:]
-                rebuildToolUseIndex()
-            }
-
-            let stream = apiClient.streamServiceLogs(
-                spriteName: spriteName,
-                serviceName: serviceName
-            )
-
-            let streamResult = await processServiceStream(
-                stream: stream,
-                modelContext: modelContext
-            )
-
-            // Flush buffered content to the observable message in one shot
-            applyReplayBuffer()
-
-            let currentUUIDs = processedEventUUIDs.count
-            logger.info("[Chat] Reconnect stream ended: result=\(streamResult), content=\(assistantMessage.content.count), uuids=\(currentUUIDs)")
-
-            guard !Task.isCancelled else { return }
-
-            // If we got a result event, Claude is done
-            if receivedResultEvent { break }
-
-            // If we already knew the service was stopped before entering, no need to re-check
-            if serviceAlreadyStopped { break }
-
-            // Check if service is still running before retrying
-            if let serviceInfo = try? await apiClient.getServiceStatus(spriteName: spriteName, serviceName: serviceName),
-               serviceInfo.state.status == "running" {
-                logger.info("[Chat] Service still running, will re-poll after delay")
-                try? await Task.sleep(for: .seconds(2))
-                continue
-            }
-
-            // Service has stopped (or status check failed / service gone). The GET stream
-            // may have been killed by iOS just as Claude finished writing its final events —
-            // a race between the connection dying and the result arriving. Allow one extra
-            // retry so we catch any events that landed in the log after the stream closed.
-            if !retriedAfterServiceStopped {
-                retriedAfterServiceStopped = true
-                logger.info("[Chat] Service stopped without result event — retrying once for final events")
-                try? await Task.sleep(for: .seconds(1))
-                continue
-            }
-
-            // Already retried after stop — give up
-            break
+        await parser.reset()
+        if !hasPriorEvents {
+            toolUseIndex = [:]
+            rebuildToolUseIndex()
         }
+        receivedSystemEvent = false
+        receivedResultEvent = false
 
-        // Finalize
+        let session = apiClient.attachExecSession(spriteName: spriteName, execSessionId: execSessionId)
+        session.connect()
+
+        let streamResult = await processExecStream(events: session.events(), modelContext: modelContext)
+        session.disconnect()
+
         if currentAssistantMessage?.id == assistantMessage.id {
             currentAssistantMessage = nil
+        }
+
+        // If exec session is gone (sprite slept, exec expired, or connection error),
+        // restore from Claude's session file. Both .disconnected (WebSocket closed cleanly
+        // with no data) and .timedOut (connection error / no data received) indicate the
+        // exec session no longer exists when reattaching.
+        let shouldRestoreFromFile: Bool
+        switch streamResult {
+        case .timedOut, .disconnected: shouldRestoreFromFile = sessionId != nil
+        default: shouldRestoreFromFile = false
+        }
+        if shouldRestoreFromFile {
+            // Clear any error status set by processExecStream before restoring
+            if case .error = status { status = .reconnecting }
+            logger.info("[Chat] Exec session gone (result=\(streamResult)) — restoring from session file")
+            await restoreFromSessionFile(apiClient: apiClient, modelContext: modelContext)
         }
 
         saveSession(modelContext: modelContext)
@@ -1191,14 +1077,6 @@ final class ChatViewModel {
             status = .idle
         }
         persistMessages(modelContext: modelContext)
-    }
-
-    private func reconnectToServiceLogs(
-        apiClient: SpritesAPIClient,
-        modelContext: ModelContext,
-        serviceAlreadyStopped: Bool = false
-    ) async {
-        await runReconnectLoop(apiClient: apiClient, modelContext: modelContext, serviceAlreadyStopped: serviceAlreadyStopped)
 
         if let queued = queuedPrompt, !Task.isCancelled {
             let prompt = buildPrompt(text: queued, attachments: queuedAttachments)
@@ -1208,6 +1086,54 @@ final class ChatViewModel {
             messages.append(userMessage)
             persistMessages(modelContext: modelContext)
             await executeClaudeCommand(prompt: prompt, apiClient: apiClient, modelContext: modelContext)
+        }
+    }
+
+    /// Restore chat history from Claude's .jsonl session file on the sprite.
+    /// Used when the exec session is gone (sprite slept, exec expired).
+    private func restoreFromSessionFile(apiClient: SpritesAPIClient, modelContext: ModelContext) async {
+        guard let sessionId = sessionId else { return }
+
+        let encodedPath = workingDirectory.replacingOccurrences(of: "/", with: "-")
+        let path = "~/.claude/projects/\(encodedPath)/\(sessionId).jsonl"
+
+        var (output, success) = await apiClient.runExec(
+            spriteName: spriteName,
+            command: "cat \(path)",
+            timeout: 30
+        )
+
+        if !success || output.isEmpty {
+            // Fallback: search for the file
+            let (findOutput, _) = await apiClient.runExec(
+                spriteName: spriteName,
+                command: "find ~/.claude -name '\(sessionId).jsonl' -print -quit 2>/dev/null",
+                timeout: 15
+            )
+            let foundPath = findOutput.trimmingCharacters(in: .whitespacesAndNewlines)
+            if !foundPath.isEmpty {
+                (output, success) = await apiClient.runExec(
+                    spriteName: spriteName,
+                    command: "cat '\(foundPath)'",
+                    timeout: 30
+                )
+            }
+        }
+
+        guard !output.isEmpty else { return }
+
+        let parsed = Self.parseSessionJSONL(output)
+        guard !parsed.isEmpty else { return }
+
+        messages = parsed
+        rebuildToolUseIndex()
+
+        if let last = messages.last, last.role == .user {
+            // Trailing user message — restore as draft
+            restoreUndeliveredDraft(modelContext: modelContext)
+        } else {
+            self.execSessionId = nil
+            saveSession(modelContext: modelContext, isComplete: true)
         }
     }
 
@@ -1645,25 +1571,10 @@ final class ChatViewModel {
     private func saveSession(modelContext: ModelContext, isComplete: Bool? = nil) {
         guard let chat = fetchChat(modelContext: modelContext) else { return }
         chat.claudeSessionId = sessionId
-        chat.currentServiceName = serviceName
+        chat.execSessionId = execSessionId
         chat.lastUsed = Date()
         if let isComplete { chat.lastSessionComplete = isComplete }
         try? modelContext.save()
-    }
-
-    /// Strip timestamp prefixes from service log lines.
-    /// The logs endpoint returns lines like "2026-02-19T09:13:24.665Z [stdout] {...}"
-    /// but the PUT stream returns just "{...}". This normalizes both formats.
-    nonisolated static func stripLogTimestamps(_ text: String) -> String {
-        text.split(separator: "\n", omittingEmptySubsequences: false)
-            .map { line in
-                // Match "TIMESTAMP [stdout] " or "TIMESTAMP [stderr] " prefix
-                if let range = line.range(of: #"^\d{4}-\d{2}-\d{2}T[\d:.]+Z \[(stdout|stderr)\] "#, options: .regularExpression) {
-                    return String(line[range.upperBound...])
-                }
-                return String(line)
-            }
-            .joined(separator: "\n")
     }
 
     nonisolated static func sanitize(_ string: String) -> String {
@@ -1723,6 +1634,10 @@ final class ChatViewModel {
     #if DEBUG
     func setCurrentAssistantMessage(_ message: ChatMessage?) {
         currentAssistantMessage = message
+    }
+
+    func setExecSessionId(_ id: String?) {
+        execSessionId = id
     }
     #endif
 
