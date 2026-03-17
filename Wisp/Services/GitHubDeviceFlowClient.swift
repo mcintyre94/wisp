@@ -86,7 +86,15 @@ struct GitHubDeviceFlowClient: Sendable {
             request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
             request.httpBody = "client_id=\(Self.clientID)&device_code=\(deviceCode)&grant_type=urn:ietf:params:oauth:grant-type:device_code".data(using: .utf8)
 
-            let (data, response) = try await URLSession.shared.data(for: request)
+            let data: Data
+            let response: URLResponse
+            do {
+                (data, response) = try await URLSession.shared.data(for: request)
+            } catch let urlError as URLError where [.networkConnectionLost, .notConnectedToInternet, .timedOut].contains(urlError.code) {
+                // Transient failure — common when app returns from background. Retry on next interval.
+                logger.warning("Token poll transient network error: \(urlError.localizedDescription)")
+                continue
+            }
 
             guard let httpResponse = response as? HTTPURLResponse,
                   (200...299).contains(httpResponse.statusCode) else {
