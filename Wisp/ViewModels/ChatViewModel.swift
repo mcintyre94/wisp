@@ -58,9 +58,6 @@ final class ChatViewModel {
     private(set) var sessionId: String?
     var workingDirectory: String
     private(set) var worktreePath: String?
-    /// True when any chat for this sprite has had a worktree created, indicating the
-    /// sprite has a git repo. Used to suppress session-resume UI on new chats.
-    private(set) var spriteUsesWorktrees = false
     private var streamTask: Task<Void, Never>?
     var namingTask: Task<String, Never>?
     private let parser = ClaudeStreamParser()
@@ -211,14 +208,6 @@ final class ChatViewModel {
             serviceName = svcName
         }
 
-        // Check if any chat on this sprite has ever had a worktree — if so the sprite
-        // has git and new chats should suppress the session-resume UI.
-        let name = spriteName
-        let worktreeDescriptor = FetchDescriptor<SpriteChat>(
-            predicate: #Predicate { $0.spriteName == name && $0.worktreePath != nil }
-        )
-        spriteUsesWorktrees = (try? modelContext.fetch(worktreeDescriptor))?.isEmpty == false
-
         if messages.isEmpty {
             let persisted = chat.loadMessages()
             messages = persisted.map { ChatMessage(from: $0) }
@@ -251,6 +240,23 @@ final class ChatViewModel {
         try? modelContext.save()
     }
 
+    func changeWorkingDirectory(_ newDir: String, modelContext: ModelContext) {
+        guard newDir != workingDirectory else { return }
+        workingDirectory = newDir
+        guard let chat = fetchChat(modelContext: modelContext) else { return }
+        chat.workingDirectory = newDir
+        try? modelContext.save()
+        clearRemoteSessions()
+        guard let apiClient else { return }
+        fetchRemoteSessions(apiClient: apiClient, existingSessionIds: [])
+    }
+
+    private func clearRemoteSessions() {
+        remoteSessions = []
+        hasAnyRemoteSessions = false
+        isLoadingRemoteSessions = false
+    }
+
     func stashDraft() {
         let text = inputText.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !text.isEmpty else { return }
@@ -264,12 +270,8 @@ final class ChatViewModel {
         inputText = stash
     }
 
-    /// True when this chat uses (or will use) a git worktree.
-    /// Covers both established worktrees and fresh chats on sprites that have
-    /// previously created worktrees (i.e. the sprite has a git repo).
-    var usesWorktree: Bool {
-        worktreePath != nil || spriteUsesWorktrees
-    }
+    /// True when this chat has an established git worktree.
+    var usesWorktree: Bool { worktreePath != nil }
 
     func fetchRemoteSessions(apiClient: SpritesAPIClient, existingSessionIds: Set<String>) {
         // Worktrees are always fresh — no sessions to resume
@@ -332,7 +334,7 @@ final class ChatViewModel {
 
     func selectRemoteSession(_ entry: ClaudeSessionEntry, apiClient: SpritesAPIClient, modelContext: ModelContext) {
         sessionId = entry.sessionId
-        remoteSessions = []
+        clearRemoteSessions()
         saveSession(modelContext: modelContext)
 
         Task {
@@ -1566,7 +1568,6 @@ final class ChatViewModel {
 
         workingDirectory = path
         worktreePath = path
-        spriteUsesWorktrees = true
         if let chat = fetchChat(modelContext: modelContext) {
             chat.worktreePath = path
             chat.worktreeBranch = uniqueBranchName

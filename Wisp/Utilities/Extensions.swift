@@ -74,4 +74,13 @@ extension String {
         guard !cwd.isEmpty else { return self }
         return replacingOccurrences(of: cwd + "/", with: "./")
     }
+
+    /// Converts `/home/sprite` paths to `~/` notation for display.
+    var displayPath: String {
+        if self == "/home/sprite" { return "~" }
+        if hasPrefix("/home/sprite/") {
+            return "~/" + dropFirst("/home/sprite/".count)
+        }
+        return self
+    }
 }

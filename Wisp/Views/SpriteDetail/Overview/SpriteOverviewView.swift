@@ -417,15 +417,7 @@ struct SpriteOverviewView: View {
         }
     }
 
-    private var displayWorkingDirectory: String {
-        if workingDirectory == "/home/sprite" {
-            return "~"
-        }
-        if workingDirectory.hasPrefix("/home/sprite/") {
-            return "~/" + workingDirectory.dropFirst("/home/sprite/".count)
-        }
-        return workingDirectory
-    }
+    private var displayWorkingDirectory: String { workingDirectory.displayPath }
 
     private func loadWorkingDirectory() {
         let key = "workingDirectory_\(viewModel.sprite.name)"

@@ -25,12 +25,30 @@ struct ChatView: View {
     // Quick Actions
     @State private var quickActionsViewModel: QuickActionsViewModel?
     @State private var saveDraftTask: Task<Void, Never>?
+    @State private var showDirectoryPicker = false
 
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
                 VStack(spacing: 12) {
                     if viewModel.messages.isEmpty && !isReadOnly && !viewModel.usesWorktree {
+                        Button {
+                            showDirectoryPicker = true
+                        } label: {
+                            HStack {
+                                Image(systemName: "folder")
+                                    .foregroundStyle(.secondary)
+                                Text(viewModel.workingDirectory.displayPath)
+                                    .font(.subheadline)
+                                    .foregroundStyle(.secondary)
+                                Spacer()
+                                Image(systemName: "chevron.right")
+                                    .font(.caption)
+                                    .foregroundStyle(.tertiary)
+                            }
+                            .padding(.horizontal, 4)
+                            .padding(.vertical, 8)
+                        }
                         SessionSuggestionsView(
                             sessions: viewModel.remoteSessions,
                             hasAnySessions: viewModel.hasAnyRemoteSessions,
@@ -204,6 +222,26 @@ struct ChatView: View {
             .environment(apiClient)
             .presentationDetents([.medium, .large])
             .presentationDragIndicator(.visible)
+        }
+        .sheet(isPresented: $showDirectoryPicker) {
+            NavigationStack {
+                DirectoryPickerView(
+                    workingDirectory: Binding(
+                        get: { viewModel.workingDirectory },
+                        set: { viewModel.changeWorkingDirectory($0, modelContext: modelContext) }
+                    ),
+                    spriteName: viewModel.spriteName
+                )
+                .toolbar {
+                    ToolbarItem(placement: .cancellationAction) {
+                        Button {
+                            showDirectoryPicker = false
+                        } label: {
+                            Image(systemName: "xmark")
+                        }
+                    }
+                }
+            }
         }
         .sheet(isPresented: $showFileBrowser) {
             SpriteFileBrowserView(

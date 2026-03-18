@@ -692,34 +692,6 @@ struct ChatViewModelTests {
         #expect(vm.isLoadingRemoteSessions == false)
     }
 
-    @Test func fetchRemoteSessions_isNoOpWhenSiblingChatHasWorktree() throws {
-        // A fresh chat on a sprite that has previously created worktrees should also
-        // suppress remote session fetching — the sprite has git, so resumes are irrelevant.
-        let ctx = try makeModelContext()
-
-        // Create an older chat for the same sprite with an established worktree
-        let olderChat = SpriteChat(spriteName: "test", chatNumber: 1)
-        olderChat.worktreePath = "/tmp/worktrees/main"
-        ctx.insert(olderChat)
-        try ctx.save()
-
-        // New chat for the same sprite — worktreePath is nil (not yet created)
-        let newChat = SpriteChat(spriteName: "test", chatNumber: 2)
-        ctx.insert(newChat)
-        try ctx.save()
-
-        let vm = ChatViewModel(spriteName: "test", chatId: newChat.id, currentServiceName: nil, workingDirectory: newChat.workingDirectory)
-        vm.loadSession(apiClient: SpritesAPIClient(), modelContext: ctx)
-
-        #expect(vm.worktreePath == nil)
-        #expect(vm.spriteUsesWorktrees == true)
-
-        vm.fetchRemoteSessions(apiClient: SpritesAPIClient(), existingSessionIds: [])
-
-        #expect(vm.remoteSessions.isEmpty)
-        #expect(vm.isLoadingRemoteSessions == false)
-    }
-
     // MARK: - ChatStatus computed properties
 
     @Test func chatStatus_isConnecting_onlyForConnecting() {
