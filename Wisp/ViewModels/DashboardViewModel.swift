@@ -16,7 +16,10 @@ final class DashboardViewModel {
         errorMessage = nil
 
         do {
-            sprites = try await apiClient.listSprites()
+            let updated = try await apiClient.listSprites()
+            if updated != sprites {
+                sprites = updated
+            }
         } catch {
             errorMessage = error.localizedDescription
         }
@@ -57,7 +60,9 @@ final class DashboardViewModel {
         while Date() < deadline {
             try? await Task.sleep(for: .seconds(2))
             if let updated = try? await apiClient.listSprites() {
-                sprites = updated
+                if updated != sprites {
+                    sprites = updated
+                }
                 if updated.first(where: { $0.name == sprite.name })?.status == .running {
                     return
                 }
