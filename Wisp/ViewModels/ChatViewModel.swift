@@ -53,6 +53,8 @@ final class ChatViewModel {
     var hasAnyRemoteSessions = false
     var isLoadingRemoteSessions = false
     var isLoadingHistory = false
+    var isLookingUpSession = false
+    var sessionLookupError: String?
 
     private var serviceName: String
     private(set) var sessionId: String?
@@ -340,6 +342,57 @@ final class ChatViewModel {
         Task {
             await loadRemoteHistory(apiClient: apiClient, modelContext: modelContext)
         }
+    }
+
+    func lookupAndResumeSession(_ input: String, apiClient: SpritesAPIClient, modelContext: ModelContext) {
+        guard let id = extractSessionId(from: input) else {
+            sessionLookupError = "No valid session ID found"
+            return
+        }
+        isLookingUpSession = true
+        sessionLookupError = nil
+
+        Task {
+            defer { isLookingUpSession = false }
+
+            // Locate the session file and read cwd from it.
+            // Session ID is UUID-format so no shell injection risk.
+            let command = """
+            f=$(find /home/sprite/.claude/projects -name '\(id).jsonl' 2>/dev/null | head -1)
+            [ -f "$f" ] && grep -m1 '"cwd"' "$f" | jq -r '.cwd // empty' 2>/dev/null
+            """
+            let (output, _) = await apiClient.runExec(spriteName: spriteName, command: command, timeout: 15)
+            let cwd = output.trimmingCharacters(in: .whitespacesAndNewlines)
+
+            guard !cwd.isEmpty else {
+                sessionLookupError = "Session not found on this Sprite"
+                return
+            }
+
+            // Persist working directory if it changed
+            if cwd != workingDirectory {
+                workingDirectory = cwd
+                if let chat = fetchChat(modelContext: modelContext) {
+                    chat.workingDirectory = cwd
+                    try? modelContext.save()
+                }
+            }
+
+            clearRemoteSessions()
+            sessionId = id
+            saveSession(modelContext: modelContext)
+            await loadRemoteHistory(apiClient: apiClient, modelContext: modelContext)
+        }
+    }
+
+    /// Extracts a UUID-format session ID from raw input (handles both bare UUIDs and full claude commands).
+    private func extractSessionId(from input: String) -> String? {
+        let pattern = "[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{4}-[0-9a-fA-F]{12}"
+        guard let regex = try? NSRegularExpression(pattern: pattern),
+              let match = regex.firstMatch(in: input, range: NSRange(input.startIndex..., in: input)),
+              let range = Range(match.range, in: input)
+        else { return nil }
+        return String(input[range])
     }
 
     private func loadRemoteHistory(apiClient: SpritesAPIClient, modelContext: ModelContext) async {

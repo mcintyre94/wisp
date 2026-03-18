@@ -57,6 +57,13 @@ struct ChatView: View {
                             contentOpacity = 0
                             viewModel.selectRemoteSession(entry, apiClient: apiClient, modelContext: modelContext)
                         }
+                        SessionIdInputView(
+                            isLoading: viewModel.isLookingUpSession,
+                            error: viewModel.sessionLookupError
+                        ) { input in
+                            contentOpacity = 0
+                            viewModel.lookupAndResumeSession(input, apiClient: apiClient, modelContext: modelContext)
+                        }
                     }
                     let lastAssistantId = viewModel.messages.last(where: { $0.role == .assistant })?.id
                     ForEach(viewModel.messages) { message in
