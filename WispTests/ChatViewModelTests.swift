@@ -1035,4 +1035,54 @@ struct ChatViewModelTests {
         // Status should not be idle yet (task was created)
         #expect(vm.status != .idle || vm.streamTask != nil)
     }
+
+    // MARK: - parseSessionJSONL: block-format user messages
+
+    @Test func parseSessionJSONL_userMessageAsTextBlockArray() {
+        // Some Claude Code versions write the user turn as an array of text blocks
+        // instead of a plain string. Verify these are treated as user messages.
+        let jsonl = """
+        {"type":"user","message":{"role":"user","content":[{"type":"text","text":"Hello from blocks"}]}}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Hi back"}]}}
+        """
+        let messages = ChatViewModel.parseSessionJSONL(jsonl)
+        #expect(messages.count == 2)
+        #expect(messages[0].role == .user)
+        #expect(messages[0].textContent == "Hello from blocks")
+        #expect(messages[1].role == .assistant)
+        #expect(messages[1].textContent == "Hi back")
+    }
+
+    @Test func parseSessionJSONL_multiTurnWithBlockFormatUserMessages() {
+        // Multi-turn conversation where both turns store the user prompt as block arrays.
+        let jsonl = """
+        {"type":"user","message":{"role":"user","content":[{"type":"text","text":"first prompt"}]}}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"first answer"}]}}
+        {"type":"user","message":{"role":"user","content":[{"type":"text","text":"second prompt"}]}}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"second answer"}]}}
+        """
+        let messages = ChatViewModel.parseSessionJSONL(jsonl)
+        #expect(messages.count == 4)
+        #expect(messages[0].role == .user)
+        #expect(messages[0].textContent == "first prompt")
+        #expect(messages[1].role == .assistant)
+        #expect(messages[2].role == .user)
+        #expect(messages[2].textContent == "second prompt")
+        #expect(messages[3].role == .assistant)
+    }
+
+    @Test func parseSessionJSONL_blockFormatUserDoesNotConflictWithToolResults() {
+        // A user event with only tool_result blocks (not text blocks) must still be
+        // treated as tool results, not as a user message.
+        let jsonl = """
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"tu-1","name":"Bash","input":{"command":"ls"}}]}}
+        {"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tu-1","content":"file.txt"}]}}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Done"}]}}
+        """
+        let messages = ChatViewModel.parseSessionJSONL(jsonl)
+        // Should be one assistant message with tool_use, tool_result, and text
+        #expect(messages.count == 1)
+        #expect(messages[0].role == .assistant)
+        #expect(messages[0].content.count == 3)
+    }
 }

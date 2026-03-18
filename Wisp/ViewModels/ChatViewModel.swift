@@ -278,8 +278,7 @@ final class ChatViewModel {
             defer { isLoadingRemoteSessions = false }
 
             // Claude Code stores sessions as {uuid}.jsonl files under the project dir.
-            let encodedPath = workingDirectory
-                .replacingOccurrences(of: "/", with: "-")
+            let encodedPath = Self.claudeProjectPathEncoding(workingDirectory)
             let projectDir = "/home/sprite/.claude/projects/\(encodedPath)"
 
             // For each session .jsonl, extract the first user message and the file's last-modified time.
@@ -342,8 +341,7 @@ final class ChatViewModel {
         isLoadingHistory = true
         defer { isLoadingHistory = false }
 
-        let encodedPath = workingDirectory
-            .replacingOccurrences(of: "/", with: "-")
+        let encodedPath = Self.claudeProjectPathEncoding(workingDirectory)
         let projectDir = "/home/sprite/.claude/projects/\(encodedPath)"
         let command = "cat '\(projectDir)/\(sessionId).jsonl' 2>/dev/null"
 
@@ -390,28 +388,42 @@ final class ChatViewModel {
                     messages.append(msg)
 
                 case .blocks(let blocks):
-                    // Tool results — append to current assistant message
-                    let assistant = currentAssistant ?? ChatMessage(role: .assistant)
-                    if currentAssistant == nil {
-                        currentAssistant = assistant
-                    }
-                    for block in blocks {
-                        guard block.type == "tool_result",
-                              let toolUseId = block.toolUseId
-                        else { continue }
-                        let toolName = toolUseNames[toolUseId] ?? "Tool"
-                        let resultContent: JSONValue
-                        if let c = block.content {
-                            resultContent = .string(c.textValue)
-                        } else {
-                            resultContent = .null
+                    let textBlocks = blocks.filter { $0.type == "text" }
+                    let toolResultBlocks = blocks.filter { $0.type == "tool_result" }
+
+                    if !textBlocks.isEmpty && toolResultBlocks.isEmpty {
+                        // User prompt stored as a text block array (some Claude Code versions
+                        // write the user turn as [{type:text, text:...}] instead of a plain string).
+                        // Treat it the same as the string case.
+                        if let assistant = currentAssistant {
+                            messages.append(assistant)
+                            currentAssistant = nil
                         }
-                        let card = ToolResultCard(
-                            toolUseId: toolUseId,
-                            toolName: toolName,
-                            content: resultContent
-                        )
-                        assistant.content.append(.toolResult(card))
+                        let text = textBlocks.compactMap { $0.text }.joined(separator: "\n")
+                        let msg = ChatMessage(role: .user, content: [.text(text)])
+                        messages.append(msg)
+                    } else {
+                        // Tool results — append to current assistant message
+                        let assistant = currentAssistant ?? ChatMessage(role: .assistant)
+                        if currentAssistant == nil {
+                            currentAssistant = assistant
+                        }
+                        for block in toolResultBlocks {
+                            guard let toolUseId = block.toolUseId else { continue }
+                            let toolName = toolUseNames[toolUseId] ?? "Tool"
+                            let resultContent: JSONValue
+                            if let c = block.content {
+                                resultContent = .string(c.textValue)
+                            } else {
+                                resultContent = .null
+                            }
+                            let card = ToolResultCard(
+                                toolUseId: toolUseId,
+                                toolName: toolName,
+                                content: resultContent
+                            )
+                            assistant.content.append(.toolResult(card))
+                        }
                     }
                 }
 
@@ -644,7 +656,18 @@ final class ChatViewModel {
     /// Attempt to reconnect to a running exec session when switching back to this chat.
     /// Called after loadSession — reattaches to the exec WebSocket if one exists.
     func reconnectIfNeeded(apiClient: SpritesAPIClient, modelContext: ModelContext) {
-        guard !isStreaming, !messages.isEmpty else { return }
+        guard !isStreaming else { return }
+
+        if messages.isEmpty {
+            // No local messages but we know the session ID — the JSONL file on the
+            // sprite contains the full conversation. Load it so the chat isn't blank.
+            // This handles the case where SwiftData was cleared, the app was reinstalled,
+            // or the path-encoding bug previously caused loadRemoteHistory to silently fail.
+            if sessionId != nil, !isLoadingHistory {
+                Task { await loadRemoteHistory(apiClient: apiClient, modelContext: modelContext) }
+            }
+            return
+        }
 
         // If the last session completed cleanly, content is already loaded from
         // persistence — no need to hit the network at all.
@@ -1021,6 +1044,17 @@ final class ChatViewModel {
         }
 
         hasPlayedFirstTextHaptic = false
+
+        // Snapshot the current tail assistant message content before any clearing.
+        // Used below to restore if the replay produces less content (e.g. truncated logs).
+        let savedContent: [ChatContent]
+        if let existing = currentAssistantMessage {
+            savedContent = existing.content
+        } else if let last = messages.last, last.role == .assistant {
+            savedContent = last.content
+        } else {
+            savedContent = []
+        }
 
         // Ensure we have an assistant message to append into.
         let assistantMessage: ChatMessage
@@ -1576,6 +1610,21 @@ final class ChatViewModel {
         if let isComplete { chat.lastSessionComplete = isComplete }
         try? modelContext.save()
     }
+
+    /// Encode a filesystem path the same way Claude Code does when creating its
+    /// per-project JSONL directories: replace every `/` and `.` with `-`.
+    ///
+    /// Example: `/home/sprite/.wisp/worktrees/wisp/my-branch`
+    ///       →  `-home-sprite--wisp-worktrees-wisp-my-branch`
+    ///
+    /// Wisp previously only replaced `/`, producing `-home-sprite-.wisp-...`
+    /// which didn't match the on-disk directory name.
+    nonisolated static func claudeProjectPathEncoding(_ path: String) -> String {
+        path
+            .replacingOccurrences(of: "/", with: "-")
+            .replacingOccurrences(of: ".", with: "-")
+    }
+
 
     nonisolated static func sanitize(_ string: String) -> String {
         string.replacingOccurrences(
