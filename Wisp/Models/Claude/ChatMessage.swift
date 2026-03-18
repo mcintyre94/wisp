@@ -37,6 +37,7 @@ enum ChatContent: Identifiable {
     case text(String)
     case toolUse(ToolUseCard)
     case toolResult(ToolResultCard)
+    case readGroup(ReadGroupCard)
     case error(String)
 
     var id: String {
@@ -44,6 +45,7 @@ enum ChatContent: Identifiable {
         case .text(let text): return "text-\(text.prefix(50).hashValue)"
         case .toolUse(let card): return "tool-\(card.toolUseId)"
         case .toolResult(let card): return "result-\(card.toolUseId)"
+        case .readGroup(let group): return "readgroup-\(group.id)"
         case .error(let msg): return "error-\(msg.hashValue)"
         }
     }
@@ -202,5 +204,34 @@ final class ToolResultCard: Identifiable {
             return String(preview.prefix(120)) + "..."
         }
         return preview
+    }
+}
+
+@Observable
+@MainActor
+final class ReadGroupCard: Identifiable {
+    nonisolated let id: UUID
+    var cards: [ToolUseCard]
+
+    init(id: UUID = UUID(), cards: [ToolUseCard] = []) {
+        self.id = id
+        self.cards = cards
+    }
+
+    var allComplete: Bool {
+        !cards.isEmpty && cards.allSatisfy { $0.result != nil }
+    }
+
+    var elapsedString: String? {
+        guard allComplete else { return nil }
+        guard let earliest = cards.map(\.startedAt).min(),
+              let latest = cards.compactMap({ $0.result?.completedAt }).max()
+        else { return nil }
+        let elapsed = latest.timeIntervalSince(earliest)
+        if elapsed < 1 { return "<1s" }
+        if elapsed < 60 { return "\(Int(elapsed))s" }
+        let minutes = Int(elapsed) / 60
+        let seconds = Int(elapsed) % 60
+        return "\(minutes)m \(seconds)s"
     }
 }

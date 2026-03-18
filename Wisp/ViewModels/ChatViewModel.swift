@@ -190,6 +190,10 @@ final class ChatViewModel {
             if case .toolUse(let card) = item, card.result == nil {
                 return card.activityLabel.relativeToCwd(workingDirectory)
             }
+            if case .readGroup(let group) = item,
+               let lastCard = group.cards.last, lastCard.result == nil {
+                return lastCard.activityLabel.relativeToCwd(workingDirectory)
+            }
         }
         return nil
     }
@@ -441,12 +445,12 @@ final class ChatViewModel {
                     case "tool_use":
                         guard let id = block.id, let name = block.name else { continue }
                         toolUseNames[id] = name
-                        let card = ToolUseCard(
-                            toolUseId: id,
-                            toolName: name,
-                            input: block.input ?? .null
-                        )
-                        assistant.content.append(.toolUse(card))
+                        let card = ToolUseCard(toolUseId: id, toolName: name, input: block.input ?? .null)
+                        if name == "Read" {
+                            Self.groupReadCard(card, into: &assistant.content)
+                        } else {
+                            assistant.content.append(.toolUse(card))
+                        }
                     default:
                         // Skip thinking, server_tool_use, etc.
                         break
@@ -482,12 +486,17 @@ final class ChatViewModel {
         var toolCards: [String: ToolUseCard] = [:]
         for (messageIndex, message) in messages.enumerated() {
             for item in message.content {
-                if case .toolUse(let card) = item {
-                    toolUseIndex[card.toolUseId] = (
-                        messageIndex: messageIndex,
-                        toolName: card.toolName
-                    )
+                switch item {
+                case .toolUse(let card):
+                    toolUseIndex[card.toolUseId] = (messageIndex: messageIndex, toolName: card.toolName)
                     toolCards[card.toolUseId] = card
+                case .readGroup(let group):
+                    for card in group.cards {
+                        toolUseIndex[card.toolUseId] = (messageIndex: messageIndex, toolName: card.toolName)
+                        toolCards[card.toolUseId] = card
+                    }
+                default:
+                    break
                 }
             }
         }
@@ -1197,6 +1206,35 @@ final class ChatViewModel {
         }
     }
 
+    /// Append a Read ToolUseCard into a content array, grouping with the previous Read if present.
+    /// Searches backwards past toolResult items to find the last significant content item.
+    private static func groupReadCard(_ card: ToolUseCard, into content: inout [ChatContent]) {
+        let lastSigIdx = content.indices.reversed().first { idx in
+            if case .toolResult = content[idx] { return false }
+            return true
+        }
+        guard let idx = lastSigIdx else {
+            content.append(.toolUse(card))
+            return
+        }
+        switch content[idx] {
+        case .readGroup(let group):
+            group.cards.append(card)
+        case .toolUse(let prevCard) where prevCard.toolName == "Read":
+            content[idx] = .readGroup(ReadGroupCard(cards: [prevCard, card]))
+        default:
+            content.append(.toolUse(card))
+        }
+    }
+
+    private func appendReadCard(to message: ChatMessage, card: ToolUseCard) {
+        Self.groupReadCard(card, into: &message.content)
+    }
+
+    private func appendReadCardToBuffer(_ buffer: inout [ChatContent], card: ToolUseCard) {
+        Self.groupReadCard(card, into: &buffer)
+    }
+
     func handleEvent(_ event: ClaudeStreamEvent, modelContext: ModelContext) {
         switch event {
         case .system(let systemEvent):
@@ -1239,13 +1277,21 @@ final class ChatViewModel {
                     )
                     logger.info("Tool use: \(toolUse.name, privacy: .public) id=\(toolUse.id, privacy: .public)")
                     if isReplaying {
-                        replayContentBuffer.append(.toolUse(card))
+                        if toolUse.name == "Read" {
+                            appendReadCardToBuffer(&replayContentBuffer, card: card)
+                        } else {
+                            replayContentBuffer.append(.toolUse(card))
+                        }
                         replayToolUseBuffer[toolUse.id] = (
                             messageIndex: messages.count - 1,
                             toolName: toolUse.name
                         )
                     } else {
-                        message.content.append(.toolUse(card))
+                        if toolUse.name == "Read" {
+                            appendReadCard(to: message, card: card)
+                        } else {
+                            message.content.append(.toolUse(card))
+                        }
                         toolUseIndex[toolUse.id] = (
                             messageIndex: messages.count - 1,
                             toolName: toolUse.name
@@ -1282,12 +1328,22 @@ final class ChatViewModel {
                             toolCard.result = resultCard
                             break
                         }
+                        if case .readGroup(let group) = item,
+                           let toolCard = group.cards.first(where: { $0.toolUseId == result.toolUseId }) {
+                            toolCard.result = resultCard
+                            break
+                        }
                     }
                 } else {
                     message.content.append(.toolResult(resultCard))
-                    // Link result back to matching tool use card
+                    // Link result back to matching tool use card (including inside readGroups)
                     for item in message.content {
                         if case .toolUse(let toolCard) = item, toolCard.toolUseId == result.toolUseId {
+                            toolCard.result = resultCard
+                            break
+                        }
+                        if case .readGroup(let group) = item,
+                           let toolCard = group.cards.first(where: { $0.toolUseId == result.toolUseId }) {
                             toolCard.result = resultCard
                             break
                         }

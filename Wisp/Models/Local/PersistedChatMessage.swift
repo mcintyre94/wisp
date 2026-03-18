@@ -15,6 +15,7 @@ enum PersistedChatContent: Codable {
     case text(String)
     case toolUse(PersistedToolUse)
     case toolResult(PersistedToolResult)
+    case readGroup([PersistedToolUse])
     case error(String)
 }
 
@@ -68,6 +69,10 @@ extension ChatContent {
                 content: card.content,
                 completedAt: card.completedAt
             ))
+        case .readGroup(let group):
+            return .readGroup(group.cards.map {
+                PersistedToolUse(toolUseId: $0.toolUseId, toolName: $0.toolName, input: $0.input, startedAt: $0.startedAt)
+            })
         case .error(let msg):
             return .error(msg)
         }
@@ -110,6 +115,10 @@ extension ChatContent {
                 content: dto.content,
                 completedAt: dto.completedAt ?? .distantPast
             ))
+        case .readGroup(let dtos):
+            self = .readGroup(ReadGroupCard(cards: dtos.map {
+                ToolUseCard(toolUseId: $0.toolUseId, toolName: $0.toolName, input: $0.input, startedAt: $0.startedAt ?? .distantPast)
+            }))
         case .error(let msg):
             self = .error(msg)
         }

@@ -9,6 +9,7 @@ struct AssistantMessageView: View {
     var isCheckpointDisabled: Bool = false
     var onAnswerWispAsk: ((String) -> Void)? = nil
     @State private var selectedToolCard: ToolUseCard?
+    @State private var selectedReadGroup: ReadGroupCard?
 
     private var canCheckpoint: Bool {
         onCreateCheckpoint != nil
@@ -60,6 +61,27 @@ struct AssistantMessageView: View {
                         // Active tool while streaming -- shimmer handles it, render nothing
                     case .toolResult:
                         EmptyView()
+                    case .readGroup(let group):
+                        if group.allComplete {
+                            ReadGroupRow(group: group, workingDirectory: workingDirectory) {
+                                selectedReadGroup = group
+                            }
+                        } else if !isStreaming {
+                            // Cancelled/incomplete group — muted row
+                            HStack(spacing: 6) {
+                                Image(systemName: "doc.text")
+                                    .font(.system(size: 12))
+                                    .foregroundStyle(.quaternary)
+                                    .frame(width: 16)
+                                Text("Reading \(group.cards.count) files...")
+                                    .font(.caption)
+                                    .foregroundStyle(.quaternary)
+                                    .strikethrough()
+                                    .lineLimit(1)
+                            }
+                            .padding(.vertical, 2)
+                        }
+                        // Active group while streaming — shimmer handles it, render nothing
                     case .error(let errorMessage):
                         Label(errorMessage, systemImage: "exclamationmark.triangle")
                             .font(.caption)
@@ -73,6 +95,9 @@ struct AssistantMessageView: View {
         }
         .sheet(item: $selectedToolCard) { card in
             ToolDetailSheet(card: card, workingDirectory: workingDirectory)
+        }
+        .sheet(item: $selectedReadGroup) { group in
+            ReadGroupDetailSheet(group: group, workingDirectory: workingDirectory)
         }
     }
 }
