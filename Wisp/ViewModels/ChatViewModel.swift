@@ -776,12 +776,7 @@ final class ChatViewModel {
         }
         claudeCmd += " '\(escapedPrompt)'"
 
-        // Wrap claude with a heartbeat so the sprite stays alive while Claude
-        // is waiting for an API response and Wisp is detached. The heartbeat
-        // writes a byte to stderr every 20s — enough to count as output without
-        // interfering with the NDJSON stdout stream. The trap ensures cleanup.
-        let wrappedClaudeCmd = "{ (while true; do sleep 20; printf . >&2; done) & HBEAT=$!; trap \"kill $HBEAT 2>/dev/null\" EXIT; \(claudeCmd); kill $HBEAT 2>/dev/null; }"
-        commandParts.append(wrappedClaudeCmd)
+        commandParts.append(claudeCmd)
         let fullCommand = commandParts.joined(separator: " && ")
 
         receivedSystemEvent = false
