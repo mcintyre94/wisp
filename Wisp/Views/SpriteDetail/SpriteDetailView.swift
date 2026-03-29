@@ -252,8 +252,9 @@ struct SpriteDetailView: View {
             QuickActionsView(
                 viewModel: vm,
                 startChatCallback: { text in
-                    guard let chatViewModel else { return }
-                    chatViewModel.inputText += (chatViewModel.inputText.isEmpty ? "" : "\n") + text
+                    let chat = chatListViewModel.createChat(modelContext: modelContext)
+                    switchToChat(chat)
+                    chatViewModel?.inputText = text
                     selectedTab = .chat
                     spriteQuickActionsViewModel = nil
                 }
