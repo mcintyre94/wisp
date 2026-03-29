@@ -36,4 +36,26 @@ struct ChatViewModelHelpersTests {
         let result = ChatViewModel.sanitize(input)
         #expect(result == "export NO_DNA=1 && claude -p 'hello'")
     }
+
+    // MARK: - claudeProjectPathEncoding
+
+    @Test func claudeProjectPathEncoding_standardPath() {
+        // Plain path with no dots — only slashes replaced
+        let result = ChatViewModel.claudeProjectPathEncoding("/home/sprite/project")
+        #expect(result == "-home-sprite-project")
+    }
+
+    @Test func claudeProjectPathEncoding_worktreePath() {
+        // Worktree paths contain a hidden directory (.wisp) — the dot must also be
+        // replaced so the encoded name matches what Claude Code writes on disk.
+        let result = ChatViewModel.claudeProjectPathEncoding(
+            "/home/sprite/.wisp/worktrees/wisp/start-chat-from-directory-e216cd70"
+        )
+        #expect(result == "-home-sprite--wisp-worktrees-wisp-start-chat-from-directory-e216cd70")
+    }
+
+    @Test func claudeProjectPathEncoding_repoPath() {
+        let result = ChatViewModel.claudeProjectPathEncoding("/home/sprite/my-repo")
+        #expect(result == "-home-sprite-my-repo")
+    }
 }

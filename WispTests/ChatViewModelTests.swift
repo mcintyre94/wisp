@@ -1035,4 +1035,111 @@ struct ChatViewModelTests {
         // Status should not be idle yet (task was created)
         #expect(vm.status != .idle || vm.streamTask != nil)
     }
+
+    // MARK: - parseSessionJSONL: block-format user messages
+
+    @Test func parseSessionJSONL_userMessageAsTextBlockArray() {
+        // Some Claude Code versions write the user turn as an array of text blocks
+        // instead of a plain string. Verify these are treated as user messages.
+        let jsonl = """
+        {"type":"user","message":{"role":"user","content":[{"type":"text","text":"Hello from blocks"}]}}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Hi back"}]}}
+        """
+        let messages = ChatViewModel.parseSessionJSONL(jsonl)
+        #expect(messages.count == 2)
+        #expect(messages[0].role == .user)
+        #expect(messages[0].textContent == "Hello from blocks")
+        #expect(messages[1].role == .assistant)
+        #expect(messages[1].textContent == "Hi back")
+    }
+
+    @Test func parseSessionJSONL_multiTurnWithBlockFormatUserMessages() {
+        // Multi-turn conversation where both turns store the user prompt as block arrays.
+        let jsonl = """
+        {"type":"user","message":{"role":"user","content":[{"type":"text","text":"first prompt"}]}}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"first answer"}]}}
+        {"type":"user","message":{"role":"user","content":[{"type":"text","text":"second prompt"}]}}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"second answer"}]}}
+        """
+        let messages = ChatViewModel.parseSessionJSONL(jsonl)
+        #expect(messages.count == 4)
+        #expect(messages[0].role == .user)
+        #expect(messages[0].textContent == "first prompt")
+        #expect(messages[1].role == .assistant)
+        #expect(messages[2].role == .user)
+        #expect(messages[2].textContent == "second prompt")
+        #expect(messages[3].role == .assistant)
+    }
+
+    @Test func parseSessionJSONL_blockFormatUserDoesNotConflictWithToolResults() {
+        // A user event with only tool_result blocks (not text blocks) must still be
+        // treated as tool results, not as a user message.
+        let jsonl = """
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"tu-1","name":"Bash","input":{"command":"ls"}}]}}
+        {"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tu-1","content":"file.txt"}]}}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Done"}]}}
+        """
+        let messages = ChatViewModel.parseSessionJSONL(jsonl)
+        // Should be one assistant message with tool_use, tool_result, and text
+        #expect(messages.count == 1)
+        #expect(messages[0].role == .assistant)
+        #expect(messages[0].content.count == 3)
+    }
+
+    // MARK: - loadSession: SwiftData round-trip preserves tool result linkage
+
+    @Test func loadSession_linksToolResultsAfterSwiftDataRoundTrip() throws {
+        // Regression: PersistedChatMessage stores toolUse and toolResult as flat separate
+        // items and does not persist ToolUseCard.result. After loading from SwiftData,
+        // all ToolUseCard.result were nil, causing tool calls to render as strikethrough.
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        // Simulate a completed session stored in SwiftData: assistant message with a
+        // tool use and its result already linked (as they would be after live streaming).
+        let toolCard = ToolUseCard(toolUseId: "tu-1", toolName: "Bash", input: .object(["command": .string("ls")]))
+        let resultCard = ToolResultCard(toolUseId: "tu-1", toolName: "Bash", content: .string("file.txt"))
+        toolCard.result = resultCard
+
+        let assistantMsg = ChatMessage(role: .assistant, content: [
+            .toolUse(toolCard),
+            .toolResult(resultCard),
+            .text("Done"),
+        ])
+        vm.messages = [assistantMsg]
+
+        // Persist and reload
+        vm.persistMessages(modelContext: ctx)
+
+        // Create a second VM for the same chat to simulate a fresh load
+        let vm2 = ChatViewModel(spriteName: "test", chatId: vm.chatId, workingDirectory: "")
+        vm2.loadSession(apiClient: SpritesAPIClient(), modelContext: ctx)
+
+        guard case .toolUse(let loadedCard) = vm2.messages.first?.content.first else {
+            Issue.record("Expected toolUse as first content item")
+            return
+        }
+        #expect(loadedCard.result != nil, "ToolUseCard.result must be re-linked after SwiftData round-trip")
+        #expect(loadedCard.result?.toolUseId == "tu-1")
+    }
+
+    @Test func parseSessionJSONL_linksToolResultToToolUseCard() {
+        // Regression: reloaded chats were not showing tool calls because parseSessionJSONL
+        // never set ToolUseCard.result. The view only renders a ToolStepRow when result != nil.
+        let jsonl = """
+        {"type":"user","message":{"role":"user","content":"do something"}}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"tu-1","name":"Bash","input":{"command":"ls"}}]}}
+        {"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tu-1","content":"file.txt"}]}}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Done"}]}}
+        """
+        let messages = ChatViewModel.parseSessionJSONL(jsonl)
+        #expect(messages.count == 2)
+        let assistant = messages[1]
+        guard case .toolUse(let card) = assistant.content.first(where: { if case .toolUse = $0 { true } else { false } }) else {
+            Issue.record("Expected toolUse content item")
+            return
+        }
+        #expect(card.result != nil, "ToolUseCard.result must be linked for the completed tool to render")
+        #expect(card.result?.toolUseId == "tu-1")
+    }
 }
