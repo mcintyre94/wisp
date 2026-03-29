@@ -219,6 +219,7 @@ final class ChatViewModel {
         if messages.isEmpty {
             let persisted = chat.loadMessages()
             messages = persisted.map { ChatMessage(from: $0) }
+            linkToolResults(in: messages)
             rebuildToolUseIndex()
             processedEventUUIDs = chat.loadStreamEventUUIDs()
         }
@@ -278,8 +279,7 @@ final class ChatViewModel {
             defer { isLoadingRemoteSessions = false }
 
             // Claude Code stores sessions as {uuid}.jsonl files under the project dir.
-            let encodedPath = workingDirectory
-                .replacingOccurrences(of: "/", with: "-")
+            let encodedPath = Self.claudeProjectPathEncoding(workingDirectory)
             let projectDir = "/home/sprite/.claude/projects/\(encodedPath)"
 
             // For each session .jsonl, extract the first user message and the file's last-modified time.
@@ -342,8 +342,7 @@ final class ChatViewModel {
         isLoadingHistory = true
         defer { isLoadingHistory = false }
 
-        let encodedPath = workingDirectory
-            .replacingOccurrences(of: "/", with: "-")
+        let encodedPath = Self.claudeProjectPathEncoding(workingDirectory)
         let projectDir = "/home/sprite/.claude/projects/\(encodedPath)"
         let command = "cat '\(projectDir)/\(sessionId).jsonl' 2>/dev/null"
 
@@ -369,6 +368,7 @@ final class ChatViewModel {
         var messages: [ChatMessage] = []
         var currentAssistant: ChatMessage?
         var toolUseNames: [String: String] = [:]  // toolUseId -> toolName
+        var toolUseCards: [String: ToolUseCard] = [:]  // toolUseId -> card (for result linkage)
 
         for line in jsonl.split(separator: "\n", omittingEmptySubsequences: true) {
             guard let data = line.data(using: .utf8),
@@ -390,28 +390,43 @@ final class ChatViewModel {
                     messages.append(msg)
 
                 case .blocks(let blocks):
-                    // Tool results — append to current assistant message
-                    let assistant = currentAssistant ?? ChatMessage(role: .assistant)
-                    if currentAssistant == nil {
-                        currentAssistant = assistant
-                    }
-                    for block in blocks {
-                        guard block.type == "tool_result",
-                              let toolUseId = block.toolUseId
-                        else { continue }
-                        let toolName = toolUseNames[toolUseId] ?? "Tool"
-                        let resultContent: JSONValue
-                        if let c = block.content {
-                            resultContent = .string(c.textValue)
-                        } else {
-                            resultContent = .null
+                    let textBlocks = blocks.filter { $0.type == "text" }
+                    let toolResultBlocks = blocks.filter { $0.type == "tool_result" }
+
+                    if !textBlocks.isEmpty && toolResultBlocks.isEmpty {
+                        // User prompt stored as a text block array (some Claude Code versions
+                        // write the user turn as [{type:text, text:...}] instead of a plain string).
+                        // Treat it the same as the string case.
+                        if let assistant = currentAssistant {
+                            messages.append(assistant)
+                            currentAssistant = nil
                         }
-                        let card = ToolResultCard(
-                            toolUseId: toolUseId,
-                            toolName: toolName,
-                            content: resultContent
-                        )
-                        assistant.content.append(.toolResult(card))
+                        let text = textBlocks.compactMap { $0.text }.joined(separator: "\n")
+                        let msg = ChatMessage(role: .user, content: [.text(text)])
+                        messages.append(msg)
+                    } else {
+                        // Tool results — append to current assistant message
+                        let assistant = currentAssistant ?? ChatMessage(role: .assistant)
+                        if currentAssistant == nil {
+                            currentAssistant = assistant
+                        }
+                        for block in toolResultBlocks {
+                            guard let toolUseId = block.toolUseId else { continue }
+                            let toolName = toolUseNames[toolUseId] ?? "Tool"
+                            let resultContent: JSONValue
+                            if let c = block.content {
+                                resultContent = .string(c.textValue)
+                            } else {
+                                resultContent = .null
+                            }
+                            let card = ToolResultCard(
+                                toolUseId: toolUseId,
+                                toolName: toolName,
+                                content: resultContent
+                            )
+                            toolUseCards[toolUseId]?.result = card
+                            assistant.content.append(.toolResult(card))
+                        }
                     }
                 }
 
@@ -443,6 +458,7 @@ final class ChatViewModel {
                             toolName: name,
                             input: block.input ?? .null
                         )
+                        toolUseCards[id] = card
                         assistant.content.append(.toolUse(card))
                     default:
                         // Skip thinking, server_tool_use, etc.
@@ -644,7 +660,18 @@ final class ChatViewModel {
     /// Attempt to reconnect to a running exec session when switching back to this chat.
     /// Called after loadSession — reattaches to the exec WebSocket if one exists.
     func reconnectIfNeeded(apiClient: SpritesAPIClient, modelContext: ModelContext) {
-        guard !isStreaming, !messages.isEmpty else { return }
+        guard !isStreaming else { return }
+
+        if messages.isEmpty {
+            // No local messages but we know the session ID — the JSONL file on the
+            // sprite contains the full conversation. Load it so the chat isn't blank.
+            // This handles the case where SwiftData was cleared, the app was reinstalled,
+            // or the path-encoding bug previously caused loadRemoteHistory to silently fail.
+            if sessionId != nil, !isLoadingHistory {
+                Task { await loadRemoteHistory(apiClient: apiClient, modelContext: modelContext) }
+            }
+            return
+        }
 
         // If the last session completed cleanly, content is already loaded from
         // persistence — no need to hit the network at all.
@@ -817,11 +844,19 @@ final class ChatViewModel {
         }
 
         // On disconnect, exec session is still alive on the server (max_run_after_disconnect).
-        // Go idle — reconnectIfNeeded will reattach when user returns.
+        // Proactively reattach after a short delay so the user gets the response even if
+        // they stay on this screen rather than triggering a manual tab-switch reconnect.
         if case .disconnected = streamResult {
-            logger.info("[Chat] Disconnected mid-stream, exec session preserved for reattach")
+            logger.info("[Chat] Disconnected mid-stream, will reattach after delay")
             status = .idle
             persistMessages(modelContext: modelContext)
+            let capturedApiClient = apiClient
+            let capturedModelContext = modelContext
+            streamTask = Task {
+                try? await Task.sleep(for: .seconds(2))
+                guard !Task.isCancelled else { return }
+                reconnectIfNeeded(apiClient: capturedApiClient, modelContext: capturedModelContext)
+            }
             return
         }
 
@@ -1056,20 +1091,28 @@ final class ChatViewModel {
             currentAssistantMessage = nil
         }
 
-        // If exec session is gone (sprite slept, exec expired, or connection error),
-        // restore from Claude's session file. Both .disconnected (WebSocket closed cleanly
-        // with no data) and .timedOut (connection error / no data received) indicate the
-        // exec session no longer exists when reattaching.
-        let shouldRestoreFromFile: Bool
-        switch streamResult {
-        case .timedOut, .disconnected: shouldRestoreFromFile = sessionId != nil
-        default: shouldRestoreFromFile = false
-        }
-        if shouldRestoreFromFile {
-            // Clear any error status set by processExecStream before restoring
+        // .timedOut means no data was received at all — exec session is gone (sprite slept,
+        // session expired). Restore from Claude's session file so the user sees the result.
+        // .disconnected means data was received but no result event — the connection dropped
+        // while Claude was still running. Schedule a proactive reconnect (same as the initial
+        // stream) so we re-attach and pick up the rest rather than showing partial content.
+        if case .timedOut = streamResult, sessionId != nil {
             if case .error = status { status = .reconnecting }
-            logger.info("[Chat] Exec session gone (result=\(streamResult)) — restoring from session file")
+            logger.info("[Chat] Exec session gone on reattach — restoring from session file")
             await restoreFromSessionFile(apiClient: apiClient, modelContext: modelContext)
+        } else if case .disconnected = streamResult {
+            logger.info("[Chat] Dropped mid-reattach — will reconnect after delay")
+            saveSession(modelContext: modelContext)
+            if !Task.isCancelled { status = .idle }
+            persistMessages(modelContext: modelContext)
+            let capturedApiClient = apiClient
+            let capturedModelContext = modelContext
+            streamTask = Task {
+                try? await Task.sleep(for: .seconds(2))
+                guard !Task.isCancelled else { return }
+                reconnectIfNeeded(apiClient: capturedApiClient, modelContext: capturedModelContext)
+            }
+            return
         }
 
         saveSession(modelContext: modelContext)
@@ -1094,7 +1137,7 @@ final class ChatViewModel {
     private func restoreFromSessionFile(apiClient: SpritesAPIClient, modelContext: ModelContext) async {
         guard let sessionId = sessionId else { return }
 
-        let encodedPath = workingDirectory.replacingOccurrences(of: "/", with: "-")
+        let encodedPath = Self.claudeProjectPathEncoding(workingDirectory)
         let path = "~/.claude/projects/\(encodedPath)/\(sessionId).jsonl"
 
         var (output, success) = await apiClient.runExec(
@@ -1575,6 +1618,39 @@ final class ChatViewModel {
         chat.lastUsed = Date()
         if let isComplete { chat.lastSessionComplete = isComplete }
         try? modelContext.save()
+    }
+
+    /// Encode a filesystem path the same way Claude Code does when creating its
+    /// per-project JSONL directories: replace every `/` and `.` with `-`.
+    ///
+    /// Example: `/home/sprite/.wisp/worktrees/wisp/my-branch`
+    ///       →  `-home-sprite--wisp-worktrees-wisp-my-branch`
+    ///
+    /// Wisp previously only replaced `/`, producing `-home-sprite-.wisp-...`
+    /// which didn't match the on-disk directory name.
+    /// Re-link ToolResultCards to their ToolUseCards after a SwiftData round-trip.
+    /// Persistence serialises tool use and tool result as separate flat items and does
+    /// not store the ToolUseCard.result reference, so it must be rebuilt on load.
+    private func linkToolResults(in messages: [ChatMessage]) {
+        var toolUseCards: [String: ToolUseCard] = [:]
+        for message in messages {
+            for item in message.content {
+                switch item {
+                case .toolUse(let card):
+                    toolUseCards[card.toolUseId] = card
+                case .toolResult(let result):
+                    toolUseCards[result.toolUseId]?.result = result
+                default:
+                    break
+                }
+            }
+        }
+    }
+
+    nonisolated static func claudeProjectPathEncoding(_ path: String) -> String {
+        path
+            .replacingOccurrences(of: "/", with: "-")
+            .replacingOccurrences(of: ".", with: "-")
     }
 
     nonisolated static func sanitize(_ string: String) -> String {
