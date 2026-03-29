@@ -1090,20 +1090,28 @@ final class ChatViewModel {
             currentAssistantMessage = nil
         }
 
-        // If exec session is gone (sprite slept, exec expired, or connection error),
-        // restore from Claude's session file. Both .disconnected (WebSocket closed cleanly
-        // with no data) and .timedOut (connection error / no data received) indicate the
-        // exec session no longer exists when reattaching.
-        let shouldRestoreFromFile: Bool
-        switch streamResult {
-        case .timedOut, .disconnected: shouldRestoreFromFile = sessionId != nil
-        default: shouldRestoreFromFile = false
-        }
-        if shouldRestoreFromFile {
-            // Clear any error status set by processExecStream before restoring
+        // .timedOut means no data was received at all — exec session is gone (sprite slept,
+        // session expired). Restore from Claude's session file so the user sees the result.
+        // .disconnected means data was received but no result event — the connection dropped
+        // while Claude was still running. Schedule a proactive reconnect (same as the initial
+        // stream) so we re-attach and pick up the rest rather than showing partial content.
+        if case .timedOut = streamResult, sessionId != nil {
             if case .error = status { status = .reconnecting }
-            logger.info("[Chat] Exec session gone (result=\(streamResult)) — restoring from session file")
+            logger.info("[Chat] Exec session gone on reattach — restoring from session file")
             await restoreFromSessionFile(apiClient: apiClient, modelContext: modelContext)
+        } else if case .disconnected = streamResult {
+            logger.info("[Chat] Dropped mid-reattach — will reconnect after delay")
+            saveSession(modelContext: modelContext)
+            if !Task.isCancelled { status = .idle }
+            persistMessages(modelContext: modelContext)
+            let capturedApiClient = apiClient
+            let capturedModelContext = modelContext
+            streamTask = Task {
+                try? await Task.sleep(for: .seconds(2))
+                guard !Task.isCancelled else { return }
+                reconnectIfNeeded(apiClient: capturedApiClient, modelContext: capturedModelContext)
+            }
+            return
         }
 
         saveSession(modelContext: modelContext)
