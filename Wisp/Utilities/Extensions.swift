@@ -67,6 +67,12 @@ extension Date {
     }
 }
 
+extension Array where Element == Sprite {
+    func sortedByDate(_ keyPath: KeyPath<Sprite, Date?>) -> [Sprite] {
+        sorted { ($0[keyPath: keyPath] ?? .distantPast) > ($1[keyPath: keyPath] ?? .distantPast) }
+    }
+}
+
 extension String {
     /// Replaces occurrences of `cwd/` with `./` so displayed paths are relative.
     /// No-ops if `cwd` is empty.
