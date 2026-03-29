@@ -86,9 +86,18 @@ private struct AssistantTextBubble: View {
 
     @State private var showTimestamp = false
 
+    // Convert backtick-wrapped URLs (code spans) to markdown links so they're tappable.
+    // e.g. `https://example.com` → [https://example.com](https://example.com)
+    private var processedText: String {
+        let pattern = #"`(https?://[^`\s]+)`"#
+        guard let regex = try? NSRegularExpression(pattern: pattern) else { return text }
+        let range = NSRange(text.startIndex..., in: text)
+        return regex.stringByReplacingMatches(in: text, range: range, withTemplate: "[$1]($1)")
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Markdown(text)
+            Markdown(processedText)
                 .markdownTheme(.wisp)
                 .markdownCodeSyntaxHighlighter(WispCodeHighlighter())
                 .textSelection(.enabled)
