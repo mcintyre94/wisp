@@ -843,11 +843,19 @@ final class ChatViewModel {
         }
 
         // On disconnect, exec session is still alive on the server (max_run_after_disconnect).
-        // Go idle — reconnectIfNeeded will reattach when user returns.
+        // Proactively reattach after a short delay so the user gets the response even if
+        // they stay on this screen rather than triggering a manual tab-switch reconnect.
         if case .disconnected = streamResult {
-            logger.info("[Chat] Disconnected mid-stream, exec session preserved for reattach")
+            logger.info("[Chat] Disconnected mid-stream, will reattach after delay")
             status = .idle
             persistMessages(modelContext: modelContext)
+            let capturedApiClient = apiClient
+            let capturedModelContext = modelContext
+            streamTask = Task {
+                try? await Task.sleep(for: .seconds(2))
+                guard !Task.isCancelled else { return }
+                reconnectIfNeeded(apiClient: capturedApiClient, modelContext: capturedModelContext)
+            }
             return
         }
 
