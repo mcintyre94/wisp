@@ -17,6 +17,7 @@ struct DashboardView: View {
     @State private var selectedTab: SpriteTab = .chat
     @State private var sortOrder: SpriteSortOrder = .newest
     @State private var showSettings = false
+    @State private var searchText = ""
 
     private var sortedSprites: [Sprite] {
         switch sortOrder {
@@ -27,9 +28,14 @@ struct DashboardView: View {
         }
     }
 
+    private var filteredSprites: [Sprite] {
+        guard !searchText.isEmpty else { return sortedSprites }
+        return sortedSprites.filter { $0.name.localizedCaseInsensitiveContains(searchText) }
+    }
+
     @ViewBuilder
     private var spriteListRows: some View {
-        ForEach(sortedSprites) { sprite in
+        ForEach(filteredSprites) { sprite in
             SpriteRowView(
                 sprite: sprite,
                 isPlain: sizeClass == .regular,
@@ -93,6 +99,8 @@ struct DashboardView: View {
                         systemImage: "sparkles",
                         description: Text("Create a Sprite to get started")
                     )
+                } else if !searchText.isEmpty && filteredSprites.isEmpty {
+                    ContentUnavailableView.search(text: searchText)
                 } else if sizeClass == .regular {
                     // iPad/Mac: use .sidebar list style so the split view properly
                     // auto-dismisses the sidebar overlay on selection (portrait iPad,
@@ -115,6 +123,7 @@ struct DashboardView: View {
                     }
                 }
             }
+            .searchable(text: $searchText, prompt: "Search sprites")
             .navigationTitle("Sprites")
             .toolbar {
                 ToolbarItem(placement: .topBarLeading) {
@@ -144,7 +153,7 @@ struct DashboardView: View {
                 }
             }
         } detail: {
-            if let id = selectedSpriteID, let selectedSprite = sortedSprites.first(where: { $0.id == id }) {
+            if let id = selectedSpriteID, let selectedSprite = viewModel.sprites.first(where: { $0.id == id }) {
                 SpriteDetailView(sprite: selectedSprite, selectedTab: $selectedTab)
                     .id(id)
             } else {
@@ -155,7 +164,7 @@ struct DashboardView: View {
                 )
             }
         }
-        .onChange(of: sortedSprites) { _, newSprites in
+        .onChange(of: viewModel.sprites) { _, newSprites in
             if let id = selectedSpriteID, !newSprites.contains(where: { $0.id == id }) {
                 selectedSpriteID = nil
             }
