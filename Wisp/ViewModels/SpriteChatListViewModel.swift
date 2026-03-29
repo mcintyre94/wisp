@@ -36,20 +36,21 @@ final class SpriteChatListViewModel {
     }
 
     @discardableResult
-    func createChat(modelContext: ModelContext) -> SpriteChat {
+    func createChat(inheritingWorktreeFrom source: SpriteChat? = nil, modelContext: ModelContext) -> SpriteChat {
         let maxNumber = chats.map(\.chatNumber).max() ?? 0
-
-        let workingDirectory = UserDefaults.standard.string(forKey: "workingDirectory_\(spriteName)") ?? "/home/sprite/project"
-
+        let workingDirectory = source?.workingDirectory
+            ?? UserDefaults.standard.string(forKey: "workingDirectory_\(spriteName)")
+            ?? "/home/sprite/project"
         let chat = SpriteChat(
             spriteName: spriteName,
             chatNumber: maxNumber + 1,
             workingDirectory: workingDirectory,
             spriteCreatedAt: spriteCreatedAt
         )
+        chat.worktreePath = source?.worktreePath
+        chat.worktreeBranch = source?.worktreeBranch
         modelContext.insert(chat)
         try? modelContext.save()
-
         chats.insert(chat, at: 0)
         activeChatId = chat.id
         logger.info("Created chat \(chat.chatNumber) for \(self.spriteName)")

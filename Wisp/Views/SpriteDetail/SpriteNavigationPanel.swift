@@ -12,6 +12,7 @@ struct SpriteNavigationPanel: View {
     @Binding var selection: SpriteNavSelection?
     let chatListViewModel: SpriteChatListViewModel
     let onCreateChat: () -> Void
+    var onCreateChatInWorktree: (() -> Void)? = nil
     @Environment(SpritesAPIClient.self) private var apiClient
     @Environment(ChatSessionManager.self) private var chatSessionManager
     @Environment(\.modelContext) private var modelContext
@@ -46,11 +47,27 @@ struct SpriteNavigationPanel: View {
                             .tag(SpriteNavSelection.chat(chat.id))
                     }
                 }
-                Button(action: onCreateChat) {
-                    Label("New Chat", systemImage: "square.and.pencil")
+                if let onCreateChatInWorktree {
+                    let branchLabel = chatListViewModel.activeChat?.worktreeBranchLabel ?? "same worktree"
+                    Menu {
+                        Button(action: onCreateChatInWorktree) {
+                            Label("New Chat in \(branchLabel)", systemImage: "arrow.branch")
+                        }
+                        Button(action: onCreateChat) {
+                            Label("New Chat", systemImage: "square.and.pencil")
+                        }
+                    } label: {
+                        Label("New Chat", systemImage: "square.and.pencil")
+                    } primaryAction: onCreateChat
+                    .foregroundStyle(.secondary)
+                    .buttonStyle(.borderless)
+                } else {
+                    Button(action: onCreateChat) {
+                        Label("New Chat", systemImage: "square.and.pencil")
+                    }
+                    .foregroundStyle(.secondary)
+                    .buttonStyle(.borderless)
                 }
-                .foregroundStyle(.secondary)
-                .buttonStyle(.borderless)
             }
         }
         .listStyle(.sidebar)

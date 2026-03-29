@@ -29,6 +29,10 @@ final class SpriteChat {
         customName ?? "Chat \(chatNumber)"
     }
 
+    var worktreeBranchLabel: String {
+        worktreeBranch.map { "'\($0)'" } ?? "same worktree"
+    }
+
     init(
         spriteName: String,
         chatNumber: Int,
