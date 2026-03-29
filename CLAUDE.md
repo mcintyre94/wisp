@@ -114,6 +114,7 @@ The app runs on iPhone, iPad, and Mac (Designed for iPad). Keep all three in min
 - **Content width**: Wide screens benefit from a max-width cap on content-heavy views (Overview, Checkpoints, Auth). Use `HStack` spacers + `.frame(maxWidth:)` — do **not** use `containerRelativeFrame` inside `NavigationSplitView` detail columns, as it measures the wrong container and compresses the sidebar.
 - **Swipe actions and context menus**: Always implement both. Swipe actions are the primary interaction on iPhone/iPad; context menus (long-press on iOS, right-click on Mac) must cover the same set of actions so nothing is inaccessible on Mac. The two should be kept in sync whenever actions are added or removed. Do not use `.disabled()` on swipe action buttons — it has no visual effect on iOS. Instead, conditionally show/hide the button.
 - **View model properties**: Use `private(set)` for properties that views only need to read, not set directly.
+- **Accessibility**: Icon-only buttons and elements that convey state without text (e.g. status dots) must have an `.accessibilityLabel(...)` so VoiceOver can describe them.
 - Tokens are org-scoped; org slug is embedded in the token string (e.g. `my-org/1290577/...`)
 - Working directory convention: `/home/sprite/project` for new Sprites, `/home/sprite/{repo}` for cloned repos
 - Run `mkdir -p /home/sprite/project` on first chat message if no project dir exists
