@@ -367,6 +367,7 @@ final class ChatViewModel {
         var messages: [ChatMessage] = []
         var currentAssistant: ChatMessage?
         var toolUseNames: [String: String] = [:]  // toolUseId -> toolName
+        var toolUseCards: [String: ToolUseCard] = [:]  // toolUseId -> card (for result linkage)
 
         for line in jsonl.split(separator: "\n", omittingEmptySubsequences: true) {
             guard let data = line.data(using: .utf8),
@@ -422,6 +423,7 @@ final class ChatViewModel {
                                 toolName: toolName,
                                 content: resultContent
                             )
+                            toolUseCards[toolUseId]?.result = card
                             assistant.content.append(.toolResult(card))
                         }
                     }
@@ -455,6 +457,7 @@ final class ChatViewModel {
                             toolName: name,
                             input: block.input ?? .null
                         )
+                        toolUseCards[id] = card
                         assistant.content.append(.toolUse(card))
                     default:
                         // Skip thinking, server_tool_use, etc.
@@ -1045,17 +1048,6 @@ final class ChatViewModel {
 
         hasPlayedFirstTextHaptic = false
 
-        // Snapshot the current tail assistant message content before any clearing.
-        // Used below to restore if the replay produces less content (e.g. truncated logs).
-        let savedContent: [ChatContent]
-        if let existing = currentAssistantMessage {
-            savedContent = existing.content
-        } else if let last = messages.last, last.role == .assistant {
-            savedContent = last.content
-        } else {
-            savedContent = []
-        }
-
         // Ensure we have an assistant message to append into.
         let assistantMessage: ChatMessage
         let hasPriorEvents = !processedEventUUIDs.isEmpty
@@ -1128,7 +1120,7 @@ final class ChatViewModel {
     private func restoreFromSessionFile(apiClient: SpritesAPIClient, modelContext: ModelContext) async {
         guard let sessionId = sessionId else { return }
 
-        let encodedPath = workingDirectory.replacingOccurrences(of: "/", with: "-")
+        let encodedPath = Self.claudeProjectPathEncoding(workingDirectory)
         let path = "~/.claude/projects/\(encodedPath)/\(sessionId).jsonl"
 
         var (output, success) = await apiClient.runExec(
@@ -1624,7 +1616,6 @@ final class ChatViewModel {
             .replacingOccurrences(of: "/", with: "-")
             .replacingOccurrences(of: ".", with: "-")
     }
-
 
     nonisolated static func sanitize(_ string: String) -> String {
         string.replacingOccurrences(

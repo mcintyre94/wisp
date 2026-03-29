@@ -1085,4 +1085,24 @@ struct ChatViewModelTests {
         #expect(messages[0].role == .assistant)
         #expect(messages[0].content.count == 3)
     }
+
+    @Test func parseSessionJSONL_linksToolResultToToolUseCard() {
+        // Regression: reloaded chats were not showing tool calls because parseSessionJSONL
+        // never set ToolUseCard.result. The view only renders a ToolStepRow when result != nil.
+        let jsonl = """
+        {"type":"user","message":{"role":"user","content":"do something"}}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"tu-1","name":"Bash","input":{"command":"ls"}}]}}
+        {"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tu-1","content":"file.txt"}]}}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Done"}]}}
+        """
+        let messages = ChatViewModel.parseSessionJSONL(jsonl)
+        #expect(messages.count == 2)
+        let assistant = messages[1]
+        guard case .toolUse(let card) = assistant.content.first(where: { if case .toolUse = $0 { true } else { false } }) else {
+            Issue.record("Expected toolUse content item")
+            return
+        }
+        #expect(card.result != nil, "ToolUseCard.result must be linked for the completed tool to render")
+        #expect(card.result?.toolUseId == "tu-1")
+    }
 }
