@@ -1086,6 +1086,43 @@ struct ChatViewModelTests {
         #expect(messages[0].content.count == 3)
     }
 
+    // MARK: - loadSession: SwiftData round-trip preserves tool result linkage
+
+    @Test func loadSession_linksToolResultsAfterSwiftDataRoundTrip() throws {
+        // Regression: PersistedChatMessage stores toolUse and toolResult as flat separate
+        // items and does not persist ToolUseCard.result. After loading from SwiftData,
+        // all ToolUseCard.result were nil, causing tool calls to render as strikethrough.
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        // Simulate a completed session stored in SwiftData: assistant message with a
+        // tool use and its result already linked (as they would be after live streaming).
+        let toolCard = ToolUseCard(toolUseId: "tu-1", toolName: "Bash", input: .object(["command": .string("ls")]))
+        let resultCard = ToolResultCard(toolUseId: "tu-1", toolName: "Bash", content: .string("file.txt"))
+        toolCard.result = resultCard
+
+        let assistantMsg = ChatMessage(role: .assistant, content: [
+            .toolUse(toolCard),
+            .toolResult(resultCard),
+            .text("Done"),
+        ])
+        vm.messages = [assistantMsg]
+
+        // Persist and reload
+        vm.persistMessages(modelContext: ctx)
+
+        // Create a second VM for the same chat to simulate a fresh load
+        let vm2 = ChatViewModel(spriteName: "test", chatId: vm.chatId, workingDirectory: "")
+        vm2.loadSession(apiClient: SpritesAPIClient(), modelContext: ctx)
+
+        guard case .toolUse(let loadedCard) = vm2.messages.first?.content.first else {
+            Issue.record("Expected toolUse as first content item")
+            return
+        }
+        #expect(loadedCard.result != nil, "ToolUseCard.result must be re-linked after SwiftData round-trip")
+        #expect(loadedCard.result?.toolUseId == "tu-1")
+    }
+
     @Test func parseSessionJSONL_linksToolResultToToolUseCard() {
         // Regression: reloaded chats were not showing tool calls because parseSessionJSONL
         // never set ToolUseCard.result. The view only renders a ToolStepRow when result != nil.

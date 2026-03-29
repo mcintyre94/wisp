@@ -219,6 +219,7 @@ final class ChatViewModel {
         if messages.isEmpty {
             let persisted = chat.loadMessages()
             messages = persisted.map { ChatMessage(from: $0) }
+            linkToolResults(in: messages)
             rebuildToolUseIndex()
             processedEventUUIDs = chat.loadStreamEventUUIDs()
         }
@@ -1627,6 +1628,25 @@ final class ChatViewModel {
     ///
     /// Wisp previously only replaced `/`, producing `-home-sprite-.wisp-...`
     /// which didn't match the on-disk directory name.
+    /// Re-link ToolResultCards to their ToolUseCards after a SwiftData round-trip.
+    /// Persistence serialises tool use and tool result as separate flat items and does
+    /// not store the ToolUseCard.result reference, so it must be rebuilt on load.
+    private func linkToolResults(in messages: [ChatMessage]) {
+        var toolUseCards: [String: ToolUseCard] = [:]
+        for message in messages {
+            for item in message.content {
+                switch item {
+                case .toolUse(let card):
+                    toolUseCards[card.toolUseId] = card
+                case .toolResult(let result):
+                    toolUseCards[result.toolUseId]?.result = result
+                default:
+                    break
+                }
+            }
+        }
+    }
+
     nonisolated static func claudeProjectPathEncoding(_ path: String) -> String {
         path
             .replacingOccurrences(of: "/", with: "-")
