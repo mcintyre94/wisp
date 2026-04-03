@@ -394,9 +394,14 @@ final class ChatViewModel {
                     let toolResultBlocks = blocks.filter { $0.type == "tool_result" }
 
                     if !textBlocks.isEmpty && toolResultBlocks.isEmpty {
-                        // User prompt stored as a text block array (some Claude Code versions
-                        // write the user turn as [{type:text, text:...}] instead of a plain string).
-                        // Treat it the same as the string case.
+                        // Pure text blocks: either a real user message (non-meta) or an
+                        // internal injection like a skill invocation (isMeta:true).
+                        // Skip meta entries — they're not user-authored content.
+                        if entry.isMeta == true { break }
+
+                        // Non-meta user message stored as text blocks (some Claude Code
+                        // versions write user turns as [{type:text,text:...}] instead of
+                        // a plain string). Treat it the same as the string case.
                         if let assistant = currentAssistant {
                             messages.append(assistant)
                             currentAssistant = nil
@@ -1057,6 +1062,17 @@ final class ChatViewModel {
 
         hasPlayedFirstTextHaptic = false
 
+        // Snapshot the current tail assistant message content before any clearing.
+        // Used below to restore if the replay produces less content (e.g. truncated logs).
+        let savedContent: [ChatContent]
+        if let existing = currentAssistantMessage {
+            savedContent = existing.content
+        } else if let last = messages.last, last.role == .assistant {
+            savedContent = last.content
+        } else {
+            savedContent = []
+        }
+
         // Ensure we have an assistant message to append into.
         let assistantMessage: ChatMessage
         let hasPriorEvents = !processedEventUUIDs.isEmpty
@@ -1649,6 +1665,14 @@ final class ChatViewModel {
         }
     }
 
+    /// Encode a filesystem path the same way Claude Code does when creating its
+    /// per-project JSONL directories: replace every `/` and `.` with `-`.
+    ///
+    /// Example: `/home/sprite/.wisp/worktrees/wisp/my-branch`
+    ///       →  `-home-sprite--wisp-worktrees-wisp-my-branch`
+    ///
+    /// Wisp previously only replaced `/`, producing `-home-sprite-.wisp-...`
+    /// which didn't match the on-disk directory name.
     nonisolated static func claudeProjectPathEncoding(_ path: String) -> String {
         path
             .replacingOccurrences(of: "/", with: "-")

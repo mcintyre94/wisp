@@ -438,6 +438,52 @@ struct ChatViewModelTests {
         }
     }
 
+    @Test func parseSessionJSONL_skillInjectionSuppressed() {
+        // isMeta:true text-block user messages are skill injections — should not appear as user bubbles
+        let jsonl = """
+        {"type":"user","message":{"role":"user","content":"Hello"},"isMeta":false}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"tu-1","name":"Bash","input":{"command":"ls"}}]}}
+        {"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tu-1","content":"files"}]}}
+        {"type":"user","message":{"role":"user","content":[{"type":"text","text":"Base directory for this skill: /home/sprite/.claude/skills/sprite\\n\\nYou are the Sprite agent..."}]},"isMeta":true}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Done."}]}}
+        """
+        let messages = ChatViewModel.parseSessionJSONL(jsonl)
+        // Should have user + assistant only; skill injection is suppressed
+        #expect(messages.count == 2)
+        #expect(messages[0].role == .user)
+        #expect(messages[0].textContent == "Hello")
+        #expect(messages[1].role == .assistant)
+        // Skill content must not appear anywhere
+        let allText = messages.flatMap { $0.content }.compactMap {
+            if case .text(let t) = $0 { t } else { nil }
+        }.joined()
+        #expect(!allText.contains("Base directory for this skill"))
+    }
+
+    @Test func parseSessionJSONL_textBlockUserMessageShown() {
+        // Non-meta text-block user messages should be shown as user bubbles
+        let jsonl = """
+        {"type":"user","message":{"role":"user","content":[{"type":"text","text":"Hello from blocks"}]}}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Hi there"}]}}
+        """
+        let messages = ChatViewModel.parseSessionJSONL(jsonl)
+        #expect(messages.count == 2)
+        #expect(messages[0].role == .user)
+        #expect(messages[0].textContent == "Hello from blocks")
+    }
+
+    // MARK: - claudeProjectPathEncoding
+
+    @Test func claudeProjectPathEncoding_simpleProject() {
+        #expect(ChatViewModel.claudeProjectPathEncoding("/home/sprite/project") == "-home-sprite-project")
+    }
+
+    @Test func claudeProjectPathEncoding_dotInPath() {
+        // The `.wisp` directory: Claude Code replaces `.` too, Wisp must match
+        #expect(ChatViewModel.claudeProjectPathEncoding("/home/sprite/.wisp/worktrees/wisp/my-branch")
+            == "-home-sprite--wisp-worktrees-wisp-my-branch")
+    }
+
     // MARK: - Queued prompt
 
     @Test func sendMessage_whileStreaming_queuesPrompt() throws {

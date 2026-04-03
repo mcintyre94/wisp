@@ -35,11 +35,15 @@ struct SessionJSONLLine: Codable, Sendable {
     let type: String?
     let sessionId: String?
     let message: SessionJSONLMessage?
+    /// True for internal meta-messages such as skill injections.
+    /// These should not be surfaced as user chat bubbles.
+    let isMeta: Bool?
 
     enum CodingKeys: String, CodingKey {
         case type
         case sessionId = "session_id"
         case message
+        case isMeta
     }
 }
 
