@@ -85,31 +85,49 @@ private struct AssistantTextBubble: View {
     var onCreateCheckpoint: (() -> Void)? = nil
 
     @State private var showTimestamp = false
+    @State private var isSelectMode = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
-            Markdown(text)
-                .markdownTheme(.wisp)
-                .markdownCodeSyntaxHighlighter(WispCodeHighlighter())
-                .textSelection(.enabled)
+            if isSelectMode {
+                SelectableTextView(
+                    text: text,
+                    textColor: .label,
+                    font: .preferredFont(forTextStyle: .body),
+                    onDeselect: { isSelectMode = false }
+                )
                 .padding(.horizontal, 14)
                 .padding(.vertical, 10)
                 .background(Color(.systemGray5), in: RoundedRectangle(cornerRadius: 16))
-                .contextMenu {
-                    Button {
-                        UIPasteboard.general.string = text
-                    } label: {
-                        Label("Copy", systemImage: "doc.on.doc")
-                    }
-                    if canCheckpoint {
+            } else {
+                Markdown(text)
+                    .markdownTheme(.wisp)
+                    .markdownCodeSyntaxHighlighter(WispCodeHighlighter())
+                    .textSelection(.enabled)
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(Color(.systemGray5), in: RoundedRectangle(cornerRadius: 16))
+                    .contextMenu {
                         Button {
-                            onCreateCheckpoint?()
+                            UIPasteboard.general.string = text
                         } label: {
-                            Label("Create Checkpoint", systemImage: "diamond")
+                            Label("Copy", systemImage: "doc.on.doc")
                         }
-                        .disabled(isCheckpointDisabled)
+                        Button {
+                            isSelectMode = true
+                        } label: {
+                            Label("Select", systemImage: "selection.pin.in.out")
+                        }
+                        if canCheckpoint {
+                            Button {
+                                onCreateCheckpoint?()
+                            } label: {
+                                Label("Create Checkpoint", systemImage: "diamond")
+                            }
+                            .disabled(isCheckpointDisabled)
+                        }
                     }
-                }
+            }
             if showTimestamp {
                 Text(timestamp.chatTimestamp)
                     .font(.caption2)
@@ -119,6 +137,7 @@ private struct AssistantTextBubble: View {
             }
         }
         .onTapGesture {
+            guard !isSelectMode else { return }
             withAnimation(.easeInOut(duration: 0.2)) {
                 showTimestamp.toggle()
             }

@@ -3,6 +3,7 @@ import SwiftUI
 struct UserBubbleView: View {
     let message: ChatMessage
     @State private var showTimestamp = false
+    @State private var isSelectMode = false
 
     private func linkedText(_ text: String) -> AttributedString {
         var attributed = AttributedString(text)
@@ -24,19 +25,31 @@ struct UserBubbleView: View {
         HStack {
             Spacer(minLength: 60)
             VStack(alignment: .trailing, spacing: 4) {
-                ForEach(message.content) { content in
-                    if case .text(let text) = content {
-                        Text(linkedText(text))
-                            .padding(.horizontal, 14)
-                            .padding(.vertical, 10)
-                            .background(.blue, in: RoundedRectangle(cornerRadius: 16))
-                            .foregroundStyle(.white)
-                            .tint(.white)
-                            .onTapGesture {
-                                withAnimation(.easeInOut(duration: 0.2)) {
-                                    showTimestamp.toggle()
+                if isSelectMode {
+                    SelectableTextView(
+                        text: message.textContent,
+                        textColor: .white,
+                        font: .preferredFont(forTextStyle: .body),
+                        onDeselect: { isSelectMode = false }
+                    )
+                    .padding(.horizontal, 14)
+                    .padding(.vertical, 10)
+                    .background(.blue, in: RoundedRectangle(cornerRadius: 16))
+                } else {
+                    ForEach(message.content) { content in
+                        if case .text(let text) = content {
+                            Text(linkedText(text))
+                                .padding(.horizontal, 14)
+                                .padding(.vertical, 10)
+                                .background(.blue, in: RoundedRectangle(cornerRadius: 16))
+                                .foregroundStyle(.white)
+                                .tint(.white)
+                                .onTapGesture {
+                                    withAnimation(.easeInOut(duration: 0.2)) {
+                                        showTimestamp.toggle()
+                                    }
                                 }
-                            }
+                        }
                     }
                 }
                 if showTimestamp {
@@ -47,10 +60,17 @@ struct UserBubbleView: View {
                 }
             }
             .contextMenu {
-                Button {
-                    UIPasteboard.general.string = message.textContent
-                } label: {
-                    Label("Copy", systemImage: "doc.on.doc")
+                if !isSelectMode {
+                    Button {
+                        UIPasteboard.general.string = message.textContent
+                    } label: {
+                        Label("Copy", systemImage: "doc.on.doc")
+                    }
+                    Button {
+                        isSelectMode = true
+                    } label: {
+                        Label("Select", systemImage: "selection.pin.in.out")
+                    }
                 }
             }
         }
