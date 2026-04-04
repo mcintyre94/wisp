@@ -7,7 +7,8 @@ struct SpriteDetailView: View {
     @State private var chatListViewModel: SpriteChatListViewModel
     @State private var chatViewModel: ChatViewModel?
     @State private var checkpointsViewModel: CheckpointsViewModel
-    @State private var showChatSwitcher = false
+    @State private var showingChat = false
+    @State private var showingCheckpoints = false
     @State private var showStaleChatsAlert = false
     @State private var showCopiedFeedback = false
     @State private var pendingFork: (checkpointId: String, messageId: UUID)? = nil
@@ -81,6 +82,47 @@ struct SpriteDetailView: View {
         SpriteTabPicker(selectedTab: $selectedTab)
     }
 
+    private var compactLayout: some View {
+        SpriteOverviewView(
+            sprite: sprite,
+            chatListViewModel: chatListViewModel,
+            onChatSelected: { chat in
+                switchToChat(chat)
+                showingChat = true
+            },
+            onNewChat: {
+                let chat = chatListViewModel.createChat(modelContext: modelContext)
+                switchToChat(chat)
+                showingChat = true
+            },
+            onCheckpoints: {
+                showingCheckpoints = true
+            }
+        )
+        .navigationDestination(isPresented: $showingChat) {
+            if let vm = chatViewModel {
+                let isReadOnly = chatListViewModel.activeChat?.isClosed == true
+                ChatView(
+                    viewModel: vm,
+                    isReadOnly: isReadOnly,
+                    existingSessionIds: Set(chatListViewModel.chats.filter { !$0.isClosed }.compactMap(\.claudeSessionId)),
+                    onFork: { checkpointId, messageId in
+                        pendingFork = (checkpointId, messageId)
+                    }
+                )
+                .id(vm.chatId)
+                .onAppear { vm.isActive = true }
+                .onDisappear { vm.isActive = false }
+            } else {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .navigationDestination(isPresented: $showingCheckpoints) {
+            CheckpointsView(viewModel: checkpointsViewModel)
+        }
+    }
+
     @ViewBuilder
     private var tabContent: some View {
         switch selectedTab {
@@ -116,7 +158,7 @@ struct SpriteDetailView: View {
             if sizeClass == .regular {
                 regularLayout
             } else {
-                tabContent
+                compactLayout
             }
         }
         .overlay {
@@ -168,28 +210,10 @@ struct SpriteDetailView: View {
                         }
                     }
             }
-            if selectedTab == .chat {
-                ToolbarItem(placement: .primaryAction) {
-                    HStack(spacing: 12) {
-                        if sizeClass != .regular {
-                            Button {
-                                showChatSwitcher = true
-                            } label: {
-                                let hasOtherUnread = chatListViewModel.chats.contains {
-                                    $0.isUnread && $0.id != chatListViewModel.activeChatId
-                                }
-                                Image(systemName: "bubble.left.and.bubble.right")
-                                    .overlay(alignment: .topTrailing) {
-                                        if hasOtherUnread {
-                                            Circle()
-                                                .fill(Color.accentColor)
-                                                .frame(width: 8, height: 8)
-                                                .offset(x: 3, y: -3)
-                                        }
-                                    }
-                            }
-                        }
-
+            if sizeClass == .regular {
+                // iPad/Mac: tab-conditional toolbar
+                if selectedTab == .chat {
+                    ToolbarItem(placement: .primaryAction) {
                         Button {
                             let chat = chatListViewModel.createChat(modelContext: modelContext)
                             switchToChat(chat)
@@ -197,8 +221,17 @@ struct SpriteDetailView: View {
                             Image(systemName: "square.and.pencil")
                         }
                     }
+                } else if selectedTab == .overview {
+                    ToolbarItem(placement: .primaryAction) {
+                        Button {
+                            openSpriteQuickActions()
+                        } label: {
+                            Image(systemName: "bolt")
+                        }
+                    }
                 }
-            } else if selectedTab == .overview {
+            } else {
+                // iPhone: bolt on overview (ChatView has its own bolt when pushed)
                 ToolbarItem(placement: .primaryAction) {
                     Button {
                         openSpriteQuickActions()
@@ -235,7 +268,11 @@ struct SpriteDetailView: View {
             switchToChat(chat)
         }
         .onAppear {
-            chatViewModel?.isActive = true
+            // On iPad/Mac, chat is visible alongside the sidebar so activate immediately.
+            // On iPhone, the pushed ChatView manages isActive via its own onAppear/onDisappear.
+            if sizeClass == .regular {
+                chatViewModel?.isActive = true
+            }
         }
         .onDisappear {
             chatViewModel?.isActive = false
@@ -245,9 +282,6 @@ struct SpriteDetailView: View {
                 chatSessionManager.resumeAllAfterBackground(apiClient: apiClient, modelContext: modelContext)
             }
         }
-        .sheet(isPresented: $showChatSwitcher) {
-            ChatSwitcherSheet(viewModel: chatListViewModel)
-        }
         .sheet(item: $spriteQuickActionsViewModel) { vm in
             QuickActionsView(
                 viewModel: vm,
@@ -255,7 +289,11 @@ struct SpriteDetailView: View {
                     let chat = chatListViewModel.createChat(modelContext: modelContext)
                     switchToChat(chat)
                     chatViewModel?.inputText = text
-                    selectedTab = .chat
+                    if sizeClass != .regular {
+                        showingChat = true
+                    } else {
+                        selectedTab = .chat
+                    }
                     spriteQuickActionsViewModel = nil
                 }
             )
@@ -355,6 +393,9 @@ struct SpriteDetailView: View {
             try? modelContext.save()
 
             switchToChat(chat)
+            if sizeClass != .regular {
+                showingChat = true
+            }
         }
     }
 

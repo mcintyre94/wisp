@@ -162,7 +162,7 @@ struct DashboardView: View {
         }
         .onChange(of: selectedSpriteID) { _, _ in
             if sizeClass != .regular {
-                selectedTab = .chat
+                selectedTab = .overview
             }
         }
         .task {
