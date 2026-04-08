@@ -103,6 +103,7 @@ Phase 1 scope — build only these features:
 - Tool use cards are collapsible/expandable inline elements between chat bubbles
 - Show loading states for Sprite wake-up ("Waking Sprite..." for cold starts, ~1s)
 - Destructive actions (delete Sprite, restore checkpoint) always require confirmation dialogs
+- **Presentation modifiers in lists**: Never attach `.confirmationDialog`, `.alert`, or `.sheet` to rows inside a `ForEach`. Attach them to the `List` (or another stable ancestor view) instead, using a single `isPresented: Binding(get: { item != nil }, set: { if !$0 { item = nil } })` pattern. Attaching to `ForEach` rows causes the dialog to dismiss itself immediately when the list re-renders.
 
 ### Multi-platform layout (iPhone / iPad / Mac)
 

@@ -94,23 +94,25 @@ struct ChatSwitcherSheet: View {
                             .tint(.orange)
                         }
                     }
-                    .confirmationDialog(
-                        "Delete Chat",
-                        isPresented: Binding(
-                            get: { chatToDelete?.id == chat.id },
-                            set: { if !$0 { chatToDelete = nil } }
-                        ),
-                        titleVisibility: .visible
-                    ) {
-                        Button("Delete", role: .destructive) {
-                            chatSessionManager.remove(chatId: chat.id, modelContext: modelContext)
-                            viewModel.deleteChat(chat, apiClient: apiClient, modelContext: modelContext)
-                            chatToDelete = nil
-                        }
-                    } message: {
-                        Text("This will permanently delete the chat and its history.")
+                }
+            }
+            .confirmationDialog(
+                "Delete Chat",
+                isPresented: Binding(
+                    get: { chatToDelete != nil },
+                    set: { if !$0 { chatToDelete = nil } }
+                ),
+                titleVisibility: .visible
+            ) {
+                Button("Delete", role: .destructive) {
+                    if let chat = chatToDelete {
+                        chatSessionManager.remove(chatId: chat.id, modelContext: modelContext)
+                        viewModel.deleteChat(chat, apiClient: apiClient, modelContext: modelContext)
+                        chatToDelete = nil
                     }
                 }
+            } message: {
+                Text("This will permanently delete the chat and its history.")
             }
             .navigationTitle("Chats")
             .navigationBarTitleDisplayMode(.inline)
