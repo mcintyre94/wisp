@@ -4,6 +4,8 @@ import PhotosUI
 
 struct SpriteOverviewView: View {
     @Environment(SpritesAPIClient.self) private var apiClient
+    @Environment(ChatSessionManager.self) private var chatSessionManager
+    @Environment(\.modelContext) private var modelContext
     @Environment(\.openURL) private var openURL
     @State private var viewModel: SpriteOverviewViewModel
     @State private var workingDirectory = "/home/sprite/project"
@@ -12,13 +14,60 @@ struct SpriteOverviewView: View {
     @State private var showPhotoPicker = false
     @State private var selectedPhotos: [PhotosPickerItem] = []
     @State private var showOverwriteConfirmation = false
+    @State private var chatToDelete: SpriteChat?
+    @State private var chatToRename: SpriteChat?
+    @State private var renameText = ""
 
-    init(sprite: Sprite) {
+    // Optional chat/checkpoint navigation (compact layout only)
+    private let chatListViewModel: SpriteChatListViewModel?
+    private let onChatSelected: ((SpriteChat) -> Void)?
+    private let onNewChat: (() -> Void)?
+    private let onCheckpoints: (() -> Void)?
+
+    init(
+        sprite: Sprite,
+        chatListViewModel: SpriteChatListViewModel? = nil,
+        onChatSelected: ((SpriteChat) -> Void)? = nil,
+        onNewChat: (() -> Void)? = nil,
+        onCheckpoints: (() -> Void)? = nil
+    ) {
         _viewModel = State(initialValue: SpriteOverviewViewModel(sprite: sprite))
+        self.chatListViewModel = chatListViewModel
+        self.onChatSelected = onChatSelected
+        self.onNewChat = onNewChat
+        self.onCheckpoints = onCheckpoints
     }
 
     var body: some View {
         List {
+            if let chatListVM = chatListViewModel {
+                Section("Chats") {
+                    ForEach(chatListVM.chats, id: \.id) { chat in
+                        chatRow(for: chat, in: chatListVM)
+                    }
+                    Button {
+                        onNewChat?()
+                    } label: {
+                        Label("New Chat", systemImage: "square.and.pencil")
+                    }
+                }
+
+                Section {
+                    Button {
+                        onCheckpoints?()
+                    } label: {
+                        HStack {
+                            Label("Checkpoints", systemImage: "clock.arrow.circlepath")
+                                .foregroundStyle(.primary)
+                            Spacer()
+                            Image(systemName: "chevron.right")
+                                .font(.caption)
+                                .foregroundStyle(.tertiary)
+                        }
+                    }
+                }
+            }
+
             Section("Status") {
                 HStack {
                     Text("Status")
@@ -359,6 +408,21 @@ struct SpriteOverviewView: View {
                 Text(error)
             }
         }
+        .alert("Rename Chat", isPresented: Binding(
+            get: { chatToRename != nil },
+            set: { if !$0 { chatToRename = nil } }
+        )) {
+            TextField("Chat name", text: $renameText)
+            Button("Save") {
+                if let chat = chatToRename, let chatListVM = chatListViewModel {
+                    chatListVM.renameChat(chat, name: renameText, modelContext: modelContext)
+                    chatToRename = nil
+                }
+            }
+            Button("Cancel", role: .cancel) {
+                chatToRename = nil
+            }
+        }
         .alert(
             "File Already Exists",
             isPresented: $showOverwriteConfirmation
@@ -417,6 +481,129 @@ struct SpriteOverviewView: View {
         }
     }
 
+    @ViewBuilder
+    private func chatRow(for chat: SpriteChat, in chatListVM: SpriteChatListViewModel) -> some View {
+        Button {
+            onChatSelected?(chat)
+        } label: {
+            HStack(alignment: .top, spacing: 8) {
+                if chat.isUnread {
+                    Circle()
+                        .fill(.tint)
+                        .frame(width: 8, height: 8)
+                        .padding(.top, 6)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    HStack(spacing: 6) {
+                        Text(chat.displayName)
+                            .fontWeight(chat.isUnread ? .semibold : .regular)
+                        if chat.isClosed {
+                            Text("Closed")
+                                .font(.caption2)
+                                .foregroundStyle(.secondary)
+                                .padding(.horizontal, 6)
+                                .padding(.vertical, 2)
+                                .background(.fill.tertiary, in: Capsule())
+                        }
+                    }
+                    if let preview = chat.firstMessagePreview {
+                        Text(preview)
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(1)
+                    }
+                }
+            }
+            .foregroundStyle(.primary)
+        }
+        .swipeActions(edge: .leading, allowsFullSwipe: true) {
+            Button {
+                chat.isUnread.toggle()
+                try? modelContext.save()
+            } label: {
+                Label(chat.isUnread ? "Read" : "Unread",
+                      systemImage: chat.isUnread ? "envelope.open" : "envelope.badge")
+            }
+            .tint(.blue)
+            if let sessionId = chat.claudeSessionId, !chat.isClosed {
+                Button {
+                    UIPasteboard.general.string = "cd \(chat.workingDirectory) && claude --resume \(sessionId)"
+                } label: {
+                    Label("Copy Resume", systemImage: "terminal")
+                }
+                .tint(.gray)
+            }
+        }
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            Button(role: .destructive) {
+                chatToDelete = chat
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+            if !chat.isClosed {
+                Button {
+                    chatSessionManager.remove(chatId: chat.id, modelContext: modelContext)
+                    chatListVM.closeChat(chat, apiClient: apiClient, modelContext: modelContext)
+                } label: {
+                    Label("Close", systemImage: "xmark.circle")
+                }
+                .tint(.orange)
+            }
+        }
+        .contextMenu {
+            Button {
+                chat.isUnread.toggle()
+                try? modelContext.save()
+            } label: {
+                Label(chat.isUnread ? "Mark as Read" : "Mark as Unread",
+                      systemImage: chat.isUnread ? "envelope.open" : "envelope.badge")
+            }
+            if let sessionId = chat.claudeSessionId, !chat.isClosed {
+                Button {
+                    UIPasteboard.general.string = "cd \(chat.workingDirectory) && claude --resume \(sessionId)"
+                } label: {
+                    Label("Copy Resume Command", systemImage: "terminal")
+                }
+            }
+            Button {
+                renameText = chat.customName ?? ""
+                chatToRename = chat
+            } label: {
+                Label("Rename", systemImage: "pencil")
+            }
+            if !chat.isClosed {
+                Button {
+                    chatSessionManager.remove(chatId: chat.id, modelContext: modelContext)
+                    chatListVM.closeChat(chat, apiClient: apiClient, modelContext: modelContext)
+                } label: {
+                    Label("Close", systemImage: "xmark.circle")
+                }
+            }
+            Divider()
+            Button(role: .destructive) {
+                chatToDelete = chat
+            } label: {
+                Label("Delete", systemImage: "trash")
+            }
+        }
+        .confirmationDialog(
+            "Delete Chat",
+            isPresented: Binding(
+                get: { chatToDelete?.id == chat.id },
+                set: { if !$0 { chatToDelete = nil } }
+            ),
+            titleVisibility: .visible
+        ) {
+            Button("Delete", role: .destructive) {
+                chatSessionManager.remove(chatId: chat.id, modelContext: modelContext)
+                chatListVM.deleteChat(chat, apiClient: apiClient, modelContext: modelContext)
+                chatToDelete = nil
+            }
+        } message: {
+            Text("This will permanently delete the chat and its history.")
+        }
+    }
+
     private var displayWorkingDirectory: String {
         if workingDirectory == "/home/sprite" {
             return "~"
@@ -446,5 +633,24 @@ struct SpriteOverviewView: View {
         case .cold: return .blue
         case .unknown: return .gray
         }
+    }
+}
+
+private func mockSprite(name: String = "my-sprite", status: String = "running") -> Sprite {
+    let decoder = JSONDecoder()
+    decoder.dateDecodingStrategy = .iso8601
+    return try! decoder.decode(Sprite.self, from: Data("""
+        {"id":"s1","name":"\(name)","status":"\(status)","created_at":"2025-01-15T10:30:00Z"}
+        """.utf8))
+}
+
+#Preview {
+    NavigationStack {
+        SpriteOverviewView(sprite: mockSprite())
+            .environment(SpritesAPIClient())
+            .environment(ChatSessionManager())
+            .modelContainer(for: [SpriteChat.self, SpriteSession.self], inMemory: true)
+            .navigationTitle("my-sprite")
+            .navigationBarTitleDisplayMode(.inline)
     }
 }
