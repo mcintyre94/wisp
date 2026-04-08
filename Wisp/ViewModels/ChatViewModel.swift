@@ -1184,7 +1184,12 @@ final class ChatViewModel {
         let parsed = Self.parseSessionJSONL(output)
         guard !parsed.isEmpty else { return }
 
-        messages = parsed
+        // Merge with locally-persisted messages to preserve sub-agent tool calls.
+        // The main JSONL only contains the main agent's turns; sub-agent tool calls
+        // (Bash, Read, Write, etc.) are streamed live and persisted locally but stored
+        // in separate session files on the sprite. Use local messages as the base and
+        // patch the final assistant text from the JSONL if it is more complete.
+        messages = mergedWithLocalMessages(parsed)
         rebuildToolUseIndex()
 
         if let last = messages.last, last.role == .user {
@@ -1194,6 +1199,44 @@ final class ChatViewModel {
             self.execSessionId = nil
             saveSession(modelContext: modelContext, isComplete: true)
         }
+    }
+
+    /// Merge JSONL-parsed messages with the current locally-persisted messages.
+    /// Returns the local messages enriched with any more-complete text from the JSONL,
+    /// or falls back to the JSONL messages if the conversation structures differ.
+    func mergedWithLocalMessages(_ jsonlMessages: [ChatMessage]) -> [ChatMessage] {
+        guard !messages.isEmpty else { return jsonlMessages }
+
+        let localUserCount = messages.filter { $0.role == .user }.count
+        let jsonlUserCount = jsonlMessages.filter { $0.role == .user }.count
+        guard localUserCount == jsonlUserCount else { return jsonlMessages }
+
+        // If the JSONL's total text is longer (more complete) than the locally-persisted
+        // version, patch only the final text block in place. Using total text for the
+        // comparison detects truncation; patching only the last block preserves any intro
+        // text that appeared before tool calls (e.g. "Let me check…" → tools → "Done!").
+        if let jsonlLast = jsonlMessages.last(where: { $0.role == .assistant }),
+           let localLast = messages.last(where: { $0.role == .assistant }),
+           jsonlLast.textContent.count > localLast.textContent.count {
+            // Find the last text segment in the JSONL message to use as the replacement.
+            var jsonlFinalText: String?
+            for item in jsonlLast.content.reversed() {
+                if case .text(let t) = item, !t.isEmpty { jsonlFinalText = t; break }
+            }
+            if let finalText = jsonlFinalText {
+                if let idx = localLast.content.indices.reversed().first(where: {
+                    if case .text = localLast.content[$0] { return true } else { return false }
+                }) {
+                    localLast.content[idx] = .text(finalText)
+                } else {
+                    // No trailing text block yet — Claude was still running tools when we
+                    // disconnected. Append the final response from the JSONL.
+                    localLast.content.append(.text(finalText))
+                }
+            }
+        }
+
+        return messages
     }
 
     func handleEvent(_ event: ClaudeStreamEvent, modelContext: ModelContext) {
