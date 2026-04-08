@@ -78,7 +78,7 @@ struct AuthView: View {
             Button("Save & Continue") {
                 viewModel.saveClaudeToken(apiClient: apiClient)
             }
-            .disabled(viewModel.claudeToken.isEmpty)
+            .disabled(!viewModel.isClaudeTokenValid)
         } header: {
             Text("Step 2 of 3")
         } footer: {
