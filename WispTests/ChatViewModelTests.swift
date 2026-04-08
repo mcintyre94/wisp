@@ -534,6 +534,29 @@ struct ChatViewModelTests {
         }
     }
 
+    @Test func interrupt_withQueuedMessage_appendsMessageAndStartsStream() throws {
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+        vm.status = .streaming
+        vm.queuedPrompt = "follow-up question"
+
+        vm.interrupt(apiClient: SpritesAPIClient(), modelContext: ctx)
+
+        // Queued prompt is consumed into the messages list
+        #expect(vm.queuedPrompt == nil)
+        #expect(vm.messages.count == 1)
+        #expect(vm.messages.first?.role == .user)
+        if case .text(let t) = vm.messages.first?.content.first {
+            #expect(t == "follow-up question")
+        } else {
+            Issue.record("Expected text content in user message")
+        }
+        // Status moves to .connecting as it starts sending the queued message
+        guard case .connecting = vm.status else {
+            Issue.record("Expected connecting status after interrupt with queued message"); return
+        }
+    }
+
     // MARK: - processExecStream
 
     @Test func processExecStream_cleanCloseWithResultEvent_returnsCompleted() async throws {

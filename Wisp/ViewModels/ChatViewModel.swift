@@ -646,15 +646,34 @@ final class ChatViewModel {
     }
 
     func interrupt(apiClient: SpritesAPIClient? = nil, modelContext: ModelContext? = nil) {
+        let savedPrompt = queuedPrompt
+        let savedAttachments = queuedAttachments
+
         detach(modelContext: modelContext)
 
         // Note: we keep sessionId intact so the next message can resume the session.
         // If the session turns out to be stale, the stale-session retry logic handles it.
 
-        // Kill the exec session to stop it; clear execSessionId to prevent reconnect
+        // Kill the exec session to stop it; clear execSessionId to prevent reconnect.
         let execId = execSessionId
         execSessionId = nil
-        if let apiClient, let execId {
+
+        if let apiClient, let savedPrompt, let modelContext {
+            // A message was queued behind the interrupted stream — drain it after the kill
+            // so the user's pending input isn't silently discarded.
+            let sName = spriteName
+            let prompt = buildPrompt(text: savedPrompt, attachments: savedAttachments)
+            let userMessage = ChatMessage(role: .user, content: [.text(prompt)])
+            messages.append(userMessage)
+            persistMessages(modelContext: modelContext)
+            status = .connecting
+            streamTask = Task {
+                if let execId {
+                    try? await apiClient.killExecSession(spriteName: sName, execSessionId: execId)
+                }
+                await executeClaudeCommand(prompt: prompt, apiClient: apiClient, modelContext: modelContext)
+            }
+        } else if let apiClient, let execId {
             let sName = spriteName
             Task {
                 try? await apiClient.killExecSession(spriteName: sName, execSessionId: execId)
