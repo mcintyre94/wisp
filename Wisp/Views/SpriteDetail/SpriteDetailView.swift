@@ -54,6 +54,39 @@ struct SpriteDetailView: View {
         )
     }
 
+    @ViewBuilder
+    private var newChatButton: some View {
+        if let activeChat = chatListViewModel.activeChat, activeChat.worktreePath != nil {
+            let branchLabel = activeChat.worktreeBranchLabel
+            Menu {
+                Button {
+                    let chat = chatListViewModel.createChat(inheritingWorktreeFrom: activeChat, modelContext: modelContext)
+                    switchToChat(chat)
+                } label: {
+                    Label("New Chat in \(branchLabel)", systemImage: "arrow.branch")
+                }
+                Button {
+                    let chat = chatListViewModel.createChat(modelContext: modelContext)
+                    switchToChat(chat)
+                } label: {
+                    Label("New Chat", systemImage: "square.and.pencil")
+                }
+            } label: {
+                Image(systemName: "square.and.pencil")
+            } primaryAction: {
+                let chat = chatListViewModel.createChat(modelContext: modelContext)
+                switchToChat(chat)
+            }
+        } else {
+            Button {
+                let chat = chatListViewModel.createChat(modelContext: modelContext)
+                switchToChat(chat)
+            } label: {
+                Image(systemName: "square.and.pencil")
+            }
+        }
+    }
+
     private var regularLayout: some View {
         HStack(spacing: 0) {
             SpriteNavigationPanel(
@@ -64,7 +97,13 @@ struct SpriteDetailView: View {
                     let chat = chatListViewModel.createChat(modelContext: modelContext)
                     selectedTab = .chat
                     switchToChat(chat)
-                }
+                },
+                onCreateChatInWorktree: chatListViewModel.activeChat?.worktreePath != nil ? {
+                    guard let activeChat = chatListViewModel.activeChat else { return }
+                    let chat = chatListViewModel.createChat(inheritingWorktreeFrom: activeChat, modelContext: modelContext)
+                    selectedTab = .chat
+                    switchToChat(chat)
+                } : nil
             )
             .frame(width: 260)
 
@@ -190,12 +229,7 @@ struct SpriteDetailView: View {
                             }
                         }
 
-                        Button {
-                            let chat = chatListViewModel.createChat(modelContext: modelContext)
-                            switchToChat(chat)
-                        } label: {
-                            Image(systemName: "square.and.pencil")
-                        }
+                        newChatButton
                     }
                 }
             } else if selectedTab == .overview {

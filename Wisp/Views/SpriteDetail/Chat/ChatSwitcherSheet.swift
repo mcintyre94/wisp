@@ -119,11 +119,34 @@ struct ChatSwitcherSheet: View {
                     Button("Done") { dismiss() }
                 }
                 ToolbarItem(placement: .primaryAction) {
-                    Button {
-                        viewModel.createChat(modelContext: modelContext)
-                        dismiss()
-                    } label: {
-                        Image(systemName: "plus")
+                    if let activeChat = viewModel.activeChat, activeChat.worktreePath != nil {
+                        let branchLabel = activeChat.worktreeBranchLabel
+                        Menu {
+                            Button {
+                                viewModel.createChat(inheritingWorktreeFrom: activeChat, modelContext: modelContext)
+                                dismiss()
+                            } label: {
+                                Label("New Chat in \(branchLabel)", systemImage: "arrow.branch")
+                            }
+                            Button {
+                                viewModel.createChat(modelContext: modelContext)
+                                dismiss()
+                            } label: {
+                                Label("New Chat", systemImage: "square.and.pencil")
+                            }
+                        } label: {
+                            Image(systemName: "plus")
+                        } primaryAction: {
+                            viewModel.createChat(modelContext: modelContext)
+                            dismiss()
+                        }
+                    } else {
+                        Button {
+                            viewModel.createChat(modelContext: modelContext)
+                            dismiss()
+                        } label: {
+                            Image(systemName: "plus")
+                        }
                     }
                 }
             }
