@@ -149,10 +149,17 @@ struct ChatSwitcherSheet: View {
 private struct ChatRowView: View {
     let chat: SpriteChat
     let isActive: Bool
+    @Environment(ChatSessionManager.self) private var chatSessionManager
+
+    private var isStreaming: Bool {
+        chatSessionManager.isStreaming(chatId: chat.id)
+    }
 
     var body: some View {
         HStack {
-            if chat.isUnread {
+            if isStreaming {
+                StreamingDot()
+            } else if chat.isUnread {
                 Circle()
                     .fill(Color.accentColor)
                     .frame(width: 8, height: 8)
@@ -199,6 +206,7 @@ private struct ChatRowView: View {
     NavigationStack {
         ChatSwitcherSheet(viewModel: viewModel)
             .environment(SpritesAPIClient())
+            .environment(ChatSessionManager())
             .modelContainer(for: [SpriteChat.self, SpriteSession.self], inMemory: true)
     }
 }
