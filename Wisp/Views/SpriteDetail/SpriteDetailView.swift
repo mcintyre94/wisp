@@ -99,28 +99,6 @@ struct SpriteDetailView: View {
                 showingCheckpoints = true
             }
         )
-        .navigationDestination(isPresented: $showingChat) {
-            if let vm = chatViewModel {
-                let isReadOnly = chatListViewModel.activeChat?.isClosed == true
-                ChatView(
-                    viewModel: vm,
-                    isReadOnly: isReadOnly,
-                    existingSessionIds: Set(chatListViewModel.chats.filter { !$0.isClosed }.compactMap(\.claudeSessionId)),
-                    onFork: { checkpointId, messageId in
-                        pendingFork = (checkpointId, messageId)
-                    }
-                )
-                .id(vm.chatId)
-                .onAppear { vm.isActive = true }
-                .onDisappear { vm.isActive = false }
-            } else {
-                ProgressView()
-                    .frame(maxWidth: .infinity, maxHeight: .infinity)
-            }
-        }
-        .navigationDestination(isPresented: $showingCheckpoints) {
-            CheckpointsView(viewModel: checkpointsViewModel)
-        }
     }
 
     @ViewBuilder
@@ -160,6 +138,33 @@ struct SpriteDetailView: View {
             } else {
                 compactLayout
             }
+        }
+        .navigationDestination(isPresented: $showingChat) {
+            if let vm = chatViewModel {
+                let isReadOnly = chatListViewModel.activeChat?.isClosed == true
+                ChatView(
+                    viewModel: vm,
+                    isReadOnly: isReadOnly,
+                    chatListViewModel: chatListViewModel,
+                    onNewChat: {
+                        let chat = chatListViewModel.createChat(modelContext: modelContext)
+                        switchToChat(chat)
+                    },
+                    existingSessionIds: Set(chatListViewModel.chats.filter { !$0.isClosed }.compactMap(\.claudeSessionId)),
+                    onFork: { checkpointId, messageId in
+                        pendingFork = (checkpointId, messageId)
+                    }
+                )
+                .id(vm.chatId)
+                .onAppear { vm.isActive = true }
+                .onDisappear { vm.isActive = false }
+            } else {
+                ProgressView()
+                    .frame(maxWidth: .infinity, maxHeight: .infinity)
+            }
+        }
+        .navigationDestination(isPresented: $showingCheckpoints) {
+            CheckpointsView(viewModel: checkpointsViewModel)
         }
         .overlay {
             if isForking {

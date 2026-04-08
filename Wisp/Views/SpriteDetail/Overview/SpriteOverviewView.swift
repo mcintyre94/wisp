@@ -525,6 +525,14 @@ struct SpriteOverviewView: View {
                       systemImage: chat.isUnread ? "envelope.open" : "envelope.badge")
             }
             .tint(.blue)
+            if let sessionId = chat.claudeSessionId, !chat.isClosed {
+                Button {
+                    UIPasteboard.general.string = "cd \(chat.workingDirectory) && claude --resume \(sessionId)"
+                } label: {
+                    Label("Copy Resume", systemImage: "terminal")
+                }
+                .tint(.gray)
+            }
         }
         .swipeActions(edge: .trailing, allowsFullSwipe: false) {
             Button(role: .destructive) {
@@ -625,5 +633,24 @@ struct SpriteOverviewView: View {
         case .cold: return .blue
         case .unknown: return .gray
         }
+    }
+}
+
+private func mockSprite(name: String = "my-sprite", status: String = "running") -> Sprite {
+    let decoder = JSONDecoder()
+    decoder.dateDecodingStrategy = .iso8601
+    return try! decoder.decode(Sprite.self, from: Data("""
+        {"id":"s1","name":"\(name)","status":"\(status)","created_at":"2025-01-15T10:30:00Z"}
+        """.utf8))
+}
+
+#Preview {
+    NavigationStack {
+        SpriteOverviewView(sprite: mockSprite())
+            .environment(SpritesAPIClient())
+            .environment(ChatSessionManager())
+            .modelContainer(for: [SpriteChat.self, SpriteSession.self], inMemory: true)
+            .navigationTitle("my-sprite")
+            .navigationBarTitleDisplayMode(.inline)
     }
 }

@@ -10,3 +10,4 @@ enum AppConfig {
     /// - No callback URL needed
     static let githubClientID = "Ov23lix0yTawxu7UQ7FH"
 }
+ 

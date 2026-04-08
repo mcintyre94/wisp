@@ -10,6 +10,8 @@ struct ChatView: View {
     @Bindable var viewModel: ChatViewModel
     var isReadOnly: Bool = false
     var topAccessory: AnyView? = nil
+    var chatListViewModel: SpriteChatListViewModel? = nil
+    var onNewChat: (() -> Void)? = nil
     var existingSessionIds: Set<String> = []
     var onFork: ((String, UUID) -> Void)? = nil
     @FocusState private var isInputFocused: Bool
@@ -25,6 +27,7 @@ struct ChatView: View {
     // Quick Actions
     @State private var quickActionsViewModel: QuickActionsViewModel?
     @State private var saveDraftTask: Task<Void, Never>?
+    @State private var showChatSwitcher = false
 
     var body: some View {
         ScrollViewReader { proxy in
@@ -181,6 +184,37 @@ struct ChatView: View {
             }
         }
         .toolbar {
+            if let chatListVM = chatListViewModel {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        showChatSwitcher = true
+                    } label: {
+                        let hasOtherUnread = chatListVM.chats.contains {
+                            $0.isUnread && $0.id != viewModel.chatId
+                        }
+                        Image(systemName: "bubble.left.and.bubble.right")
+                            .overlay(alignment: .topTrailing) {
+                                if hasOtherUnread {
+                                    Circle()
+                                        .fill(Color.accentColor)
+                                        .frame(width: 8, height: 8)
+                                        .offset(x: 3, y: -3)
+                                }
+                            }
+                    }
+                    .accessibilityLabel("Chats")
+                }
+            }
+            if onNewChat != nil {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Button {
+                        onNewChat?()
+                    } label: {
+                        Image(systemName: "square.and.pencil")
+                    }
+                    .accessibilityLabel("New chat")
+                }
+            }
             ToolbarItem(placement: .topBarTrailing) {
                 Button {
                     quickActionsViewModel = QuickActionsViewModel(
@@ -191,6 +225,12 @@ struct ChatView: View {
                 } label: {
                     Image(systemName: "bolt")
                 }
+                .accessibilityLabel("Quick actions")
+            }
+        }
+        .sheet(isPresented: $showChatSwitcher) {
+            if let chatListVM = chatListViewModel {
+                ChatSwitcherSheet(viewModel: chatListVM)
             }
         }
         .sheet(item: $quickActionsViewModel) { vm in
