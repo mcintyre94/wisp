@@ -438,6 +438,52 @@ struct ChatViewModelTests {
         }
     }
 
+    @Test func parseSessionJSONL_skillInjectionSuppressed() {
+        // isMeta:true text-block user messages are skill injections — should not appear as user bubbles
+        let jsonl = """
+        {"type":"user","message":{"role":"user","content":"Hello"},"isMeta":false}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"tu-1","name":"Bash","input":{"command":"ls"}}]}}
+        {"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tu-1","content":"files"}]}}
+        {"type":"user","message":{"role":"user","content":[{"type":"text","text":"Base directory for this skill: /home/sprite/.claude/skills/sprite\\n\\nYou are the Sprite agent..."}]},"isMeta":true}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Done."}]}}
+        """
+        let messages = ChatViewModel.parseSessionJSONL(jsonl)
+        // Should have user + assistant only; skill injection is suppressed
+        #expect(messages.count == 2)
+        #expect(messages[0].role == .user)
+        #expect(messages[0].textContent == "Hello")
+        #expect(messages[1].role == .assistant)
+        // Skill content must not appear anywhere
+        let allText = messages.flatMap { $0.content }.compactMap {
+            if case .text(let t) = $0 { t } else { nil }
+        }.joined()
+        #expect(!allText.contains("Base directory for this skill"))
+    }
+
+    @Test func parseSessionJSONL_textBlockUserMessageShown() {
+        // Non-meta text-block user messages should be shown as user bubbles
+        let jsonl = """
+        {"type":"user","message":{"role":"user","content":[{"type":"text","text":"Hello from blocks"}]}}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Hi there"}]}}
+        """
+        let messages = ChatViewModel.parseSessionJSONL(jsonl)
+        #expect(messages.count == 2)
+        #expect(messages[0].role == .user)
+        #expect(messages[0].textContent == "Hello from blocks")
+    }
+
+    // MARK: - claudeProjectPathEncoding
+
+    @Test func claudeProjectPathEncoding_simpleProject() {
+        #expect(ChatViewModel.claudeProjectPathEncoding("/home/sprite/project") == "-home-sprite-project")
+    }
+
+    @Test func claudeProjectPathEncoding_dotInPath() {
+        // The `.wisp` directory: Claude Code replaces `.` too, Wisp must match
+        #expect(ChatViewModel.claudeProjectPathEncoding("/home/sprite/.wisp/worktrees/wisp/my-branch")
+            == "-home-sprite--wisp-worktrees-wisp-my-branch")
+    }
+
     // MARK: - Queued prompt
 
     @Test func sendMessage_whileStreaming_queuesPrompt() throws {
@@ -1141,5 +1187,132 @@ struct ChatViewModelTests {
         }
         #expect(card.result != nil, "ToolUseCard.result must be linked for the completed tool to render")
         #expect(card.result?.toolUseId == "tu-1")
+    }
+
+    // MARK: - mergedWithLocalMessages
+
+    @Test func mergedWithLocalMessages_preservesSubAgentToolCalls() throws {
+        // Local messages have sub-agent tool calls (streamed live); JSONL only has main-agent turns.
+        // The merge should keep local tool cards and use JSONL text if it's more complete.
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        // Simulate locally-persisted assistant message with a sub-agent Bash call
+        let userMsg = ChatMessage(role: .user, content: [.text("do the thing")])
+        let subAgentCard = ToolUseCard(toolUseId: "tu-bash", toolName: "Bash", input: .object(["command": .string("ls")]))
+        let assistantMsg = ChatMessage(role: .assistant, content: [
+            .toolUse(subAgentCard),
+            .text("Partial text..."),   // truncated — app disconnected before full response
+        ])
+        vm.messages = [userMsg, assistantMsg]
+
+        // JSONL version: no Bash card, but complete final text
+        let jsonlUser = ChatMessage(role: .user, content: [.text("do the thing")])
+        let jsonlAssistant = ChatMessage(role: .assistant, content: [
+            .text("Complete response from Claude with all details."),
+        ])
+        let jsonlMessages = [jsonlUser, jsonlAssistant]
+
+        let result = vm.mergedWithLocalMessages(jsonlMessages)
+
+        #expect(result.count == 2)
+        let merged = result[1]
+        #expect(merged.role == .assistant)
+        // Sub-agent Bash tool call preserved
+        let hasToolUse = merged.content.contains { if case .toolUse = $0 { true } else { false } }
+        #expect(hasToolUse, "Sub-agent tool call should be preserved from local messages")
+        // Text updated to the longer JSONL version
+        #expect(merged.textContent == "Complete response from Claude with all details.")
+    }
+
+    @Test func mergedWithLocalMessages_fallsBackToJSONLWhenStructureDiffers() throws {
+        // If the conversation structures differ (different user message counts), fall back
+        // to the JSONL messages as-is. In practice this shouldn't happen — Claude can't
+        // create new user turns on its own — but it's a safety net for unexpected states.
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        let userMsg = ChatMessage(role: .user, content: [.text("first message")])
+        vm.messages = [userMsg]
+
+        // JSONL has an extra exchange
+        let jsonlMessages = [
+            ChatMessage(role: .user, content: [.text("first message")]),
+            ChatMessage(role: .assistant, content: [.text("reply")]),
+            ChatMessage(role: .user, content: [.text("follow-up")]),
+            ChatMessage(role: .assistant, content: [.text("final reply")]),
+        ]
+
+        let result = vm.mergedWithLocalMessages(jsonlMessages)
+
+        #expect(result.count == 4, "Should fall back to JSONL when structures differ")
+    }
+
+    @Test func mergedWithLocalMessages_preservesIntroTextBeforeToolCalls() throws {
+        // "Let me check…" → tool call → "Final response" — intro text must stay in
+        // position; only the last text block (which may be truncated) should be updated.
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        let taskCard = ToolUseCard(toolUseId: "tu-task", toolName: "Task", input: .null)
+        let userMsg = ChatMessage(role: .user, content: [.text("do the thing")])
+        let assistantMsg = ChatMessage(role: .assistant, content: [
+            .text("Let me check on that..."),
+            .toolUse(taskCard),
+            .text("Partial fi"),  // truncated
+        ])
+        vm.messages = [userMsg, assistantMsg]
+
+        let jsonlMessages = [
+            ChatMessage(role: .user, content: [.text("do the thing")]),
+            ChatMessage(role: .assistant, content: [
+                .text("Let me check on that..."),
+                .toolUse(taskCard),
+                .text("Final response complete."),
+            ]),
+        ]
+
+        let result = vm.mergedWithLocalMessages(jsonlMessages)
+        let merged = result[1]
+
+        // Intro text stays first
+        guard case .text(let intro) = merged.content.first else {
+            Issue.record("Expected intro text as first content item"); return
+        }
+        #expect(intro == "Let me check on that...")
+        // Tool call stays second
+        guard case .toolUse = merged.content[1] else {
+            Issue.record("Expected toolUse as second content item"); return
+        }
+        // Final text updated from JSONL
+        guard case .text(let final) = merged.content[2] else {
+            Issue.record("Expected text as third content item"); return
+        }
+        #expect(final == "Final response complete.")
+    }
+
+    @Test func mergedWithLocalMessages_keepsLocalTextIfAlreadyComplete() throws {
+        // If local text is already as long as the JSONL text, keep the local version unchanged.
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        let subAgentCard = ToolUseCard(toolUseId: "tu-read", toolName: "Read", input: .object(["file_path": .string("/foo.txt")]))
+        let userMsg = ChatMessage(role: .user, content: [.text("read a file")])
+        let assistantMsg = ChatMessage(role: .assistant, content: [
+            .toolUse(subAgentCard),
+            .text("Here is the content of the file."),
+        ])
+        vm.messages = [userMsg, assistantMsg]
+
+        let jsonlMessages = [
+            ChatMessage(role: .user, content: [.text("read a file")]),
+            ChatMessage(role: .assistant, content: [.text("Here is the content.")]),  // shorter
+        ]
+
+        let result = vm.mergedWithLocalMessages(jsonlMessages)
+
+        #expect(result[1].textContent == "Here is the content of the file.", "Local text should be kept when it's already complete")
+        let hasToolUse = result[1].content.contains { if case .toolUse = $0 { true } else { false } }
+        #expect(hasToolUse)
     }
 }
