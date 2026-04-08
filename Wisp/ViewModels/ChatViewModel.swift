@@ -49,6 +49,7 @@ final class ChatViewModel {
     var status: ChatStatus = .idle
     var modelName: String?
     var modelOverride: ClaudeModel?
+    var effortLevel: ClaudeEffortLevel = .medium
     var remoteSessions: [ClaudeSessionEntry] = []
     var hasAnyRemoteSessions = false
     var isLoadingRemoteSessions = false
@@ -790,6 +791,7 @@ final class ChatViewModel {
 
         let modelId = modelOverride?.rawValue ?? UserDefaults.standard.string(forKey: "claudeModel") ?? ClaudeModel.sonnet.rawValue
         claudeCmd += " --model \(modelId)"
+        claudeCmd += " --effort \(effortLevel.rawValue)"
 
         let maxTurns = UserDefaults.standard.integer(forKey: "maxTurns")
         if maxTurns > 0 {

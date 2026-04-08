@@ -84,7 +84,9 @@ struct SpriteNavigationPanel: View {
                 }
             }
             Spacer(minLength: 0)
-            if chat.isUnread {
+            if chatSessionManager.isStreaming(chatId: chat.id) {
+                StreamingDot()
+            } else if chat.isUnread {
                 Circle()
                     .fill(Color.accentColor)
                     .frame(width: 8, height: 8)
