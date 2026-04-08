@@ -715,6 +715,12 @@ final class ChatViewModel {
             return
         }
 
+        // Optimistically show reconnecting immediately — local state already tells us
+        // the session wasn't complete, so no need to wait for the task to start before
+        // the UI reflects that we're reconnecting. reattachToExec also sets this, but
+        // setting synchronously here avoids a brief idle flash while the Task warms up.
+        status = .reconnecting
+
         // Cancel any orphaned task that may still be running (e.g., from a concurrent
         // call to reconnectIfNeeded triggered by both DashboardView startup and
         // resumeAllAfterBackground before the first task had a chance to set .reconnecting).
