@@ -1584,9 +1584,10 @@ final class ChatViewModel {
 
         // Mark all directories as safe to avoid "dubious ownership" errors when the repo
         // is owned by a different uid than the running process (common on Sprites).
+        // Fetch origin so the new branch starts from the latest remote state (failure is non-fatal).
         // Prune stale worktree registrations (handles dirs deleted without `git worktree remove`).
         // Capture stderr from worktree add collapsed to one line so we can log it on failure.
-        let command = "git config --global --add safe.directory '*' 2>/dev/null; git -C '\(currentWorkDir)' pull 2>/dev/null || true; git -C '\(currentWorkDir)' worktree prune 2>/dev/null; mkdir -p '\(worktreeParent)' && GTWT_OUT=$(git -C '\(currentWorkDir)' worktree add '\(worktreeDir)' -b '\(uniqueBranchName)' 2>&1); if [ $? -eq 0 ]; then echo '\(worktreeDir)'; else echo \"WORKTREE_ERR:$(echo $GTWT_OUT)\"; fi"
+        let command = "git config --global --add safe.directory '*' 2>/dev/null; git -C '\(currentWorkDir)' fetch origin 2>/dev/null || true; git -C '\(currentWorkDir)' worktree prune 2>/dev/null; mkdir -p '\(worktreeParent)' && GTWT_OUT=$(git -C '\(currentWorkDir)' worktree add '\(worktreeDir)' -b '\(uniqueBranchName)' origin/main 2>&1); if [ $? -eq 0 ]; then echo '\(worktreeDir)'; else echo \"WORKTREE_ERR:$(echo $GTWT_OUT)\"; fi"
 
         let (output, _) = await apiClient.runExec(spriteName: spriteName, command: command, timeout: 60)
         // git worktree add may print "HEAD is now at..." to stdout before our echo,
