@@ -15,6 +15,10 @@ struct SettingsView: View {
     @State private var showGitHubConnect = false
     @State private var showGitHubDisconnectConfirmation = false
     @State private var copiedTokenFlash = false
+    @State private var showEditSpritesToken = false
+    @State private var showEditClaudeToken = false
+    @State private var copiedSpritesFlash = false
+    @State private var copiedClaudeFlash = false
     #if DEBUG
     @State private var copiedDeviceIDFlash = false
     @State private var copiedCommitFlash = false
@@ -54,25 +58,75 @@ struct SettingsView: View {
         .sheet(isPresented: $showGitHubConnect) {
             GitHubConnectSheet()
         }
+        .sheet(isPresented: $showEditSpritesToken) {
+            EditTokenSheet(tokenType: .sprites, isPresented: $showEditSpritesToken)
+                .environment(apiClient)
+        }
+        .sheet(isPresented: $showEditClaudeToken) {
+            EditTokenSheet(tokenType: .claude, isPresented: $showEditClaudeToken)
+                .environment(apiClient)
+        }
+    }
+
+    // MARK: - Helpers
+
+    @ViewBuilder
+    private func tokenRow(
+        title: String,
+        icon: String,
+        isConnected: Bool,
+        token: String?,
+        copiedFlash: Binding<Bool>,
+        showEdit: Binding<Bool>
+    ) -> some View {
+        HStack {
+            Label(title, systemImage: icon)
+            Spacer()
+            Text(copiedFlash.wrappedValue ? "Copied!" : (isConnected ? "Connected" : "Disconnected"))
+                .foregroundStyle(copiedFlash.wrappedValue ? .green : (isConnected ? .green : .secondary))
+                .contentTransition(.numericText())
+        }
+        .contextMenu {
+            if isConnected, let token {
+                Button {
+                    UIPasteboard.general.string = token
+                    withAnimation { copiedFlash.wrappedValue = true }
+                    Task {
+                        try? await Task.sleep(for: .seconds(1.5))
+                        withAnimation { copiedFlash.wrappedValue = false }
+                    }
+                } label: {
+                    Label("Copy Token", systemImage: "doc.on.doc")
+                }
+            }
+            Button {
+                showEdit.wrappedValue = true
+            } label: {
+                Label("Update Token", systemImage: "pencil")
+            }
+        }
     }
 
     // MARK: - Sections
 
     private var accountSection: some View {
         Section("Account") {
-            HStack {
-                Label("Sprites API", systemImage: "server.rack")
-                Spacer()
-                Text(apiClient.isAuthenticated ? "Connected" : "Disconnected")
-                    .foregroundStyle(apiClient.isAuthenticated ? .green : .secondary)
-            }
-
-            HStack {
-                Label("Claude Code", systemImage: "brain")
-                Spacer()
-                Text(apiClient.hasClaudeToken ? "Connected" : "Disconnected")
-                    .foregroundStyle(apiClient.hasClaudeToken ? .green : .secondary)
-            }
+            tokenRow(
+                title: "Sprites API",
+                icon: "server.rack",
+                isConnected: apiClient.isAuthenticated,
+                token: apiClient.spritesToken,
+                copiedFlash: $copiedSpritesFlash,
+                showEdit: $showEditSpritesToken
+            )
+            tokenRow(
+                title: "Claude Code",
+                icon: "brain",
+                isConnected: apiClient.hasClaudeToken,
+                token: apiClient.claudeToken,
+                copiedFlash: $copiedClaudeFlash,
+                showEdit: $showEditClaudeToken
+            )
 
             HStack {
                 Label("GitHub", systemImage: "lock.shield")
