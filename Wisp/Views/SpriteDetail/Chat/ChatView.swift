@@ -106,6 +106,7 @@ struct ChatView: View {
                     status: viewModel.status,
                     modelName: viewModel.modelName,
                     modelOverride: Bindable(viewModel).modelOverride,
+                    effortLevel: Bindable(viewModel).effortLevel,
                     hasPendingWispAsk: viewModel.pendingWispAskCard != nil
                 )
             }

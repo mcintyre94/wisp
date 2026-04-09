@@ -4,6 +4,7 @@ struct ChatStatusBar: View {
     let status: ChatStatus
     let modelName: String?
     @Binding var modelOverride: ClaudeModel?
+    @Binding var effortLevel: ClaudeEffortLevel
     var hasPendingWispAsk: Bool = false
 
     @AppStorage("claudeModel") private var globalModel: String = ClaudeModel.sonnet.rawValue
@@ -71,18 +72,37 @@ struct ChatStatusBar: View {
 
     private var modelPicker: some View {
         Menu {
-            ForEach(ClaudeModel.allCases) { model in
-                Button {
-                    if model.rawValue == globalModel {
-                        modelOverride = nil
-                    } else {
-                        modelOverride = model
+            Section("Model") {
+                ForEach(ClaudeModel.allCases) { model in
+                    Button {
+                        if model.rawValue == globalModel {
+                            modelOverride = nil
+                        } else {
+                            modelOverride = model
+                        }
+                        if model != .opus && effortLevel == .max {
+                            effortLevel = .high
+                        }
+                    } label: {
+                        HStack {
+                            Text(model.displayName)
+                            if model == effectiveModel {
+                                Image(systemName: "checkmark")
+                            }
+                        }
                     }
-                } label: {
-                    HStack {
-                        Text(model.displayName)
-                        if model == effectiveModel {
-                            Image(systemName: "checkmark")
+                }
+            }
+            Section("Effort") {
+                ForEach(ClaudeEffortLevel.allCases.filter { $0 != .max || effectiveModel == .opus }) { level in
+                    Button {
+                        effortLevel = level
+                    } label: {
+                        HStack {
+                            Text(level.displayName)
+                            if level == effortLevel {
+                                Image(systemName: "checkmark")
+                            }
                         }
                     }
                 }
@@ -92,9 +112,15 @@ struct ChatStatusBar: View {
                 Image(systemName: "sparkle")
                     .foregroundStyle(.primary)
                     .font(.system(size: 9))
-                Text(effectiveModel.displayName)
-                    .font(.caption2)
-                    .foregroundStyle(.primary)
+                if effortLevel.isDefault {
+                    Text(effectiveModel.displayName)
+                        .font(.caption2)
+                        .foregroundStyle(.primary)
+                } else {
+                    Text("\(effectiveModel.displayName) · \(effortLevel.displayName)")
+                        .font(.caption2)
+                        .foregroundStyle(.primary)
+                }
                 Image(systemName: "chevron.up.chevron.down")
                     .foregroundStyle(.secondary)
                     .font(.system(size: 8))
@@ -111,35 +137,48 @@ private let previewBackground = LinearGradient(
 
 #Preview("Idle - Model Picker") {
     @Previewable @State var modelOverride: ClaudeModel? = nil
-    ChatStatusBar(status: .idle, modelName: "claude-sonnet-4-5-20250929", modelOverride: $modelOverride)
+    @Previewable @State var effortLevel: ClaudeEffortLevel = .medium
+    ChatStatusBar(status: .idle, modelName: "claude-sonnet-4-5-20250929", modelOverride: $modelOverride, effortLevel: $effortLevel)
+        .frame(maxWidth: .infinity, maxHeight: .infinity)
+        .background(previewBackground)
+}
+
+#Preview("Idle - High Effort") {
+    @Previewable @State var modelOverride: ClaudeModel? = nil
+    @Previewable @State var effortLevel: ClaudeEffortLevel = .high
+    ChatStatusBar(status: .idle, modelName: "claude-sonnet-4-5-20250929", modelOverride: $modelOverride, effortLevel: $effortLevel)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(previewBackground)
 }
 
 #Preview("Streaming") {
     @Previewable @State var modelOverride: ClaudeModel? = nil
-    ChatStatusBar(status: .streaming, modelName: nil, modelOverride: $modelOverride)
+    @Previewable @State var effortLevel: ClaudeEffortLevel = .medium
+    ChatStatusBar(status: .streaming, modelName: nil, modelOverride: $modelOverride, effortLevel: $effortLevel)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(previewBackground)
 }
 
 #Preview("Connecting") {
     @Previewable @State var modelOverride: ClaudeModel? = nil
-    ChatStatusBar(status: .connecting, modelName: nil, modelOverride: $modelOverride)
+    @Previewable @State var effortLevel: ClaudeEffortLevel = .medium
+    ChatStatusBar(status: .connecting, modelName: nil, modelOverride: $modelOverride, effortLevel: $effortLevel)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(previewBackground)
 }
 
 #Preview("Reconnecting") {
     @Previewable @State var modelOverride: ClaudeModel? = nil
-    ChatStatusBar(status: .reconnecting, modelName: nil, modelOverride: $modelOverride)
+    @Previewable @State var effortLevel: ClaudeEffortLevel = .medium
+    ChatStatusBar(status: .reconnecting, modelName: nil, modelOverride: $modelOverride, effortLevel: $effortLevel)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(previewBackground)
 }
 
 #Preview("Error") {
     @Previewable @State var modelOverride: ClaudeModel? = nil
-    ChatStatusBar(status: .error("Connection lost"), modelName: nil, modelOverride: $modelOverride)
+    @Previewable @State var effortLevel: ClaudeEffortLevel = .medium
+    ChatStatusBar(status: .error("Connection lost"), modelName: nil, modelOverride: $modelOverride, effortLevel: $effortLevel)
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(previewBackground)
 }
@@ -147,6 +186,7 @@ private let previewBackground = LinearGradient(
 #Preview("All States") {
     @Previewable @State var stateIndex = 0
     @Previewable @State var modelOverride: ClaudeModel? = nil
+    @Previewable @State var effortLevel: ClaudeEffortLevel = .medium
 
     let states: [(ChatStatus, String?)] = [
         (.connecting, nil),
@@ -160,7 +200,8 @@ private let previewBackground = LinearGradient(
         ChatStatusBar(
             status: states[stateIndex].0,
             modelName: states[stateIndex].1,
-            modelOverride: $modelOverride
+            modelOverride: $modelOverride,
+            effortLevel: $effortLevel
         )
 
         Button("Next State") {
