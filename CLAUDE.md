@@ -103,6 +103,8 @@ Phase 1 scope — build only these features:
 - Tool use cards are collapsible/expandable inline elements between chat bubbles
 - Show loading states for Sprite wake-up ("Waking Sprite..." for cold starts, ~1s)
 - Destructive actions (delete Sprite, restore checkpoint) always require confirmation dialogs
+- **Presentation modifiers in lists**: Never attach `.confirmationDialog`, `.alert`, or `.sheet` to rows inside a `ForEach`. Attach them to the `List` (or another stable ancestor view) instead, using a single `isPresented: Binding(get: { item != nil }, set: { if !$0 { item = nil } })` pattern. Attaching to `ForEach` rows causes the dialog to dismiss itself immediately when the list re-renders.
+- **Destructive row confirmations on iPad/Mac**: Prefer `.alert` over `.confirmationDialog` for row-level destructive confirmations in views that can render in a regular horizontal size class (e.g. `NavigationSplitView` detail columns like `SpriteOverviewView`). In regular size class `.confirmationDialog` becomes a popover anchored to its host view — attached to the `List` it points at the whole list instead of the swiped row, and attaching per-row re-introduces the dismiss bug. `.alert` is a centered modal with no anchoring and works identically across size classes. `.confirmationDialog` is still fine inside sheets (e.g. `ChatSwitcherSheet`), which run in a compact-ish presentation environment internally.
 
 ### Multi-platform layout (iPhone / iPad / Mac)
 

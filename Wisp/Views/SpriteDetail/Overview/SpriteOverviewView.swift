@@ -381,6 +381,27 @@ struct SpriteOverviewView: View {
                 }
             }
         }
+        .alert(
+            "Delete Chat",
+            isPresented: Binding(
+                get: { chatToDelete != nil },
+                set: { if !$0 { chatToDelete = nil } }
+            ),
+            presenting: chatToDelete
+        ) { chat in
+            Button("Delete", role: .destructive) {
+                if let chatListVM = chatListViewModel {
+                    chatSessionManager.remove(chatId: chat.id, modelContext: modelContext)
+                    chatListVM.deleteChat(chat, apiClient: apiClient, modelContext: modelContext)
+                }
+                chatToDelete = nil
+            }
+            Button("Cancel", role: .cancel) {
+                chatToDelete = nil
+            }
+        } message: { _ in
+            Text("This will permanently delete the chat and its history.")
+        }
         .refreshable {
             await viewModel.refresh(apiClient: apiClient)
         }
@@ -585,22 +606,6 @@ struct SpriteOverviewView: View {
             } label: {
                 Label("Delete", systemImage: "trash")
             }
-        }
-        .confirmationDialog(
-            "Delete Chat",
-            isPresented: Binding(
-                get: { chatToDelete?.id == chat.id },
-                set: { if !$0 { chatToDelete = nil } }
-            ),
-            titleVisibility: .visible
-        ) {
-            Button("Delete", role: .destructive) {
-                chatSessionManager.remove(chatId: chat.id, modelContext: modelContext)
-                chatListVM.deleteChat(chat, apiClient: apiClient, modelContext: modelContext)
-                chatToDelete = nil
-            }
-        } message: {
-            Text("This will permanently delete the chat and its history.")
         }
     }
 
