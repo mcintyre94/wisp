@@ -557,6 +557,29 @@ struct ChatViewModelTests {
         }
     }
 
+    @Test func interrupt_withQueuedMessageAndAttachments_preservesAttachments() throws {
+        // Regression guard: detach() clears queuedAttachments, so interrupt() must capture
+        // them before detach or the attachment paths are silently dropped from the drained message.
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+        vm.status = .streaming
+        vm.queuedPrompt = "look at this"
+        vm.queuedAttachments = [AttachedFile(name: "notes.txt", path: "/home/sprite/project/notes.txt")]
+
+        vm.interrupt(apiClient: SpritesAPIClient(), modelContext: ctx)
+
+        #expect(vm.queuedPrompt == nil)
+        #expect(vm.queuedAttachments.isEmpty)
+        #expect(vm.messages.count == 1)
+        // buildPrompt prepends the attachment path to the text, so both should appear in the bubble
+        if case .text(let t) = vm.messages.first?.content.first {
+            #expect(t.contains("/home/sprite/project/notes.txt"))
+            #expect(t.contains("look at this"))
+        } else {
+            Issue.record("Expected text content in user message")
+        }
+    }
+
     // MARK: - processExecStream
 
     @Test func processExecStream_cleanCloseWithResultEvent_returnsCompleted() async throws {
