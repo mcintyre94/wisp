@@ -48,6 +48,7 @@ struct SpriteDetailView: View {
                 case .chat(let id):
                     selectedTab = .chat
                     if let chat = chatListViewModel.chats.first(where: { $0.id == id }) {
+                        markChatRead(chat)
                         switchToChat(chat)
                     }
                 }
@@ -87,6 +88,7 @@ struct SpriteDetailView: View {
             sprite: sprite,
             chatListViewModel: chatListViewModel,
             onChatSelected: { chat in
+                markChatRead(chat)
                 switchToChat(chat)
                 showingChat = true
             },
@@ -343,17 +345,22 @@ struct SpriteDetailView: View {
         )
     }
 
+    /// Called by user-tap sites (overview row, iPad nav panel, switcher sheet via
+    /// `selectChat`) to clear the unread indicator. Kept separate from `switchToChat`
+    /// because that method is also called programmatically (e.g. from the initial
+    /// `.task` that positions on the last-active chat), where clearing unread would
+    /// be wrong — the user never explicitly selected anything.
+    private func markChatRead(_ chat: SpriteChat) {
+        guard chat.isUnread else { return }
+        chat.isUnread = false
+        try? modelContext.save()
+    }
+
     private func switchToChat(_ chat: SpriteChat) {
         guard chatViewModel?.chatId != chat.id else { return }
 
         // Deactivate outgoing VM
         chatViewModel?.isActive = false
-
-        // Clear unread when opening a chat
-        if chat.isUnread {
-            chat.isUnread = false
-            try? modelContext.save()
-        }
 
         // Look up or create a VM from the app-wide cache — old VM keeps streaming in background
         let vm = chatSessionManager.viewModel(
