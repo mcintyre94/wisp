@@ -1560,14 +1560,6 @@ final class ChatViewModel {
 
     // MARK: - Worktrees
 
-    /// Returns a POSIX single-quoted shell argument with any internal single quotes escaped.
-    /// Single quotes have no escape sequence in POSIX shell, so the idiom is:
-    /// close the quote, insert a backslash-escaped literal quote, then reopen.
-    /// e.g. "it's here" → "'it'\\''s here'"
-    static func shellEscapePath(_ s: String) -> String {
-        "'" + s.replacingOccurrences(of: "'", with: "'\\''") + "'"
-    }
-
     /// Converts a chat name to a kebab-case git branch name.
     /// e.g. "Add dark mode" → "add-dark-mode"
     static func branchName(from chatName: String) -> String {
@@ -1598,10 +1590,10 @@ final class ChatViewModel {
         worktreeDir: String,
         uniqueBranchName: String
     ) -> String {
-        let qWorkDir = shellEscapePath(currentWorkDir)
-        let qWorktreeParent = shellEscapePath(worktreeParent)
-        let qWorktreeDir = shellEscapePath(worktreeDir)
-        let qBranch = shellEscapePath(uniqueBranchName)
+        let qWorkDir = shellEscape(currentWorkDir)
+        let qWorktreeParent = shellEscape(worktreeParent)
+        let qWorktreeDir = shellEscape(worktreeDir)
+        let qBranch = shellEscape(uniqueBranchName)
 
         return """
         git config --global --add safe.directory '*' 2>/dev/null; \
@@ -1684,7 +1676,7 @@ final class ChatViewModel {
             let newPath = worktree.hasSuffix("/") ? worktree + filename : worktree + "/" + filename
             guard attachment.path != newPath else { continue }
             copyJobs.append((index: i, newPath: newPath))
-            copyCommands.append("cp \(Self.shellEscapePath(attachment.path)) \(Self.shellEscapePath(newPath)) 2>/dev/null && echo ok || echo skip")
+            copyCommands.append("cp \(shellEscape(attachment.path)) \(shellEscape(newPath)) 2>/dev/null && echo ok || echo skip")
         }
 
         guard !copyJobs.isEmpty else { return attachments }
