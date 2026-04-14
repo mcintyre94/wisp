@@ -534,6 +534,52 @@ struct ChatViewModelTests {
         }
     }
 
+    @Test func interrupt_withQueuedMessage_appendsMessageAndStartsStream() throws {
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+        vm.status = .streaming
+        vm.queuedPrompt = "follow-up question"
+
+        vm.interrupt(apiClient: SpritesAPIClient(), modelContext: ctx)
+
+        // Queued prompt is consumed into the messages list
+        #expect(vm.queuedPrompt == nil)
+        #expect(vm.messages.count == 1)
+        #expect(vm.messages.first?.role == .user)
+        if case .text(let t) = vm.messages.first?.content.first {
+            #expect(t == "follow-up question")
+        } else {
+            Issue.record("Expected text content in user message")
+        }
+        // Status moves to .connecting as it starts sending the queued message
+        guard case .connecting = vm.status else {
+            Issue.record("Expected connecting status after interrupt with queued message"); return
+        }
+    }
+
+    @Test func interrupt_withQueuedMessageAndAttachments_preservesAttachments() throws {
+        // Regression guard: detach() clears queuedAttachments, so interrupt() must capture
+        // them before detach or the attachment paths are silently dropped from the drained message.
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+        vm.status = .streaming
+        vm.queuedPrompt = "look at this"
+        vm.queuedAttachments = [AttachedFile(name: "notes.txt", path: "/home/sprite/project/notes.txt")]
+
+        vm.interrupt(apiClient: SpritesAPIClient(), modelContext: ctx)
+
+        #expect(vm.queuedPrompt == nil)
+        #expect(vm.queuedAttachments.isEmpty)
+        #expect(vm.messages.count == 1)
+        // buildPrompt prepends the attachment path to the text, so both should appear in the bubble
+        if case .text(let t) = vm.messages.first?.content.first {
+            #expect(t.contains("/home/sprite/project/notes.txt"))
+            #expect(t.contains("look at this"))
+        } else {
+            Issue.record("Expected text content in user message")
+        }
+    }
+
     // MARK: - processExecStream
 
     @Test func processExecStream_cleanCloseWithResultEvent_returnsCompleted() async throws {
