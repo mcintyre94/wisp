@@ -26,23 +26,23 @@ struct WorktreeTests {
         )
     }
 
-    // MARK: - shellEscapePath
+    // MARK: - shellEscape
 
-    @Test func shellEscapePath_plainPath() {
-        #expect(ChatViewModel.shellEscapePath("/home/sprite/project/file.txt") == "'/home/sprite/project/file.txt'")
+    @Test func shellEscape_plainPath() {
+        #expect(shellEscape("/home/sprite/project/file.txt") == "'/home/sprite/project/file.txt'")
     }
 
-    @Test func shellEscapePath_pathWithSingleQuote() {
+    @Test func shellEscape_pathWithSingleQuote() {
         // "it's.txt" → 'it'\''s.txt'
-        #expect(ChatViewModel.shellEscapePath("/home/sprite/it's.txt") == "'/home/sprite/it'\\''s.txt'")
+        #expect(shellEscape("/home/sprite/it's.txt") == "'/home/sprite/it'\\''s.txt'")
     }
 
-    @Test func shellEscapePath_pathWithSpaces() {
-        #expect(ChatViewModel.shellEscapePath("/home/sprite/my file.txt") == "'/home/sprite/my file.txt'")
+    @Test func shellEscape_pathWithSpaces() {
+        #expect(shellEscape("/home/sprite/my file.txt") == "'/home/sprite/my file.txt'")
     }
 
-    @Test func shellEscapePath_empty() {
-        #expect(ChatViewModel.shellEscapePath("") == "''")
+    @Test func shellEscape_empty() {
+        #expect(shellEscape("") == "''")
     }
 
     // MARK: - copyAttachmentsToWorktree

@@ -775,26 +775,21 @@ final class ChatViewModel {
             }
         }
 
-        let escapedPrompt = fullPrompt
-            .replacingOccurrences(of: "'", with: "'\\''")
-
         // Build the full bash -c command with env vars inlined
         var commandParts: [String] = [
-            "export CLAUDE_CODE_OAUTH_TOKEN='\(claudeToken)'",
+            "export CLAUDE_CODE_OAUTH_TOKEN=\(shellEscape(claudeToken))",
             "export NO_DNA=1", // Signal to CLIs that they're running under an agent operator (no-dna.org)
-            "mkdir -p \(workingDirectory)",
-            "cd \(workingDirectory)",
+            "mkdir -p \(shellEscape(workingDirectory))",
+            "cd \(shellEscape(workingDirectory))",
         ]
 
         let gitName = UserDefaults.standard.string(forKey: "gitName") ?? ""
         let gitEmail = UserDefaults.standard.string(forKey: "gitEmail") ?? ""
         if !gitName.isEmpty {
-            let escapedName = gitName.replacingOccurrences(of: "'", with: "'\\''")
-            commandParts.append("git config --global user.name '\(escapedName)'")
+            commandParts.append("git config --global user.name \(shellEscape(gitName))")
         }
         if !gitEmail.isEmpty {
-            let escapedEmail = gitEmail.replacingOccurrences(of: "'", with: "'\\''")
-            commandParts.append("git config --global user.email '\(escapedEmail)'")
+            commandParts.append("git config --global user.email \(shellEscape(gitEmail))")
         }
 
         var claudeCmd = "claude -p --verbose --output-format stream-json --dangerously-skip-permissions"
@@ -802,9 +797,9 @@ final class ChatViewModel {
             let sessionId = chatId.uuidString.lowercased()
             let configPath = ClaudeQuestionTool.mcpConfigFilePath(for: sessionId)
             // Write per-session MCP config (inlined in the command chain so no extra round-trip)
-            commandParts.append("echo '\(ClaudeQuestionTool.mcpConfigJSON(for: sessionId))' > \(configPath)")
+            commandParts.append("echo \(shellEscape(ClaudeQuestionTool.mcpConfigJSON(for: sessionId))) > \(shellEscape(configPath))")
             claudeCmd += " --disallowedTools AskUserQuestion"
-            claudeCmd += " --mcp-config \(configPath)"
+            claudeCmd += " --mcp-config \(shellEscape(configPath))"
         }
 
         let modelId = modelOverride?.rawValue ?? UserDefaults.standard.string(forKey: "claudeModel") ?? ClaudeModel.sonnet.rawValue
@@ -817,15 +812,14 @@ final class ChatViewModel {
 
         let customInstructions = UserDefaults.standard.string(forKey: "customInstructions") ?? ""
         if !customInstructions.isEmpty {
-            let escapedInstructions = customInstructions.replacingOccurrences(of: "'", with: "'\\''")
-            claudeCmd += " --append-system-prompt '\(escapedInstructions)'"
+            claudeCmd += " --append-system-prompt \(shellEscape(customInstructions))"
         }
 
         usedResume = sessionId != nil
         if let sessionId {
-            claudeCmd += " --resume \(sessionId)"
+            claudeCmd += " --resume \(shellEscape(sessionId))"
         }
-        claudeCmd += " '\(escapedPrompt)'"
+        claudeCmd += " \(shellEscape(fullPrompt))"
 
         // Wrap claude with a heartbeat so the sprite stays alive while Claude
         // is waiting for an API response and Wisp is detached. The heartbeat
@@ -1566,14 +1560,6 @@ final class ChatViewModel {
 
     // MARK: - Worktrees
 
-    /// Returns a POSIX single-quoted shell argument with any internal single quotes escaped.
-    /// Single quotes have no escape sequence in POSIX shell, so the idiom is:
-    /// close the quote, insert a backslash-escaped literal quote, then reopen.
-    /// e.g. "it's here" → "'it'\\''s here'"
-    static func shellEscapePath(_ s: String) -> String {
-        "'" + s.replacingOccurrences(of: "'", with: "'\\''") + "'"
-    }
-
     /// Converts a chat name to a kebab-case git branch name.
     /// e.g. "Add dark mode" → "add-dark-mode"
     static func branchName(from chatName: String) -> String {
@@ -1604,10 +1590,10 @@ final class ChatViewModel {
         worktreeDir: String,
         uniqueBranchName: String
     ) -> String {
-        let qWorkDir = shellEscapePath(currentWorkDir)
-        let qWorktreeParent = shellEscapePath(worktreeParent)
-        let qWorktreeDir = shellEscapePath(worktreeDir)
-        let qBranch = shellEscapePath(uniqueBranchName)
+        let qWorkDir = shellEscape(currentWorkDir)
+        let qWorktreeParent = shellEscape(worktreeParent)
+        let qWorktreeDir = shellEscape(worktreeDir)
+        let qBranch = shellEscape(uniqueBranchName)
 
         return """
         git config --global --add safe.directory '*' 2>/dev/null; \
@@ -1690,7 +1676,7 @@ final class ChatViewModel {
             let newPath = worktree.hasSuffix("/") ? worktree + filename : worktree + "/" + filename
             guard attachment.path != newPath else { continue }
             copyJobs.append((index: i, newPath: newPath))
-            copyCommands.append("cp \(Self.shellEscapePath(attachment.path)) \(Self.shellEscapePath(newPath)) 2>/dev/null && echo ok || echo skip")
+            copyCommands.append("cp \(shellEscape(attachment.path)) \(shellEscape(newPath)) 2>/dev/null && echo ok || echo skip")
         }
 
         guard !copyJobs.isEmpty else { return attachments }
