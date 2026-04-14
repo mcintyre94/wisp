@@ -42,13 +42,14 @@ struct SpriteOverviewView: View {
         List {
             if let chatListVM = chatListViewModel {
                 Section("Chats") {
-                    ForEach(chatListVM.chats, id: \.id) { chat in
-                        chatRow(for: chat, in: chatListVM)
-                    }
                     Button {
                         onNewChat?()
                     } label: {
                         Label("New Chat", systemImage: "square.and.pencil")
+                    }
+                    .alignmentGuide(.listRowSeparatorLeading) { _ in 0 }
+                    ForEach(chatListVM.chats, id: \.id) { chat in
+                        chatRow(for: chat, in: chatListVM)
                     }
                 }
 
