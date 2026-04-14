@@ -381,22 +381,25 @@ struct SpriteOverviewView: View {
                 }
             }
         }
-        .confirmationDialog(
+        .alert(
             "Delete Chat",
             isPresented: Binding(
                 get: { chatToDelete != nil },
                 set: { if !$0 { chatToDelete = nil } }
             ),
-            titleVisibility: .visible
-        ) {
+            presenting: chatToDelete
+        ) { chat in
             Button("Delete", role: .destructive) {
-                if let chat = chatToDelete, let chatListVM = chatListViewModel {
+                if let chatListVM = chatListViewModel {
                     chatSessionManager.remove(chatId: chat.id, modelContext: modelContext)
                     chatListVM.deleteChat(chat, apiClient: apiClient, modelContext: modelContext)
-                    chatToDelete = nil
                 }
+                chatToDelete = nil
             }
-        } message: {
+            Button("Cancel", role: .cancel) {
+                chatToDelete = nil
+            }
+        } message: { _ in
             Text("This will permanently delete the chat and its history.")
         }
         .refreshable {
