@@ -21,6 +21,10 @@ struct ChatSwitcherSheet: View {
                     )
                     .contentShape(Rectangle())
                     .onTapGesture {
+                        if chat.isUnread {
+                            chat.isUnread = false
+                            try? modelContext.save()
+                        }
                         viewModel.selectChat(chat)
                         dismiss()
                     }
