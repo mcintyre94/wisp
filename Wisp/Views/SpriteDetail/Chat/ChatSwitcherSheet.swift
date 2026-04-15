@@ -3,6 +3,7 @@ import SwiftData
 
 struct ChatSwitcherSheet: View {
     @Bindable var viewModel: SpriteChatListViewModel
+    var onSelectChat: ((SpriteChat) -> Void)? = nil
     @Environment(SpritesAPIClient.self) private var apiClient
     @Environment(ChatSessionManager.self) private var chatSessionManager
     @Environment(\.modelContext) private var modelContext
@@ -25,7 +26,16 @@ struct ChatSwitcherSheet: View {
                             chat.isUnread = false
                             try? modelContext.save()
                         }
-                        viewModel.selectChat(chat)
+                        // Route selection via an explicit callback rather than mutating
+                        // activeChatId here. The sheet runs inside a pushed ChatView subtree,
+                        // and SpriteDetailView's onChange(of: activeChatId) doesn't fire in
+                        // that context unless the property is already observed in its body —
+                        // so relying on observation would silently drop the selection.
+                        if let onSelectChat {
+                            onSelectChat(chat)
+                        } else {
+                            viewModel.selectChat(chat)
+                        }
                         dismiss()
                     }
                     .contextMenu {

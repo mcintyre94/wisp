@@ -152,6 +152,10 @@ struct SpriteDetailView: View {
                         let chat = chatListViewModel.createChat(modelContext: modelContext)
                         switchToChat(chat)
                     },
+                    onSelectChat: { chat in
+                        markChatRead(chat)
+                        switchToChat(chat)
+                    },
                     existingSessionIds: Set(chatListViewModel.chats.filter { !$0.isClosed }.compactMap(\.claudeSessionId)),
                     onFork: { checkpointId, messageId in
                         pendingFork = (checkpointId, messageId)
