@@ -12,6 +12,7 @@ struct ChatView: View {
     var topAccessory: AnyView? = nil
     var chatListViewModel: SpriteChatListViewModel? = nil
     var onNewChat: (() -> Void)? = nil
+    var onSelectChat: ((SpriteChat) -> Void)? = nil
     var existingSessionIds: Set<String> = []
     var onFork: ((String, UUID) -> Void)? = nil
     @FocusState private var isInputFocused: Bool
@@ -230,7 +231,7 @@ struct ChatView: View {
         }
         .sheet(isPresented: $showChatSwitcher) {
             if let chatListVM = chatListViewModel {
-                ChatSwitcherSheet(viewModel: chatListVM)
+                ChatSwitcherSheet(viewModel: chatListVM, onSelectChat: onSelectChat)
             }
         }
         .sheet(item: $quickActionsViewModel) { vm in
