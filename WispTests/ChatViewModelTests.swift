@@ -32,6 +32,14 @@ struct ChatViewModelTests {
         }
     }
 
+    // MARK: - initial state
+
+    @Test func initialEffortLevelIsMedium() throws {
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+        #expect(vm.effortLevel == .medium)
+    }
+
     // MARK: - handleEvent: system
 
     @Test func handleEvent_systemSetsModelName() throws {
