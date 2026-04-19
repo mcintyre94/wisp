@@ -149,3 +149,58 @@ xcodebuild -scheme Wisp -sdk iphonesimulator -destination 'platform=iOS Simulato
 # Run tests
 xcodebuild -scheme Wisp -sdk iphonesimulator -destination 'platform=iOS Simulator,name=iPhone 17' test
 ```
+
+## Debugging on the simulator
+
+### Adding debug logs
+
+Use `os.Logger` with a distinctive subsystem — **not `print`**. `print` writes to stdout, which `xcrun simctl spawn booted log stream` does not capture. `Logger` writes to the unified log, which can be streamed and filtered cleanly.
+
+```swift
+import os
+
+@MainActor
+enum LaunchDebug {
+    static let logger = Logger(subsystem: "com.wisp.app", category: "LaunchDebug")
+    static let start = Date()
+    static func log(_ msg: String) {
+        let ms = Int(Date().timeIntervalSince(start) * 1000)
+        logger.log("t+\(ms)ms \(msg)")
+    }
+}
+```
+
+Log from SwiftUI bodies with `let _ = LaunchDebug.log(...)` so the call sites don't break the view builder. Log from `.onAppear`, `.task`, `.onChange`, and any lifecycle hook you want to trace.
+
+### Capturing logs for a single launch
+
+```bash
+# 1. Start log stream BEFORE launching, filtered to your subsystem
+xcrun simctl spawn booted log stream --predicate 'subsystem == "com.wisp.app"' --style compact > /tmp/wisp.log 2>&1 &
+
+# 2. Drive a clean test
+xcrun simctl terminate booted app.callum.wisp
+xcrun simctl install booted /path/to/Wisp.app   # built via xcodebuild
+xcrun simctl launch booted app.callum.wisp
+
+# 3. Wait for activity, then read
+sleep 5
+cat /tmp/wisp.log
+
+# 4. Verify UI state with a screenshot
+xcrun simctl io booted screenshot /tmp/wisp-screen.png
+```
+
+Bundle ID is `app.callum.wisp`. The built `.app` lives in `DerivedData/Wisp-*/Build/Products/Debug-iphonesimulator/Wisp.app`.
+
+### Caveats
+
+- `simctl install` + `simctl launch` is **not** identical to an Xcode build+run — Xcode launches with the debugger attached, which can surface bugs that the simctl path hides (and vice versa). If you can't reproduce a bug from the command line, fall back to reproducing in Xcode and reading the debug console instead.
+- Scene phase transitions on launch go `background → inactive → active`. Logging `scenePhase` via `.onChange(of: scenePhase, initial: true)` at the app root is useful for spotting rendering issues that correlate with phase changes.
+- A freshly installed app launches with scenePhase starting at `background` before transitioning — don't assume the first body eval happens in `.active`.
+
+### Red herring: blank screen on first launch after a fresh build
+
+Fresh builds (Xcode build+run, or `simctl install` of a new binary) can produce a blank screen on launch — **black in dark mode, white in light mode** — before the app UI appears. Reproduces on real device and simulator. Does not repro on a warm relaunch of the same binary. Opening the multitasking switcher and returning appears to unblock it, though timing isn't fully pinned down.
+
+**This is almost certainly not an app bug.** The diagnostic signature: if you add `Logger`-based lifecycle tracing and see **no logs at all during the blank period** (i.e. `WispApp.init` hasn't run yet), the Swift runtime hasn't reached `@main`. Our code isn't executing — don't chase SwiftUI, scene, or view-model theories. The likely cause is iOS first-launch-of-new-binary overhead (code-signing validation, dyld fixups, AppIntents metadata processing, etc.) that a real user who taps the icon on Springboard wouldn't trigger, because the binary has already been validated on install.
