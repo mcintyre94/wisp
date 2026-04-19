@@ -618,6 +618,12 @@ final class ChatViewModel {
                 if let content = entry.message?.content {
                     switch content {
                     case .string(let text):
+                        // Skip CLI-injected entries (local commands run via `!`)
+                        if text.hasPrefix("<local-command-caveat>")
+                            || text.hasPrefix("<bash-input>")
+                            || text.hasPrefix("<bash-stdout>") {
+                            continue
+                        }
                         // User prompt — convert to wisp_user_prompt
                         let event = WispUserPromptEvent(text: text, timestamp: "")
                         if let eventData = try? encoder.encode(event),
@@ -633,6 +639,12 @@ final class ChatViewModel {
                             // Text-only blocks — convert to wisp_user_prompt
                             let text = blocks.compactMap { $0.text }.joined(separator: "\n")
                             guard !text.isEmpty else { continue }
+                            // Skip CLI-injected entries in block form too
+                            if text.hasPrefix("<local-command-caveat>")
+                                || text.hasPrefix("<bash-input>")
+                                || text.hasPrefix("<bash-stdout>") {
+                                continue
+                            }
                             let event = WispUserPromptEvent(text: text, timestamp: "")
                             if let eventData = try? encoder.encode(event),
                                let eventStr = String(data: eventData, encoding: .utf8) {
@@ -641,8 +653,9 @@ final class ChatViewModel {
                         }
                     }
                 }
-            } else {
-                // system, assistant, result — pass through verbatim
+            } else if type == "system" || type == "assistant" || type == "result" {
+                // Pass through verbatim — skip non-conversation types
+                // (file-history-snapshot, last-prompt, permission-mode, etc.)
                 lines.append(String(line))
             }
         }

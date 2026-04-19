@@ -1451,4 +1451,37 @@ struct ChatViewModelTests {
         #expect(lines[0].contains("system"))
         #expect(lines[1].contains("result"))
     }
+
+    @Test func convertJSONLToWisp_cliInjectedEntriesSkipped() {
+        let jsonl = """
+        {"type":"user","message":{"role":"user","content":"real prompt"},"session_id":"s1"}
+        {"type":"user","message":{"role":"user","content":"<local-command-caveat>Caveat: ...</local-command-caveat>"},"session_id":"s1"}
+        {"type":"user","message":{"role":"user","content":"<bash-input>ls</bash-input>"},"session_id":"s1"}
+        {"type":"user","message":{"role":"user","content":"<bash-stdout>file1.txt</bash-stdout><bash-stderr></bash-stderr>"},"session_id":"s1"}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"response"}]},"session_id":"s1"}
+        """
+
+        let wisp = ChatViewModel.convertJSONLToWisp(jsonl)
+        let lines = wisp.split(separator: "\n")
+
+        #expect(lines.count == 2) // real prompt + assistant only
+        #expect(lines[0].contains("wisp_user_prompt"))
+        #expect(lines[0].contains("real prompt"))
+    }
+
+    @Test func convertJSONLToWisp_nonConversationTypesSkipped() {
+        let jsonl = """
+        {"type":"system","session_id":"s1","model":"claude-sonnet"}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"hi"}]},"session_id":"s1"}
+        {"type":"file-history-snapshot","messageId":"abc","snapshot":{}}
+        {"type":"last-prompt","lastPrompt":"hello","sessionId":"s1"}
+        {"type":"permission-mode","permissionMode":"bypassPermissions","sessionId":"s1"}
+        {"type":"result","session_id":"s1","is_error":false}
+        """
+
+        let wisp = ChatViewModel.convertJSONLToWisp(jsonl)
+        let lines = wisp.split(separator: "\n")
+
+        #expect(lines.count == 3) // system + assistant + result only
+    }
 }
