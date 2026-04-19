@@ -472,6 +472,96 @@ struct ChatViewModelTests {
         #expect(messages[0].textContent == "Hello from blocks")
     }
 
+    @Test func parseSessionJSONL_realisticMultiTurnWithThinkingAndExtras() {
+        // Mirrors the structure of a real Claude Code JSONL file:
+        // permission-mode, file-history-snapshot, attachment, system, thinking blocks,
+        // CLI-injected entries (bash-input, bash-stdout, local-command-caveat)
+        let jsonl = """
+        {"type":"permission-mode","permissionMode":"bypassPermissions","sessionId":"s1"}
+        {"type":"file-history-snapshot","messageId":"m1","snapshot":{}}
+        {"type":"user","message":{"role":"user","content":"Write me a weather app"},"sessionId":"s1"}
+        {"type":"attachment","messageId":"m1","filePath":"/tmp/foo.png"}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"thinking","thinking":"I will create..."}]},"sessionId":"s1"}
+        {"type":"file-history-snapshot","messageId":"m2","snapshot":{}}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"tu-w1","name":"Write","input":{"file_path":"/weather.py","content":"print('hello')"}}]},"sessionId":"s1"}
+        {"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tu-w1","content":"File written"}]},"sessionId":"s1"}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"tu-b1","name":"Bash","input":{"command":"python3 weather.py"}}]},"sessionId":"s1"}
+        {"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tu-b1","content":"hello"}]},"sessionId":"s1"}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Here is your weather app!"}]},"sessionId":"s1"}
+        {"type":"system","sessionId":"s1","isMeta":false}
+        {"type":"user","message":{"role":"user","content":"<local-command-caveat>Caveat: ...</local-command-caveat>"},"isMeta":true}
+        {"type":"user","message":{"role":"user","content":"<bash-input>python3 weather.py</bash-input>"},"sessionId":"s1"}
+        {"type":"user","message":{"role":"user","content":"<bash-stdout>hello</bash-stdout><bash-stderr></bash-stderr>"},"sessionId":"s1"}
+        {"type":"file-history-snapshot","messageId":"m3","snapshot":{}}
+        {"type":"user","message":{"role":"user","content":"Add a location CLI flag"},"sessionId":"s1"}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"tu-e1","name":"Edit","input":{"file_path":"/weather.py","old_string":"print","new_string":"import sys; print"}}]},"sessionId":"s1"}
+        {"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tu-e1","content":"File edited"}]},"sessionId":"s1"}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Added location flag!"}]},"sessionId":"s1"}
+        {"type":"last-prompt","lastPrompt":"Add a location CLI flag","sessionId":"s1"}
+        {"type":"permission-mode","permissionMode":"bypassPermissions","sessionId":"s1"}
+        """
+
+        let messages = ChatViewModel.parseSessionJSONL(jsonl)
+
+        // Should produce 4 messages: user1, assistant1, user2, assistant2
+        #expect(messages.count == 4, "Expected 4 messages but got \\(messages.count)")
+        #expect(messages[0].role == .user)
+        #expect(messages[0].textContent == "Write me a weather app")
+        #expect(messages[1].role == .assistant)
+        // assistant1 should have: toolUse(Write), toolResult, toolUse(Bash), toolResult, text
+        #expect(messages[1].content.count == 5, "Turn 1 assistant should have 5 content items, got \\(messages[1].content.count)")
+        #expect(messages[2].role == .user)
+        #expect(messages[2].textContent == "Add a location CLI flag")
+        #expect(messages[3].role == .assistant)
+        // assistant2 should have: toolUse(Edit), toolResult, text
+        #expect(messages[3].content.count == 3)
+        #expect(messages[3].textContent == "Added location flag!")
+    }
+
+    @Test func convertJSONLToWisp_thenParseWispLog_roundTrip() {
+        // Verify the full round-trip: JSONL → convertJSONLToWisp → parseWispLog
+        // produces the same conversation structure as parseSessionJSONL
+        let jsonl = """
+        {"type":"permission-mode","permissionMode":"bypassPermissions","sessionId":"s1"}
+        {"type":"file-history-snapshot","messageId":"m1","snapshot":{}}
+        {"type":"user","message":{"role":"user","content":"Write me a weather app"},"sessionId":"s1"}
+        {"type":"attachment","messageId":"m1","filePath":"/tmp/foo.png"}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"thinking","thinking":"I will create..."}]},"sessionId":"s1"}
+        {"type":"file-history-snapshot","messageId":"m2","snapshot":{}}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"tu-w1","name":"Write","input":{"file_path":"/weather.py","content":"print('hello')"}}]},"sessionId":"s1"}
+        {"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tu-w1","content":"File written"}]},"sessionId":"s1"}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"tu-b1","name":"Bash","input":{"command":"python3 weather.py"}}]},"sessionId":"s1"}
+        {"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tu-b1","content":"hello"}]},"sessionId":"s1"}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Here is your weather app!"}]},"sessionId":"s1"}
+        {"type":"system","sessionId":"s1","isMeta":false}
+        {"type":"user","message":{"role":"user","content":"<local-command-caveat>Caveat: ...</local-command-caveat>"},"isMeta":true}
+        {"type":"user","message":{"role":"user","content":"<bash-input>python3 weather.py</bash-input>"},"sessionId":"s1"}
+        {"type":"user","message":{"role":"user","content":"<bash-stdout>hello</bash-stdout><bash-stderr></bash-stderr>"},"sessionId":"s1"}
+        {"type":"file-history-snapshot","messageId":"m3","snapshot":{}}
+        {"type":"user","message":{"role":"user","content":"Add a location CLI flag"},"sessionId":"s1"}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"tu-e1","name":"Edit","input":{"file_path":"/weather.py","old_string":"print","new_string":"import sys; print"}}]},"sessionId":"s1"}
+        {"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tu-e1","content":"File edited"}]},"sessionId":"s1"}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Added location flag!"}]},"sessionId":"s1"}
+        {"type":"last-prompt","lastPrompt":"Add a location CLI flag","sessionId":"s1"}
+        {"type":"permission-mode","permissionMode":"bypassPermissions","sessionId":"s1"}
+        """
+
+        let wispContent = ChatViewModel.convertJSONLToWisp(jsonl)
+        let (wispMessages, _) = ChatViewModel.parseWispLog(wispContent)
+
+        // Should produce same 4 messages as parseSessionJSONL
+        #expect(wispMessages.count == 4, "Round-trip produced \(wispMessages.count) messages, expected 4")
+        #expect(wispMessages[0].role == .user)
+        #expect(wispMessages[0].textContent == "Write me a weather app")
+        #expect(wispMessages[1].role == .assistant)
+        #expect(wispMessages[1].content.count == 5, "Turn 1 assistant should have 5 items, got \(wispMessages[1].content.count)")
+        #expect(wispMessages[2].role == .user)
+        #expect(wispMessages[2].textContent == "Add a location CLI flag")
+        #expect(wispMessages[3].role == .assistant)
+        #expect(wispMessages[3].content.count == 3)
+        #expect(wispMessages[3].textContent == "Added location flag!")
+    }
+
     // MARK: - claudeProjectPathEncoding
 
     @Test func claudeProjectPathEncoding_simpleProject() {
@@ -1235,130 +1325,253 @@ struct ChatViewModelTests {
         #expect(card.result?.toolUseId == "tu-1")
     }
 
-    // MARK: - mergedWithLocalMessages
+    // MARK: - wispLogPath
 
-    @Test func mergedWithLocalMessages_preservesSubAgentToolCalls() throws {
-        // Local messages have sub-agent tool calls (streamed live); JSONL only has main-agent turns.
-        // The merge should keep local tool cards and use JSONL text if it's more complete.
-        let ctx = try makeModelContext()
-        let (vm, _) = makeChatViewModel(modelContext: ctx)
-
-        // Simulate locally-persisted assistant message with a sub-agent Bash call
-        let userMsg = ChatMessage(role: .user, content: [.text("do the thing")])
-        let subAgentCard = ToolUseCard(toolUseId: "tu-bash", toolName: "Bash", input: .object(["command": .string("ls")]))
-        let assistantMsg = ChatMessage(role: .assistant, content: [
-            .toolUse(subAgentCard),
-            .text("Partial text..."),   // truncated — app disconnected before full response
-        ])
-        vm.messages = [userMsg, assistantMsg]
-
-        // JSONL version: no Bash card, but complete final text
-        let jsonlUser = ChatMessage(role: .user, content: [.text("do the thing")])
-        let jsonlAssistant = ChatMessage(role: .assistant, content: [
-            .text("Complete response from Claude with all details."),
-        ])
-        let jsonlMessages = [jsonlUser, jsonlAssistant]
-
-        let result = vm.mergedWithLocalMessages(jsonlMessages)
-
-        #expect(result.count == 2)
-        let merged = result[1]
-        #expect(merged.role == .assistant)
-        // Sub-agent Bash tool call preserved
-        let hasToolUse = merged.content.contains { if case .toolUse = $0 { true } else { false } }
-        #expect(hasToolUse, "Sub-agent tool call should be preserved from local messages")
-        // Text updated to the longer JSONL version
-        #expect(merged.textContent == "Complete response from Claude with all details.")
+    @Test func wispLogPath_formatsCorrectly() {
+        let id = UUID(uuidString: "12345678-1234-1234-1234-123456789ABC")!
+        let path = ChatViewModel.wispLogPath(for: id)
+        #expect(path == "/home/sprite/.wisp/chats/12345678-1234-1234-1234-123456789abc.wisplog")
     }
 
-    @Test func mergedWithLocalMessages_fallsBackToJSONLWhenStructureDiffers() throws {
-        // If the conversation structures differ (different user message counts), fall back
-        // to the JSONL messages as-is. In practice this shouldn't happen — Claude can't
-        // create new user turns on its own — but it's a safety net for unexpected states.
-        let ctx = try makeModelContext()
-        let (vm, _) = makeChatViewModel(modelContext: ctx)
+    // MARK: - parseWispLog
 
-        let userMsg = ChatMessage(role: .user, content: [.text("first message")])
-        vm.messages = [userMsg]
+    @Test func parseWispLog_singleTurn() {
+        let ndjson = """
+        {"type":"wisp_user_prompt","text":"Hello","timestamp":"2026-01-01T00:00:00Z"}
+        {"type":"system","session_id":"sess-1","model":"claude-sonnet"}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Hi there!"}]}}
+        {"type":"result","session_id":"sess-1","is_error":false}
+        """
 
-        // JSONL has an extra exchange
-        let jsonlMessages = [
-            ChatMessage(role: .user, content: [.text("first message")]),
-            ChatMessage(role: .assistant, content: [.text("reply")]),
-            ChatMessage(role: .user, content: [.text("follow-up")]),
-            ChatMessage(role: .assistant, content: [.text("final reply")]),
-        ]
+        let (messages, sessionId) = ChatViewModel.parseWispLog(ndjson)
 
-        let result = vm.mergedWithLocalMessages(jsonlMessages)
-
-        #expect(result.count == 4, "Should fall back to JSONL when structures differ")
+        #expect(messages.count == 2)
+        #expect(messages[0].role == .user)
+        #expect(messages[0].textContent == "Hello")
+        #expect(messages[1].role == .assistant)
+        #expect(messages[1].textContent == "Hi there!")
+        #expect(sessionId == "sess-1")
     }
 
-    @Test func mergedWithLocalMessages_preservesIntroTextBeforeToolCalls() throws {
-        // "Let me check…" → tool call → "Final response" — intro text must stay in
-        // position; only the last text block (which may be truncated) should be updated.
-        let ctx = try makeModelContext()
-        let (vm, _) = makeChatViewModel(modelContext: ctx)
+    @Test func parseWispLog_multiTurn() {
+        let ndjson = """
+        {"type":"wisp_user_prompt","text":"First message","timestamp":""}
+        {"type":"system","session_id":"sess-1","model":"claude-sonnet"}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Reply 1"}]}}
+        {"type":"result","session_id":"sess-1","is_error":false}
+        {"type":"wisp_user_prompt","text":"Follow-up","timestamp":""}
+        {"type":"system","session_id":"sess-1","model":"claude-sonnet"}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Reply 2"}]}}
+        {"type":"result","session_id":"sess-1","is_error":false}
+        """
 
-        let taskCard = ToolUseCard(toolUseId: "tu-task", toolName: "Task", input: .null)
-        let userMsg = ChatMessage(role: .user, content: [.text("do the thing")])
-        let assistantMsg = ChatMessage(role: .assistant, content: [
-            .text("Let me check on that..."),
-            .toolUse(taskCard),
-            .text("Partial fi"),  // truncated
-        ])
-        vm.messages = [userMsg, assistantMsg]
+        let (messages, sessionId) = ChatViewModel.parseWispLog(ndjson)
 
-        let jsonlMessages = [
-            ChatMessage(role: .user, content: [.text("do the thing")]),
-            ChatMessage(role: .assistant, content: [
-                .text("Let me check on that..."),
-                .toolUse(taskCard),
-                .text("Final response complete."),
-            ]),
-        ]
-
-        let result = vm.mergedWithLocalMessages(jsonlMessages)
-        let merged = result[1]
-
-        // Intro text stays first
-        guard case .text(let intro) = merged.content.first else {
-            Issue.record("Expected intro text as first content item"); return
-        }
-        #expect(intro == "Let me check on that...")
-        // Tool call stays second
-        guard case .toolUse = merged.content[1] else {
-            Issue.record("Expected toolUse as second content item"); return
-        }
-        // Final text updated from JSONL
-        guard case .text(let final) = merged.content[2] else {
-            Issue.record("Expected text as third content item"); return
-        }
-        #expect(final == "Final response complete.")
+        #expect(messages.count == 4)
+        #expect(messages[0].role == .user)
+        #expect(messages[0].textContent == "First message")
+        #expect(messages[1].role == .assistant)
+        #expect(messages[1].textContent == "Reply 1")
+        #expect(messages[2].role == .user)
+        #expect(messages[2].textContent == "Follow-up")
+        #expect(messages[3].role == .assistant)
+        #expect(messages[3].textContent == "Reply 2")
+        #expect(sessionId == "sess-1")
     }
 
-    @Test func mergedWithLocalMessages_keepsLocalTextIfAlreadyComplete() throws {
-        // If local text is already as long as the JSONL text, keep the local version unchanged.
-        let ctx = try makeModelContext()
-        let (vm, _) = makeChatViewModel(modelContext: ctx)
+    @Test func parseWispLog_toolUseAndResultLinkage() {
+        let ndjson = """
+        {"type":"wisp_user_prompt","text":"List files","timestamp":""}
+        {"type":"system","session_id":"sess-1","model":"claude-sonnet"}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Let me check."},{"type":"tool_use","id":"tu-1","name":"Bash","input":{"command":"ls"}}]}}
+        {"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tu-1","content":"file1.txt\\nfile2.txt"}]}}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Found 2 files."}]}}
+        {"type":"result","session_id":"sess-1","is_error":false}
+        """
 
-        let subAgentCard = ToolUseCard(toolUseId: "tu-read", toolName: "Read", input: .object(["file_path": .string("/foo.txt")]))
-        let userMsg = ChatMessage(role: .user, content: [.text("read a file")])
-        let assistantMsg = ChatMessage(role: .assistant, content: [
-            .toolUse(subAgentCard),
-            .text("Here is the content of the file."),
-        ])
-        vm.messages = [userMsg, assistantMsg]
+        let (messages, _) = ChatViewModel.parseWispLog(ndjson)
 
-        let jsonlMessages = [
-            ChatMessage(role: .user, content: [.text("read a file")]),
-            ChatMessage(role: .assistant, content: [.text("Here is the content.")]),  // shorter
-        ]
+        #expect(messages.count == 2) // user + assistant
+        let assistant = messages[1]
+        #expect(assistant.role == .assistant)
 
-        let result = vm.mergedWithLocalMessages(jsonlMessages)
+        // Should have: text, toolUse, toolResult, text
+        #expect(assistant.content.count == 4)
+        guard case .text(let intro) = assistant.content[0] else {
+            Issue.record("Expected text"); return
+        }
+        #expect(intro == "Let me check.")
 
-        #expect(result[1].textContent == "Here is the content of the file.", "Local text should be kept when it's already complete")
-        let hasToolUse = result[1].content.contains { if case .toolUse = $0 { true } else { false } }
-        #expect(hasToolUse)
+        guard case .toolUse(let card) = assistant.content[1] else {
+            Issue.record("Expected toolUse"); return
+        }
+        #expect(card.toolName == "Bash")
+        #expect(card.toolUseId == "tu-1")
+
+        guard case .toolResult(let result) = assistant.content[2] else {
+            Issue.record("Expected toolResult"); return
+        }
+        #expect(result.toolUseId == "tu-1")
+        #expect(result.toolName == "Bash")
+
+        // Tool use card should be linked to its result
+        #expect(card.result != nil)
+        #expect(card.result?.toolUseId == "tu-1")
+
+        guard case .text(let outro) = assistant.content[3] else {
+            Issue.record("Expected trailing text"); return
+        }
+        #expect(outro == "Found 2 files.")
+    }
+
+    @Test func parseWispLog_consecutiveTextMerging() {
+        // Multiple text blocks in the same assistant event should be merged
+        let ndjson = """
+        {"type":"wisp_user_prompt","text":"Hello","timestamp":""}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Part 1 "},{"type":"text","text":"Part 2"}]}}
+        {"type":"result","session_id":"sess-1","is_error":false}
+        """
+
+        let (messages, _) = ChatViewModel.parseWispLog(ndjson)
+
+        #expect(messages.count == 2)
+        #expect(messages[1].textContent == "Part 1 Part 2")
+    }
+
+    @Test func parseWispLog_corruptLinesSkipped() {
+        let ndjson = """
+        {"type":"wisp_user_prompt","text":"Hello","timestamp":""}
+        not valid json at all
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Works fine"}]}}
+        {"truncated
+        {"type":"result","session_id":"sess-1","is_error":false}
+        """
+
+        let (messages, _) = ChatViewModel.parseWispLog(ndjson)
+
+        #expect(messages.count == 2)
+        #expect(messages[1].textContent == "Works fine")
+    }
+
+    @Test func parseWispLog_emptyInput() {
+        let (messages, sessionId) = ChatViewModel.parseWispLog("")
+        #expect(messages.isEmpty)
+        #expect(sessionId == nil)
+    }
+
+    @Test func parseWispLog_trailingAssistantWithoutResult() {
+        // If stream was interrupted before result event, trailing assistant should still be captured
+        let ndjson = """
+        {"type":"wisp_user_prompt","text":"Hello","timestamp":""}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"I was saying..."}]}}
+        """
+
+        let (messages, _) = ChatViewModel.parseWispLog(ndjson)
+
+        #expect(messages.count == 2)
+        #expect(messages[1].role == .assistant)
+        #expect(messages[1].textContent == "I was saying...")
+    }
+
+    // MARK: - convertJSONLToWisp
+
+    @Test func convertJSONLToWisp_userPromptString() {
+        let jsonl = """
+        {"type":"user","message":{"role":"user","content":"Hello world"},"session_id":"s1"}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Hi!"}]},"session_id":"s1"}
+        """
+
+        let wisp = ChatViewModel.convertJSONLToWisp(jsonl)
+        let lines = wisp.split(separator: "\n")
+
+        #expect(lines.count == 2)
+        // First line should be a wisp_user_prompt
+        #expect(lines[0].contains("wisp_user_prompt"))
+        #expect(lines[0].contains("Hello world"))
+        // Second line should be passed through
+        #expect(lines[1].contains("assistant"))
+    }
+
+    @Test func convertJSONLToWisp_userPromptTextBlocks() {
+        let jsonl = """
+        {"type":"user","message":{"role":"user","content":[{"type":"text","text":"Block prompt"}]},"session_id":"s1"}
+        """
+
+        let wisp = ChatViewModel.convertJSONLToWisp(jsonl)
+
+        #expect(wisp.contains("wisp_user_prompt"))
+        #expect(wisp.contains("Block prompt"))
+    }
+
+    @Test func convertJSONLToWisp_toolResultsPassThrough() {
+        let jsonl = """
+        {"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tu-1","content":"output"}]},"session_id":"s1"}
+        """
+
+        let wisp = ChatViewModel.convertJSONLToWisp(jsonl)
+
+        // Should NOT be converted to wisp_user_prompt — pass through verbatim
+        #expect(!wisp.contains("wisp_user_prompt"))
+        #expect(wisp.contains("tool_result"))
+    }
+
+    @Test func convertJSONLToWisp_metaEntriesSkipped() {
+        let jsonl = """
+        {"type":"user","message":{"role":"user","content":"real prompt"},"session_id":"s1"}
+        {"type":"user","message":{"role":"user","content":[{"type":"text","text":"skill injection"}]},"session_id":"s1","isMeta":true}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"response"}]},"session_id":"s1"}
+        """
+
+        let wisp = ChatViewModel.convertJSONLToWisp(jsonl)
+        let lines = wisp.split(separator: "\n")
+
+        #expect(lines.count == 2) // user prompt + assistant, meta skipped
+    }
+
+    @Test func convertJSONLToWisp_systemAndResultPassThrough() {
+        let jsonl = """
+        {"type":"system","session_id":"s1","model":"claude-sonnet"}
+        {"type":"result","session_id":"s1","is_error":false}
+        """
+
+        let wisp = ChatViewModel.convertJSONLToWisp(jsonl)
+        let lines = wisp.split(separator: "\n")
+
+        #expect(lines.count == 2)
+        #expect(lines[0].contains("system"))
+        #expect(lines[1].contains("result"))
+    }
+
+    @Test func convertJSONLToWisp_cliInjectedEntriesSkipped() {
+        let jsonl = """
+        {"type":"user","message":{"role":"user","content":"real prompt"},"session_id":"s1"}
+        {"type":"user","message":{"role":"user","content":"<local-command-caveat>Caveat: ...</local-command-caveat>"},"session_id":"s1"}
+        {"type":"user","message":{"role":"user","content":"<bash-input>ls</bash-input>"},"session_id":"s1"}
+        {"type":"user","message":{"role":"user","content":"<bash-stdout>file1.txt</bash-stdout><bash-stderr></bash-stderr>"},"session_id":"s1"}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"response"}]},"session_id":"s1"}
+        """
+
+        let wisp = ChatViewModel.convertJSONLToWisp(jsonl)
+        let lines = wisp.split(separator: "\n")
+
+        #expect(lines.count == 2) // real prompt + assistant only
+        #expect(lines[0].contains("wisp_user_prompt"))
+        #expect(lines[0].contains("real prompt"))
+    }
+
+    @Test func convertJSONLToWisp_nonConversationTypesSkipped() {
+        let jsonl = """
+        {"type":"system","session_id":"s1","model":"claude-sonnet"}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"hi"}]},"session_id":"s1"}
+        {"type":"file-history-snapshot","messageId":"abc","snapshot":{}}
+        {"type":"last-prompt","lastPrompt":"hello","sessionId":"s1"}
+        {"type":"permission-mode","permissionMode":"bypassPermissions","sessionId":"s1"}
+        {"type":"result","session_id":"s1","is_error":false}
+        """
+
+        let wisp = ChatViewModel.convertJSONLToWisp(jsonl)
+        let lines = wisp.split(separator: "\n")
+
+        #expect(lines.count == 3) // system + assistant + result only
     }
 }

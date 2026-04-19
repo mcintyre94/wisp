@@ -60,11 +60,13 @@ final class SpriteChatListViewModel {
         chat.isClosed = true
         try? modelContext.save()
 
-        // Remove worktree (best-effort, fire-and-forget)
+        // Remove worktree and wisp log file (best-effort, fire-and-forget)
+        let chatId = chat.id
+        let sName = spriteName
         if let path = chat.worktreePath {
-            let sName = spriteName
             Task { await Self.removeWorktree(path: path, spriteName: sName, apiClient: apiClient) }
         }
+        Task { await Self.removeWispLog(chatId: chatId, spriteName: sName, apiClient: apiClient) }
 
         // If closing the active chat, select next open chat
         if activeChatId == chat.id {
@@ -75,11 +77,13 @@ final class SpriteChatListViewModel {
     func deleteChat(_ chat: SpriteChat, apiClient: SpritesAPIClient, modelContext: ModelContext) {
         let wasActive = activeChatId == chat.id
 
-        // Remove worktree (best-effort, fire-and-forget)
+        // Remove worktree and wisp log file (best-effort, fire-and-forget)
+        let chatId = chat.id
+        let sName = spriteName
         if let path = chat.worktreePath {
-            let sName = spriteName
             Task { await Self.removeWorktree(path: path, spriteName: sName, apiClient: apiClient) }
         }
+        Task { await Self.removeWispLog(chatId: chatId, spriteName: sName, apiClient: apiClient) }
 
         chats.removeAll { $0.id == chat.id }
         modelContext.delete(chat)
@@ -110,6 +114,14 @@ final class SpriteChatListViewModel {
         try? modelContext.save()
         chats = []
         activeChatId = nil
+        // Remove all wisp log files in one shot
+        Task {
+            _ = await apiClient.runExec(
+                spriteName: sName,
+                command: "rm -rf /home/sprite/.wisp/chats",
+                timeout: 10
+            )
+        }
         logger.info("Cleared all chats for \(self.spriteName)")
     }
 
@@ -126,6 +138,15 @@ final class SpriteChatListViewModel {
             spriteName: spriteName,
             command: "git -C '\(path)' worktree remove --force '\(path)' 2>/dev/null || true",
             timeout: 15
+        )
+    }
+
+    private static func removeWispLog(chatId: UUID, spriteName: String, apiClient: SpritesAPIClient) async {
+        let logPath = ChatViewModel.wispLogPath(for: chatId)
+        _ = await apiClient.runExec(
+            spriteName: spriteName,
+            command: "rm -f '\(logPath)'",
+            timeout: 10
         )
     }
 
