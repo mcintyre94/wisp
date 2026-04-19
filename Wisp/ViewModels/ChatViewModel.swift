@@ -333,12 +333,13 @@ final class ChatViewModel {
         saveSession(modelContext: modelContext)
 
         Task {
-            await loadRemoteHistory(apiClient: apiClient, modelContext: modelContext)
+            await importJSONLSession(sessionId: entry.sessionId, apiClient: apiClient, modelContext: modelContext)
         }
     }
 
-    private func loadRemoteHistory(apiClient: SpritesAPIClient, modelContext: ModelContext) async {
-        guard let sessionId else { return }
+    /// Import a Claude JSONL session: read the JSONL, convert to wisp format, write the
+    /// wisp file to the sprite, then load via the normal wisp log path.
+    private func importJSONLSession(sessionId: String, apiClient: SpritesAPIClient, modelContext: ModelContext) async {
         isLoadingHistory = true
         defer { isLoadingHistory = false }
 
@@ -354,13 +355,27 @@ final class ChatViewModel {
 
         guard !output.isEmpty else { return }
 
+        // Parse JSONL for immediate display
         let parsed = Self.parseSessionJSONL(output)
         guard !parsed.isEmpty else { return }
 
         messages = parsed
         rebuildToolUseIndex()
         persistMessages(modelContext: modelContext)
+
+        // Convert JSONL to wisp format and write to sprite so future loads use one code path
+        let wispContent = Self.convertJSONLToWisp(output)
+        if !wispContent.isEmpty {
+            let logPath = Self.wispLogPath(for: chatId)
+            _ = await apiClient.runExec(
+                spriteName: spriteName,
+                command: "mkdir -p /home/sprite/.wisp/chats && cat > \(shellEscape(logPath)) <<'WISP_EOF'\n\(wispContent)\nWISP_EOF",
+                timeout: 15
+            )
+        }
     }
+
+
 
     /// Parse a Claude session JSONL string into ChatMessages.
     /// Resilient — skips any lines that fail to decode.
@@ -483,6 +498,179 @@ final class ChatViewModel {
         }
 
         return messages
+    }
+
+    /// Parse a wisp NDJSON log file into ChatMessages.
+    /// The file contains `wisp_user_prompt` events (user messages) interleaved with
+    /// raw Claude stream-json events (system, assistant, user/tool_result, result).
+    /// Resilient — skips any lines that fail to decode.
+    static func parseWispLog(_ ndjson: String) -> (messages: [ChatMessage], sessionId: String?) {
+        var messages: [ChatMessage] = []
+        var currentAssistant: ChatMessage?
+        var toolUseCards: [String: ToolUseCard] = [:]
+        var sessionId: String?
+        let decoder = JSONDecoder.apiDecoder()
+
+        for line in ndjson.split(separator: "\n", omittingEmptySubsequences: true) {
+            guard let data = line.data(using: .utf8) else { continue }
+
+            // Try wisp user prompt event first
+            if let wispEvent = try? decoder.decode(WispUserPromptEvent.self, from: Data(data)),
+               wispEvent.type == "wisp_user_prompt" {
+                if let assistant = currentAssistant {
+                    messages.append(assistant)
+                    currentAssistant = nil
+                }
+                messages.append(ChatMessage(role: .user, content: [.text(wispEvent.text)]))
+                continue
+            }
+
+            // Try Claude stream event
+            guard let event = try? decoder.decode(ClaudeStreamEvent.self, from: Data(data)) else {
+                continue
+            }
+
+            switch event {
+            case .system(let se):
+                sessionId = se.sessionId
+
+            case .assistant(let ae):
+                let assistant = currentAssistant ?? ChatMessage(role: .assistant)
+                if currentAssistant == nil { currentAssistant = assistant }
+
+                for block in ae.message.content {
+                    switch block {
+                    case .text(let text):
+                        guard !text.isEmpty else { continue }
+                        if case .text(let existing) = assistant.content.last {
+                            assistant.content[assistant.content.count - 1] = .text(existing + text)
+                        } else {
+                            assistant.content.append(.text(text))
+                        }
+                    case .toolUse(let toolUse):
+                        let card = ToolUseCard(
+                            toolUseId: toolUse.id,
+                            toolName: toolUse.name,
+                            input: toolUse.input
+                        )
+                        toolUseCards[toolUse.id] = card
+                        assistant.content.append(.toolUse(card))
+                    case .unknown:
+                        break
+                    }
+                }
+
+            case .user(let toolResultEvent):
+                let assistant = currentAssistant ?? ChatMessage(role: .assistant)
+                if currentAssistant == nil { currentAssistant = assistant }
+
+                for result in toolResultEvent.message.content {
+                    let toolName = toolUseCards[result.toolUseId]?.toolName ?? "Tool"
+                    let resultCard = ToolResultCard(
+                        toolUseId: result.toolUseId,
+                        toolName: toolName,
+                        content: result.content ?? .null
+                    )
+                    toolUseCards[result.toolUseId]?.result = resultCard
+                    assistant.content.append(.toolResult(resultCard))
+                }
+
+            case .result(let re):
+                sessionId = re.sessionId
+                if let assistant = currentAssistant {
+                    messages.append(assistant)
+                    currentAssistant = nil
+                }
+
+            case .unknown:
+                break
+            }
+        }
+
+        // Finalize any trailing assistant message
+        if let assistant = currentAssistant {
+            messages.append(assistant)
+        }
+
+        return (messages, sessionId)
+    }
+
+    /// Convert a Claude JSONL session string to wisp NDJSON format.
+    /// User prompts become `wisp_user_prompt` events; assistant, tool result,
+    /// system, and result lines are passed through verbatim (the JSONL and stream
+    /// formats share the same structure — extra JSONL fields are ignored by the decoder).
+    static func convertJSONLToWisp(_ jsonl: String) -> String {
+        let decoder = JSONDecoder()
+        decoder.keyDecodingStrategy = .convertFromSnakeCase
+        let encoder = JSONEncoder()
+
+        var lines: [String] = []
+
+        for line in jsonl.split(separator: "\n", omittingEmptySubsequences: true) {
+            guard let data = line.data(using: .utf8),
+                  let entry = try? decoder.decode(SessionJSONLLine.self, from: Data(data)),
+                  let type = entry.type
+            else { continue }
+
+            if type == "user" {
+                guard entry.isMeta != true else { continue }
+
+                if let content = entry.message?.content {
+                    switch content {
+                    case .string(let text):
+                        // User prompt — convert to wisp_user_prompt
+                        let event = WispUserPromptEvent(text: text, timestamp: "")
+                        if let eventData = try? encoder.encode(event),
+                           let eventStr = String(data: eventData, encoding: .utf8) {
+                            lines.append(eventStr)
+                        }
+                    case .blocks(let blocks):
+                        let hasToolResults = blocks.contains { $0.type == "tool_result" }
+                        if hasToolResults {
+                            // Tool results — pass through verbatim
+                            lines.append(String(line))
+                        } else {
+                            // Text-only blocks — convert to wisp_user_prompt
+                            let text = blocks.compactMap { $0.text }.joined(separator: "\n")
+                            guard !text.isEmpty else { continue }
+                            let event = WispUserPromptEvent(text: text, timestamp: "")
+                            if let eventData = try? encoder.encode(event),
+                               let eventStr = String(data: eventData, encoding: .utf8) {
+                                lines.append(eventStr)
+                            }
+                        }
+                    }
+                }
+            } else {
+                // system, assistant, result — pass through verbatim
+                lines.append(String(line))
+            }
+        }
+
+        return lines.joined(separator: "\n")
+    }
+
+    /// Load chat history from the wisp NDJSON log file on the sprite.
+    private func loadFromWispLog(apiClient: SpritesAPIClient, modelContext: ModelContext) async {
+        isLoadingHistory = true
+        defer { isLoadingHistory = false }
+
+        let logPath = Self.wispLogPath(for: chatId)
+        let (output, success) = await apiClient.runExec(
+            spriteName: spriteName,
+            command: "cat \(shellEscape(logPath)) 2>/dev/null",
+            timeout: 30
+        )
+
+        guard success, !output.isEmpty else { return }
+
+        let (parsed, parsedSessionId) = Self.parseWispLog(output)
+        guard !parsed.isEmpty else { return }
+
+        messages = parsed
+        if let parsedSessionId { sessionId = parsedSessionId }
+        rebuildToolUseIndex()
+        persistMessages(modelContext: modelContext)
     }
 
     func persistMessages(modelContext: ModelContext) {
@@ -687,12 +875,11 @@ final class ChatViewModel {
         guard !isStreaming else { return }
 
         if messages.isEmpty {
-            // No local messages but we know the session ID — the JSONL file on the
-            // sprite contains the full conversation. Load it so the chat isn't blank.
-            // This handles the case where SwiftData was cleared, the app was reinstalled,
-            // or the path-encoding bug previously caused loadRemoteHistory to silently fail.
-            if sessionId != nil, !isLoadingHistory {
-                Task { await loadRemoteHistory(apiClient: apiClient, modelContext: modelContext) }
+            // No local messages — the wisp log file (or legacy JSONL) on the sprite
+            // contains the full conversation. Load it so the chat isn't blank.
+            // This handles the case where SwiftData was cleared or the app was reinstalled.
+            if !isLoadingHistory {
+                Task { await loadFromWispLog(apiClient: apiClient, modelContext: modelContext) }
             }
             return
         }
@@ -782,12 +969,26 @@ final class ChatViewModel {
         }
 
         // Build the full bash -c command with env vars inlined
+        let logPath = Self.wispLogPath(for: chatId)
         var commandParts: [String] = [
             "export CLAUDE_CODE_OAUTH_TOKEN=\(shellEscape(claudeToken))",
             "export NO_DNA=1", // Signal to CLIs that they're running under an agent operator (no-dna.org)
             "mkdir -p \(shellEscape(workingDirectory))",
+            "mkdir -p /home/sprite/.wisp/chats",
             "cd \(shellEscape(workingDirectory))",
         ]
+
+        // Write the user prompt to the wisp log file before launching Claude.
+        // Stream output doesn't include user prompts (they're CLI arguments),
+        // so we write them ourselves to make the log file self-contained.
+        let promptEvent = WispUserPromptEvent(
+            text: prompt,
+            timestamp: ISO8601DateFormatter().string(from: Date())
+        )
+        if let jsonData = try? JSONEncoder().encode(promptEvent),
+           let jsonStr = String(data: jsonData, encoding: .utf8) {
+            commandParts.append("printf '%s\\n' \(shellEscape(jsonStr)) >> \(shellEscape(logPath))")
+        }
 
         let gitName = UserDefaults.standard.string(forKey: "gitName") ?? ""
         let gitEmail = UserDefaults.standard.string(forKey: "gitEmail") ?? ""
@@ -831,7 +1032,7 @@ final class ChatViewModel {
         // is waiting for an API response and Wisp is detached. The heartbeat
         // writes a byte to stderr every 20s — enough to count as output without
         // interfering with the NDJSON stdout stream. The trap ensures cleanup.
-        let wrappedClaudeCmd = "{ (while true; do sleep 20; printf . >&2; done) & HBEAT=$!; trap \"kill $HBEAT 2>/dev/null\" EXIT; \(claudeCmd); kill $HBEAT 2>/dev/null; }"
+        let wrappedClaudeCmd = "{ (while true; do sleep 20; printf . >&2; done) & HBEAT=$!; trap \"kill $HBEAT 2>/dev/null\" EXIT; \(claudeCmd) | tee -a \(shellEscape(logPath)); kill $HBEAT 2>/dev/null; }"
         commandParts.append(wrappedClaudeCmd)
         let fullCommand = commandParts.joined(separator: " && ")
 
@@ -1170,6 +1371,32 @@ final class ChatViewModel {
     /// Restore chat history from Claude's .jsonl session file on the sprite.
     /// Used when the exec session is gone (sprite slept, exec expired).
     private func restoreFromSessionFile(apiClient: SpritesAPIClient, modelContext: ModelContext) async {
+        // Try wisp log file first — it captures the full stream including sub-agent calls.
+        let logPath = Self.wispLogPath(for: chatId)
+        let (wispOutput, wispSuccess) = await apiClient.runExec(
+            spriteName: spriteName,
+            command: "cat \(shellEscape(logPath)) 2>/dev/null",
+            timeout: 30
+        )
+
+        if wispSuccess, !wispOutput.isEmpty {
+            let (parsed, parsedSessionId) = Self.parseWispLog(wispOutput)
+            if !parsed.isEmpty {
+                messages = parsed
+                if let parsedSessionId { sessionId = parsedSessionId }
+                rebuildToolUseIndex()
+
+                if let last = messages.last, last.role == .user {
+                    restoreUndeliveredDraft(modelContext: modelContext)
+                } else {
+                    self.execSessionId = nil
+                    saveSession(modelContext: modelContext, isComplete: true)
+                }
+                return
+            }
+        }
+
+        // Fallback: read Claude's internal JSONL for chats that predate wisp log files.
         guard let sessionId = sessionId else { return }
 
         let encodedPath = Self.claudeProjectPathEncoding(workingDirectory)
@@ -1182,7 +1409,6 @@ final class ChatViewModel {
         )
 
         if !success || output.isEmpty {
-            // Fallback: search for the file
             let (findOutput, _) = await apiClient.runExec(
                 spriteName: spriteName,
                 command: "find ~/.claude -name '\(sessionId).jsonl' -print -quit 2>/dev/null",
@@ -1203,59 +1429,15 @@ final class ChatViewModel {
         let parsed = Self.parseSessionJSONL(output)
         guard !parsed.isEmpty else { return }
 
-        // Merge with locally-persisted messages to preserve sub-agent tool calls.
-        // The main JSONL only contains the main agent's turns; sub-agent tool calls
-        // (Bash, Read, Write, etc.) are streamed live and persisted locally but stored
-        // in separate session files on the sprite. Use local messages as the base and
-        // patch the final assistant text from the JSONL if it is more complete.
-        messages = mergedWithLocalMessages(parsed)
+        messages = parsed
         rebuildToolUseIndex()
 
         if let last = messages.last, last.role == .user {
-            // Trailing user message — restore as draft
             restoreUndeliveredDraft(modelContext: modelContext)
         } else {
             self.execSessionId = nil
             saveSession(modelContext: modelContext, isComplete: true)
         }
-    }
-
-    /// Merge JSONL-parsed messages with the current locally-persisted messages.
-    /// Returns the local messages enriched with any more-complete text from the JSONL,
-    /// or falls back to the JSONL messages if the conversation structures differ.
-    func mergedWithLocalMessages(_ jsonlMessages: [ChatMessage]) -> [ChatMessage] {
-        guard !messages.isEmpty else { return jsonlMessages }
-
-        let localUserCount = messages.filter { $0.role == .user }.count
-        let jsonlUserCount = jsonlMessages.filter { $0.role == .user }.count
-        guard localUserCount == jsonlUserCount else { return jsonlMessages }
-
-        // If the JSONL's total text is longer (more complete) than the locally-persisted
-        // version, patch only the final text block in place. Using total text for the
-        // comparison detects truncation; patching only the last block preserves any intro
-        // text that appeared before tool calls (e.g. "Let me check…" → tools → "Done!").
-        if let jsonlLast = jsonlMessages.last(where: { $0.role == .assistant }),
-           let localLast = messages.last(where: { $0.role == .assistant }),
-           jsonlLast.textContent.count > localLast.textContent.count {
-            // Find the last text segment in the JSONL message to use as the replacement.
-            var jsonlFinalText: String?
-            for item in jsonlLast.content.reversed() {
-                if case .text(let t) = item, !t.isEmpty { jsonlFinalText = t; break }
-            }
-            if let finalText = jsonlFinalText {
-                if let idx = localLast.content.indices.reversed().first(where: {
-                    if case .text = localLast.content[$0] { return true } else { return false }
-                }) {
-                    localLast.content[idx] = .text(finalText)
-                } else {
-                    // No trailing text block yet — Claude was still running tools when we
-                    // disconnected. Append the final response from the JSONL.
-                    localLast.content.append(.text(finalText))
-                }
-            }
-        }
-
-        return messages
     }
 
     func handleEvent(_ event: ClaudeStreamEvent, modelContext: ModelContext) {
@@ -1762,6 +1944,11 @@ final class ChatViewModel {
     ///
     /// Wisp previously only replaced `/`, producing `-home-sprite-.wisp-...`
     /// which didn't match the on-disk directory name.
+    /// Path to the wisp stream log file for a given chat on the sprite.
+    nonisolated static func wispLogPath(for chatId: UUID) -> String {
+        "/home/sprite/.wisp/chats/\(chatId.uuidString.lowercased()).wisplog"
+    }
+
     nonisolated static func claudeProjectPathEncoding(_ path: String) -> String {
         path
             .replacingOccurrences(of: "/", with: "-")

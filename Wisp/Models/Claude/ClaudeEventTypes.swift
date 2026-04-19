@@ -127,3 +127,20 @@ struct ClaudeResultEvent: Codable, Sendable {
         case numTurns = "num_turns"
     }
 }
+
+// MARK: - Wisp User Prompt Event
+
+/// Custom event written to the wisp NDJSON log file before each Claude invocation.
+/// User prompts don't appear in Claude's stream-json output (they're CLI arguments),
+/// so we write them ourselves to make the log file self-contained.
+struct WispUserPromptEvent: Codable, Sendable {
+    let type: String
+    let text: String
+    let timestamp: String
+
+    init(text: String, timestamp: String) {
+        self.type = "wisp_user_prompt"
+        self.text = text
+        self.timestamp = timestamp
+    }
+}
