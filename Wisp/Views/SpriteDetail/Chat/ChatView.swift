@@ -75,6 +75,16 @@ struct ChatView: View {
                 .opacity(contentOpacity)
                 .padding()
             }
+            .overlay {
+                if viewModel.isLoadingHistory && contentOpacity == 0 {
+                    VStack(spacing: 8) {
+                        ProgressView()
+                        Text("Loading session…")
+                            .font(.subheadline)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+            }
             .defaultScrollAnchor(.bottom)
             .scrollDismissesKeyboard(.interactively)
             .onChange(of: viewModel.messages.count) {

@@ -393,9 +393,16 @@ final class ChatViewModel {
 
             switch type {
             case "user":
+                guard entry.isMeta != true else { continue }
                 guard let content = entry.message?.content else { continue }
                 switch content {
                 case .string(let text):
+                    // Skip CLI-injected entries (local commands run via `!`)
+                    if text.hasPrefix("<local-command-caveat>")
+                        || text.hasPrefix("<bash-input>")
+                        || text.hasPrefix("<bash-stdout>") {
+                        continue
+                    }
                     // User prompt — finalize any current assistant message
                     if let assistant = currentAssistant {
                         messages.append(assistant)
@@ -409,19 +416,20 @@ final class ChatViewModel {
                     let toolResultBlocks = blocks.filter { $0.type == "tool_result" }
 
                     if !textBlocks.isEmpty && toolResultBlocks.isEmpty {
-                        // Pure text blocks: either a real user message (non-meta) or an
-                        // internal injection like a skill invocation (isMeta:true).
-                        // Skip meta entries — they're not user-authored content.
-                        if entry.isMeta == true { break }
-
                         // Non-meta user message stored as text blocks (some Claude Code
                         // versions write user turns as [{type:text,text:...}] instead of
                         // a plain string). Treat it the same as the string case.
+                        let text = textBlocks.compactMap { $0.text }.joined(separator: "\n")
+                        // Skip CLI-injected entries in block form too
+                        if text.hasPrefix("<local-command-caveat>")
+                            || text.hasPrefix("<bash-input>")
+                            || text.hasPrefix("<bash-stdout>") {
+                            continue
+                        }
                         if let assistant = currentAssistant {
                             messages.append(assistant)
                             currentAssistant = nil
                         }
-                        let text = textBlocks.compactMap { $0.text }.joined(separator: "\n")
                         let msg = ChatMessage(role: .user, content: [.text(text)])
                         messages.append(msg)
                     } else {
