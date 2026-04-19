@@ -472,6 +472,96 @@ struct ChatViewModelTests {
         #expect(messages[0].textContent == "Hello from blocks")
     }
 
+    @Test func parseSessionJSONL_realisticMultiTurnWithThinkingAndExtras() {
+        // Mirrors the structure of a real Claude Code JSONL file:
+        // permission-mode, file-history-snapshot, attachment, system, thinking blocks,
+        // CLI-injected entries (bash-input, bash-stdout, local-command-caveat)
+        let jsonl = """
+        {"type":"permission-mode","permissionMode":"bypassPermissions","sessionId":"s1"}
+        {"type":"file-history-snapshot","messageId":"m1","snapshot":{}}
+        {"type":"user","message":{"role":"user","content":"Write me a weather app"},"sessionId":"s1"}
+        {"type":"attachment","messageId":"m1","filePath":"/tmp/foo.png"}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"thinking","thinking":"I will create..."}]},"sessionId":"s1"}
+        {"type":"file-history-snapshot","messageId":"m2","snapshot":{}}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"tu-w1","name":"Write","input":{"file_path":"/weather.py","content":"print('hello')"}}]},"sessionId":"s1"}
+        {"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tu-w1","content":"File written"}]},"sessionId":"s1"}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"tu-b1","name":"Bash","input":{"command":"python3 weather.py"}}]},"sessionId":"s1"}
+        {"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tu-b1","content":"hello"}]},"sessionId":"s1"}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Here is your weather app!"}]},"sessionId":"s1"}
+        {"type":"system","sessionId":"s1","isMeta":false}
+        {"type":"user","message":{"role":"user","content":"<local-command-caveat>Caveat: ...</local-command-caveat>"},"isMeta":true}
+        {"type":"user","message":{"role":"user","content":"<bash-input>python3 weather.py</bash-input>"},"sessionId":"s1"}
+        {"type":"user","message":{"role":"user","content":"<bash-stdout>hello</bash-stdout><bash-stderr></bash-stderr>"},"sessionId":"s1"}
+        {"type":"file-history-snapshot","messageId":"m3","snapshot":{}}
+        {"type":"user","message":{"role":"user","content":"Add a location CLI flag"},"sessionId":"s1"}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"tu-e1","name":"Edit","input":{"file_path":"/weather.py","old_string":"print","new_string":"import sys; print"}}]},"sessionId":"s1"}
+        {"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tu-e1","content":"File edited"}]},"sessionId":"s1"}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Added location flag!"}]},"sessionId":"s1"}
+        {"type":"last-prompt","lastPrompt":"Add a location CLI flag","sessionId":"s1"}
+        {"type":"permission-mode","permissionMode":"bypassPermissions","sessionId":"s1"}
+        """
+
+        let messages = ChatViewModel.parseSessionJSONL(jsonl)
+
+        // Should produce 4 messages: user1, assistant1, user2, assistant2
+        #expect(messages.count == 4, "Expected 4 messages but got \\(messages.count)")
+        #expect(messages[0].role == .user)
+        #expect(messages[0].textContent == "Write me a weather app")
+        #expect(messages[1].role == .assistant)
+        // assistant1 should have: toolUse(Write), toolResult, toolUse(Bash), toolResult, text
+        #expect(messages[1].content.count == 5, "Turn 1 assistant should have 5 content items, got \\(messages[1].content.count)")
+        #expect(messages[2].role == .user)
+        #expect(messages[2].textContent == "Add a location CLI flag")
+        #expect(messages[3].role == .assistant)
+        // assistant2 should have: toolUse(Edit), toolResult, text
+        #expect(messages[3].content.count == 3)
+        #expect(messages[3].textContent == "Added location flag!")
+    }
+
+    @Test func convertJSONLToWisp_thenParseWispLog_roundTrip() {
+        // Verify the full round-trip: JSONL → convertJSONLToWisp → parseWispLog
+        // produces the same conversation structure as parseSessionJSONL
+        let jsonl = """
+        {"type":"permission-mode","permissionMode":"bypassPermissions","sessionId":"s1"}
+        {"type":"file-history-snapshot","messageId":"m1","snapshot":{}}
+        {"type":"user","message":{"role":"user","content":"Write me a weather app"},"sessionId":"s1"}
+        {"type":"attachment","messageId":"m1","filePath":"/tmp/foo.png"}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"thinking","thinking":"I will create..."}]},"sessionId":"s1"}
+        {"type":"file-history-snapshot","messageId":"m2","snapshot":{}}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"tu-w1","name":"Write","input":{"file_path":"/weather.py","content":"print('hello')"}}]},"sessionId":"s1"}
+        {"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tu-w1","content":"File written"}]},"sessionId":"s1"}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"tu-b1","name":"Bash","input":{"command":"python3 weather.py"}}]},"sessionId":"s1"}
+        {"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tu-b1","content":"hello"}]},"sessionId":"s1"}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Here is your weather app!"}]},"sessionId":"s1"}
+        {"type":"system","sessionId":"s1","isMeta":false}
+        {"type":"user","message":{"role":"user","content":"<local-command-caveat>Caveat: ...</local-command-caveat>"},"isMeta":true}
+        {"type":"user","message":{"role":"user","content":"<bash-input>python3 weather.py</bash-input>"},"sessionId":"s1"}
+        {"type":"user","message":{"role":"user","content":"<bash-stdout>hello</bash-stdout><bash-stderr></bash-stderr>"},"sessionId":"s1"}
+        {"type":"file-history-snapshot","messageId":"m3","snapshot":{}}
+        {"type":"user","message":{"role":"user","content":"Add a location CLI flag"},"sessionId":"s1"}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"tool_use","id":"tu-e1","name":"Edit","input":{"file_path":"/weather.py","old_string":"print","new_string":"import sys; print"}}]},"sessionId":"s1"}
+        {"type":"user","message":{"role":"user","content":[{"type":"tool_result","tool_use_id":"tu-e1","content":"File edited"}]},"sessionId":"s1"}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Added location flag!"}]},"sessionId":"s1"}
+        {"type":"last-prompt","lastPrompt":"Add a location CLI flag","sessionId":"s1"}
+        {"type":"permission-mode","permissionMode":"bypassPermissions","sessionId":"s1"}
+        """
+
+        let wispContent = ChatViewModel.convertJSONLToWisp(jsonl)
+        let (wispMessages, _) = ChatViewModel.parseWispLog(wispContent)
+
+        // Should produce same 4 messages as parseSessionJSONL
+        #expect(wispMessages.count == 4, "Round-trip produced \(wispMessages.count) messages, expected 4")
+        #expect(wispMessages[0].role == .user)
+        #expect(wispMessages[0].textContent == "Write me a weather app")
+        #expect(wispMessages[1].role == .assistant)
+        #expect(wispMessages[1].content.count == 5, "Turn 1 assistant should have 5 items, got \(wispMessages[1].content.count)")
+        #expect(wispMessages[2].role == .user)
+        #expect(wispMessages[2].textContent == "Add a location CLI flag")
+        #expect(wispMessages[3].role == .assistant)
+        #expect(wispMessages[3].content.count == 3)
+        #expect(wispMessages[3].textContent == "Added location flag!")
+    }
+
     // MARK: - claudeProjectPathEncoding
 
     @Test func claudeProjectPathEncoding_simpleProject() {

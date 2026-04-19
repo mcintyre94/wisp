@@ -345,11 +345,11 @@ final class ChatViewModel {
 
         let encodedPath = Self.claudeProjectPathEncoding(workingDirectory)
         let projectDir = "/home/sprite/.claude/projects/\(encodedPath)"
-        let command = "cat '\(projectDir)/\(sessionId).jsonl' 2>/dev/null"
+        let jsonlPath = "\(projectDir)/\(sessionId).jsonl"
 
         let (output, _) = await apiClient.runExec(
             spriteName: spriteName,
-            command: command,
+            command: "cat '\(jsonlPath)' 2>/dev/null",
             timeout: 15
         )
 
@@ -363,16 +363,40 @@ final class ChatViewModel {
         rebuildToolUseIndex()
         persistMessages(modelContext: modelContext)
 
-        // Convert JSONL to wisp format and write to sprite so future loads use one code path
-        let wispContent = Self.convertJSONLToWisp(output)
-        if !wispContent.isEmpty {
-            let logPath = Self.wispLogPath(for: chatId)
-            _ = await apiClient.runExec(
-                spriteName: spriteName,
-                command: "mkdir -p /home/sprite/.wisp/chats && cat > \(shellEscape(logPath)) <<'WISP_EOF'\n\(wispContent)\nWISP_EOF",
-                timeout: 15
-            )
-        }
+        // Convert JSONL to wisp format on the sprite so future loads use one code path.
+        // Done entirely on-sprite with jq to avoid transferring large data via URL params.
+        let logPath = Self.wispLogPath(for: chatId)
+        _ = await apiClient.runExec(
+            spriteName: spriteName,
+            command: Self.jsonlToWispCommand(jsonlPath: jsonlPath, wispLogPath: logPath),
+            timeout: 15
+        )
+    }
+
+    /// Build a shell command that converts a Claude JSONL file to wisp format on the sprite.
+    /// User prompts become wisp_user_prompt events; assistant/system/result lines pass through;
+    /// CLI-injected entries (bash-input, bash-stdout, local-command-caveat) and meta entries are skipped.
+    nonisolated static func jsonlToWispCommand(jsonlPath: String, wispLogPath: String) -> String {
+        // jq processes each line independently (-c for compact output).
+        // User prompts with string content → wisp_user_prompt events.
+        // Tool result user entries and assistant/system/result → pass through verbatim.
+        // Everything else (attachment, file-history-snapshot, permission-mode, etc.) → skipped.
+        """
+        mkdir -p /home/sprite/.wisp/chats && jq -c '
+          if .type == "user" then
+            if .isMeta then empty
+            elif (.message.content | type) == "string" then
+              if (.message.content | test("^<(local-command-caveat|bash-input|bash-stdout)")) then empty
+              else {type: "wisp_user_prompt", text: .message.content, timestamp: (.timestamp // "")}
+              end
+            elif (.message.content | type) == "array" and (.message.content | any(.type == "tool_result")) then .
+            else empty
+            end
+          elif .type == "assistant" or .type == "system" or .type == "result" then .
+          else empty
+          end
+        ' \(shellEscape(jsonlPath)) > \(shellEscape(wispLogPath))
+        """
     }
 
 
@@ -609,7 +633,6 @@ final class ChatViewModel {
     /// formats share the same structure — extra JSONL fields are ignored by the decoder).
     static func convertJSONLToWisp(_ jsonl: String) -> String {
         let decoder = JSONDecoder()
-        decoder.keyDecodingStrategy = .convertFromSnakeCase
         let encoder = JSONEncoder()
 
         var lines: [String] = []
