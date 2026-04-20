@@ -1638,6 +1638,7 @@ final class ChatViewModel {
             }
         } catch {
             logger.error("Auto-checkpoint failed: \(error.localizedDescription)")
+            status = .error("Auto-checkpoint failed")
         }
     }
 

@@ -50,12 +50,14 @@ struct KeychainService: Sendable {
         return String(data: data, encoding: .utf8)
     }
 
-    func delete(key: KeychainKey) {
+    @discardableResult
+    func delete(key: KeychainKey) -> Bool {
         let query: [String: Any] = [
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrAccount as String: key.rawValue,
         ]
-        SecItemDelete(query as CFDictionary)
+        let status = SecItemDelete(query as CFDictionary)
+        return status == errSecSuccess || status == errSecItemNotFound
     }
 }
 
