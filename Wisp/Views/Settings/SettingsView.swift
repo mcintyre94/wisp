@@ -143,7 +143,7 @@ struct SettingsView: View {
 
             Picker("Max Turns", selection: $maxTurns) {
                 Text("Unlimited").tag(0)
-                ForEach(1...50, id: \.self) { n in
+                ForEach([5, 10, 20, 50], id: \.self) { n in
                     Text("\(n)").tag(n)
                 }
             }
