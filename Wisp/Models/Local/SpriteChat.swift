@@ -20,6 +20,7 @@ final class SpriteChat {
     var isClosed: Bool
     var spriteCreatedAt: Date?
     var firstMessagePreview: String?
+    var fullTextContent: String?
     var forkContext: String?
     var worktreePath: String?
     var worktreeBranch: String?
@@ -72,5 +73,12 @@ final class SpriteChat {
                 firstMessagePreview = String(collapsed.prefix(100))
             }
         }
+
+        let allText = messages
+            .filter { $0.role == .user || $0.role == .assistant }
+            .flatMap { $0.content }
+            .compactMap { if case .text(let t) = $0 { t } else { nil } }
+            .joined(separator: " ")
+        fullTextContent = allText.isEmpty ? nil : allText
     }
 }
