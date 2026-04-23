@@ -113,6 +113,7 @@ struct ChatView: View {
         .safeAreaInset(edge: .top, spacing: 0) {
             VStack(spacing: 0) {
                 if let topAccessory { topAccessory }
+                WorkingDirectoryLabel(workingDirectory: viewModel.workingDirectory)
                 ChatStatusBar(
                     status: viewModel.status,
                     modelName: viewModel.modelName,
@@ -439,6 +440,33 @@ struct ChatView: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 12)
         .background(.bar)
+    }
+}
+
+private struct WorkingDirectoryLabel: View {
+    let workingDirectory: String
+
+    private var displayText: String {
+        let worktreePrefix = "/home/sprite/.wisp/worktrees/"
+        if workingDirectory.hasPrefix(worktreePrefix) {
+            let remainder = String(workingDirectory.dropFirst(worktreePrefix.count))
+            // remainder is "{repo}/{branch}" — reformat as "{repo}:{branch}"
+            let parts = remainder.split(separator: "/", maxSplits: 1)
+            if parts.count == 2 {
+                return "\(parts[0]):\(parts[1])"
+            }
+        }
+        return workingDirectory
+    }
+
+    var body: some View {
+        Text(displayText)
+            .font(.caption2)
+            .foregroundStyle(.secondary)
+            .lineLimit(1)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 3)
     }
 }
 
