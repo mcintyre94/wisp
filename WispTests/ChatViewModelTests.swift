@@ -821,6 +821,32 @@ struct ChatViewModelTests {
         #expect(vm.streamTask != nil)
     }
 
+    @Test func reconnectIfNeeded_corruptedMessages_firstIsAssistant_triggersWispLogLoad() throws {
+        // Regression: after a reconnect following phone-sleep during streaming,
+        // SwiftData can end up with a partial history that starts with an assistant
+        // message (e.g. the first user+assistant exchange was lost). The wisplog
+        // on the sprite still has the full history. Verify that reconnectIfNeeded
+        // detects this corruption and does NOT try to reattach to a (nonexistent)
+        // exec session — it should take the wisplog-reload path instead.
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        // Simulate truncated SwiftData: first message is an assistant (wrong — should be user)
+        vm.messages = [
+            ChatMessage(role: .assistant, content: [.text("Here's the deep dive...")]),
+            ChatMessage(role: .user, content: [.text("Follow-up question")]),
+        ]
+        vm.setExecSessionId("exec-abc") // would normally trigger reattach
+
+        vm.reconnectIfNeeded(apiClient: SpritesAPIClient(), modelContext: ctx)
+
+        // Should NOT have started a reattach task (the exec-session path).
+        // An async wisplog load is scheduled instead — but it's async so we verify
+        // the exec-reattach task was NOT created and messages were not synchronously changed.
+        #expect(vm.streamTask == nil)
+        #expect(vm.messages.count == 2)
+    }
+
     // MARK: - UUID persistence
 
     @Test func persistMessages_savesUUIDsToChat() throws {

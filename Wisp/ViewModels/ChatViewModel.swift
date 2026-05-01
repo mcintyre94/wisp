@@ -918,10 +918,11 @@ final class ChatViewModel {
     func reconnectIfNeeded(apiClient: SpritesAPIClient, modelContext: ModelContext) {
         guard !isStreaming else { return }
 
-        if messages.isEmpty {
-            // No local messages — the wisp log file (or legacy JSONL) on the sprite
-            // contains the full conversation. Load it so the chat isn't blank.
-            // This handles the case where SwiftData was cleared or the app was reinstalled.
+        if messages.isEmpty || messages.first?.role == .assistant {
+            // No local messages, or messages appear truncated (first message should always
+            // be from the user — if it's an assistant message the persisted state is corrupt,
+            // likely because a reconnect after backgrounding wrote a partial history starting
+            // mid-conversation). Reload the full conversation from the wisp log file.
             if !isLoadingHistory {
                 Task { await loadFromWispLog(apiClient: apiClient, modelContext: modelContext) }
             }
