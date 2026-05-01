@@ -547,7 +547,7 @@ struct ChatViewModelTests {
         """
 
         let wispContent = ChatViewModel.convertJSONLToWisp(jsonl)
-        let (wispMessages, _) = ChatViewModel.parseWispLog(wispContent)
+        let (wispMessages, _, _) = ChatViewModel.parseWispLog(wispContent)
 
         // Should produce same 4 messages as parseSessionJSONL
         #expect(wispMessages.count == 4, "Round-trip produced \(wispMessages.count) messages, expected 4")
@@ -819,52 +819,6 @@ struct ChatViewModelTests {
 
         // A stream task should have been created for reattach
         #expect(vm.streamTask != nil)
-    }
-
-    // MARK: - UUID persistence
-
-    @Test func persistMessages_savesUUIDsToChat() throws {
-        let ctx = try makeModelContext()
-        let (vm, chat) = makeChatViewModel(modelContext: ctx)
-
-        vm.processedEventUUIDs = ["uuid-a", "uuid-b"]
-        vm.persistMessages(modelContext: ctx)
-
-        #expect(chat.loadStreamEventUUIDs() == ["uuid-a", "uuid-b"])
-    }
-
-    @Test func persistMessages_doesNotOverwriteWithEmptySet() throws {
-        let ctx = try makeModelContext()
-        let (vm, chat) = makeChatViewModel(modelContext: ctx)
-
-        // Save a valid UUID set
-        chat.saveStreamEventUUIDs(["uuid-prior"])
-
-        // persistMessages with empty processedEventUUIDs should not overwrite
-        vm.processedEventUUIDs = []
-        vm.persistMessages(modelContext: ctx)
-
-        #expect(chat.loadStreamEventUUIDs() == ["uuid-prior"])
-    }
-
-    @Test func loadSession_restoresProcessedEventUUIDs() throws {
-        let ctx = try makeModelContext()
-        let (vm, chat) = makeChatViewModel(modelContext: ctx)
-
-        chat.saveStreamEventUUIDs(["uuid-x", "uuid-y"])
-
-        vm.loadSession(apiClient: SpritesAPIClient(), modelContext: ctx)
-
-        #expect(vm.processedEventUUIDs == ["uuid-x", "uuid-y"])
-    }
-
-    @Test func loadSession_setsEmptyUUIDsWhenNoneStored() throws {
-        let ctx = try makeModelContext()
-        let (vm, _) = makeChatViewModel(modelContext: ctx)
-
-        vm.loadSession(apiClient: SpritesAPIClient(), modelContext: ctx)
-
-        #expect(vm.processedEventUUIDs.isEmpty)
     }
 
     // MARK: - fetchRemoteSessions
@@ -1268,43 +1222,6 @@ struct ChatViewModelTests {
         #expect(messages[0].content.count == 3)
     }
 
-    // MARK: - loadSession: SwiftData round-trip preserves tool result linkage
-
-    @Test func loadSession_linksToolResultsAfterSwiftDataRoundTrip() throws {
-        // Regression: PersistedChatMessage stores toolUse and toolResult as flat separate
-        // items and does not persist ToolUseCard.result. After loading from SwiftData,
-        // all ToolUseCard.result were nil, causing tool calls to render as strikethrough.
-        let ctx = try makeModelContext()
-        let (vm, _) = makeChatViewModel(modelContext: ctx)
-
-        // Simulate a completed session stored in SwiftData: assistant message with a
-        // tool use and its result already linked (as they would be after live streaming).
-        let toolCard = ToolUseCard(toolUseId: "tu-1", toolName: "Bash", input: .object(["command": .string("ls")]))
-        let resultCard = ToolResultCard(toolUseId: "tu-1", toolName: "Bash", content: .string("file.txt"))
-        toolCard.result = resultCard
-
-        let assistantMsg = ChatMessage(role: .assistant, content: [
-            .toolUse(toolCard),
-            .toolResult(resultCard),
-            .text("Done"),
-        ])
-        vm.messages = [assistantMsg]
-
-        // Persist and reload
-        vm.persistMessages(modelContext: ctx)
-
-        // Create a second VM for the same chat to simulate a fresh load
-        let vm2 = ChatViewModel(spriteName: "test", chatId: vm.chatId, workingDirectory: "")
-        vm2.loadSession(apiClient: SpritesAPIClient(), modelContext: ctx)
-
-        guard case .toolUse(let loadedCard) = vm2.messages.first?.content.first else {
-            Issue.record("Expected toolUse as first content item")
-            return
-        }
-        #expect(loadedCard.result != nil, "ToolUseCard.result must be re-linked after SwiftData round-trip")
-        #expect(loadedCard.result?.toolUseId == "tu-1")
-    }
-
     @Test func parseSessionJSONL_linksToolResultToToolUseCard() {
         // Regression: reloaded chats were not showing tool calls because parseSessionJSONL
         // never set ToolUseCard.result. The view only renders a ToolStepRow when result != nil.
@@ -1343,7 +1260,7 @@ struct ChatViewModelTests {
         {"type":"result","session_id":"sess-1","is_error":false}
         """
 
-        let (messages, sessionId) = ChatViewModel.parseWispLog(ndjson)
+        let (messages, sessionId, _) = ChatViewModel.parseWispLog(ndjson)
 
         #expect(messages.count == 2)
         #expect(messages[0].role == .user)
@@ -1365,7 +1282,7 @@ struct ChatViewModelTests {
         {"type":"result","session_id":"sess-1","is_error":false}
         """
 
-        let (messages, sessionId) = ChatViewModel.parseWispLog(ndjson)
+        let (messages, sessionId, _) = ChatViewModel.parseWispLog(ndjson)
 
         #expect(messages.count == 4)
         #expect(messages[0].role == .user)
@@ -1389,7 +1306,7 @@ struct ChatViewModelTests {
         {"type":"result","session_id":"sess-1","is_error":false}
         """
 
-        let (messages, _) = ChatViewModel.parseWispLog(ndjson)
+        let (messages, _, _) = ChatViewModel.parseWispLog(ndjson)
 
         #expect(messages.count == 2) // user + assistant
         let assistant = messages[1]
@@ -1432,7 +1349,7 @@ struct ChatViewModelTests {
         {"type":"result","session_id":"sess-1","is_error":false}
         """
 
-        let (messages, _) = ChatViewModel.parseWispLog(ndjson)
+        let (messages, _, _) = ChatViewModel.parseWispLog(ndjson)
 
         #expect(messages.count == 2)
         #expect(messages[1].textContent == "Part 1 Part 2")
@@ -1447,14 +1364,14 @@ struct ChatViewModelTests {
         {"type":"result","session_id":"sess-1","is_error":false}
         """
 
-        let (messages, _) = ChatViewModel.parseWispLog(ndjson)
+        let (messages, _, _) = ChatViewModel.parseWispLog(ndjson)
 
         #expect(messages.count == 2)
         #expect(messages[1].textContent == "Works fine")
     }
 
     @Test func parseWispLog_emptyInput() {
-        let (messages, sessionId) = ChatViewModel.parseWispLog("")
+        let (messages, sessionId, _) = ChatViewModel.parseWispLog("")
         #expect(messages.isEmpty)
         #expect(sessionId == nil)
     }
@@ -1466,7 +1383,7 @@ struct ChatViewModelTests {
         {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"I was saying..."}]}}
         """
 
-        let (messages, _) = ChatViewModel.parseWispLog(ndjson)
+        let (messages, _, _) = ChatViewModel.parseWispLog(ndjson)
 
         #expect(messages.count == 2)
         #expect(messages[1].role == .assistant)

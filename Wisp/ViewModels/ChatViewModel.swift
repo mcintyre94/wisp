@@ -216,14 +216,6 @@ final class ChatViewModel {
         )
         spriteUsesWorktrees = (try? modelContext.fetch(worktreeDescriptor))?.isEmpty == false
 
-        if messages.isEmpty {
-            let persisted = chat.loadMessages()
-            messages = persisted.map { ChatMessage(from: $0) }
-            linkToolResults(in: messages)
-            rebuildToolUseIndex()
-            processedEventUUIDs = chat.loadStreamEventUUIDs()
-        }
-
         if inputText.isEmpty, let draft = chat.draftInputText, !draft.isEmpty {
             inputText = draft
         }
@@ -355,14 +347,6 @@ final class ChatViewModel {
 
         guard !output.isEmpty else { return }
 
-        // Parse JSONL for immediate display
-        let parsed = Self.parseSessionJSONL(output)
-        guard !parsed.isEmpty else { return }
-
-        messages = parsed
-        rebuildToolUseIndex()
-        persistMessages(modelContext: modelContext)
-
         // Convert JSONL to wisp format on the sprite so future loads use one code path.
         // Done entirely on-sprite with jq to avoid transferring large data via URL params.
         let logPath = Self.wispLogPath(for: chatId)
@@ -371,6 +355,9 @@ final class ChatViewModel {
             command: Self.jsonlToWispCommand(jsonlPath: jsonlPath, wispLogPath: logPath),
             timeout: 15
         )
+
+        // Load from the newly written wisplog.
+        await loadFromWispLog(apiClient: apiClient, modelContext: modelContext)
     }
 
     /// Build a shell command that converts a Claude JSONL file to wisp format on the sprite.
@@ -536,11 +523,12 @@ final class ChatViewModel {
     /// The file contains `wisp_user_prompt` events (user messages) interleaved with
     /// raw Claude stream-json events (system, assistant, user/tool_result, result).
     /// Resilient — skips any lines that fail to decode.
-    static func parseWispLog(_ ndjson: String) -> (messages: [ChatMessage], sessionId: String?) {
+    static func parseWispLog(_ ndjson: String) -> (messages: [ChatMessage], sessionId: String?, eventUUIDs: Set<String>) {
         var messages: [ChatMessage] = []
         var currentAssistant: ChatMessage?
         var toolUseCards: [String: ToolUseCard] = [:]
         var sessionId: String?
+        var eventUUIDs: Set<String> = []
         let decoder = JSONDecoder.apiDecoder()
 
         for line in ndjson.split(separator: "\n", omittingEmptySubsequences: true) {
@@ -561,6 +549,8 @@ final class ChatViewModel {
             guard let event = try? decoder.decode(ClaudeStreamEvent.self, from: Data(data)) else {
                 continue
             }
+
+            if let uuid = event.uuid { eventUUIDs.insert(uuid) }
 
             switch event {
             case .system(let se):
@@ -624,7 +614,7 @@ final class ChatViewModel {
             messages.append(assistant)
         }
 
-        return (messages, sessionId)
+        return (messages, sessionId, eventUUIDs)
     }
 
     /// Convert a Claude JSONL session string to wisp NDJSON format.
@@ -708,23 +698,32 @@ final class ChatViewModel {
 
         guard success, !output.isEmpty else { return }
 
-        let (parsed, parsedSessionId) = Self.parseWispLog(output)
+        let (parsed, parsedSessionId, seenUUIDs) = Self.parseWispLog(output)
         guard !parsed.isEmpty else { return }
+
+        // Don't overwrite messages if a new streaming session started while fetching.
+        guard status != .streaming else { return }
 
         messages = parsed
         if let parsedSessionId { sessionId = parsedSessionId }
         rebuildToolUseIndex()
-        persistMessages(modelContext: modelContext)
-    }
+        processedEventUUIDs = seenUUIDs
 
-    func persistMessages(modelContext: ModelContext) {
-        let persisted = messages.map { $0.toPersisted() }
-        guard let chat = fetchChat(modelContext: modelContext) else { return }
-        chat.saveMessages(persisted)
-        if !processedEventUUIDs.isEmpty {
-            chat.saveStreamEventUUIDs(processedEventUUIDs)
+        if let chat = fetchChat(modelContext: modelContext), chat.firstMessagePreview == nil {
+            if let firstUser = messages.first(where: { $0.role == .user }) {
+                let collapsed = firstUser.textContent.replacingOccurrences(of: "\n", with: " ")
+                if !collapsed.isEmpty {
+                    chat.firstMessagePreview = String(collapsed.prefix(100))
+                }
+            }
         }
-        try? modelContext.save()
+
+        if let last = messages.last, last.role == .user {
+            restoreUndeliveredDraft(modelContext: modelContext)
+        } else {
+            execSessionId = nil
+            saveSession(modelContext: modelContext)
+        }
     }
 
     private func rebuildToolUseIndex() {
@@ -812,9 +811,13 @@ final class ChatViewModel {
         let isFirstMessage = messages.isEmpty
         let userMessage = ChatMessage(role: .user, content: [.text(prompt)])
         messages.append(userMessage)
-        persistMessages(modelContext: modelContext)
 
         if isFirstMessage {
+            if let chat = fetchChat(modelContext: modelContext), chat.firstMessagePreview == nil {
+                let collapsed = prompt.replacingOccurrences(of: "\n", with: " ")
+                chat.firstMessagePreview = String(collapsed.prefix(100))
+                try? modelContext.save()
+            }
             namingTask = Task { await autoNameChat(firstMessage: prompt, modelContext: modelContext) }
         }
 
@@ -871,9 +874,6 @@ final class ChatViewModel {
         queuedAttachments = []
         status = .idle
 
-        if let modelContext {
-            persistMessages(modelContext: modelContext)
-        }
         return wasStreaming
     }
 
@@ -897,7 +897,6 @@ final class ChatViewModel {
             let prompt = buildPrompt(text: savedPrompt, attachments: savedAttachments)
             let userMessage = ChatMessage(role: .user, content: [.text(prompt)])
             messages.append(userMessage)
-            persistMessages(modelContext: modelContext)
             status = .connecting
             streamTask = Task {
                 if let execId {
@@ -916,51 +915,22 @@ final class ChatViewModel {
     /// Attempt to reconnect to a running exec session when switching back to this chat.
     /// Called after loadSession — reattaches to the exec WebSocket if one exists.
     func reconnectIfNeeded(apiClient: SpritesAPIClient, modelContext: ModelContext) {
-        guard !isStreaming else { return }
+        guard !isStreaming, !isLoadingHistory else { return }
 
-        if messages.isEmpty {
-            // No local messages — the wisp log file (or legacy JSONL) on the sprite
-            // contains the full conversation. Load it so the chat isn't blank.
-            // This handles the case where SwiftData was cleared or the app was reinstalled.
-            if !isLoadingHistory {
-                Task { await loadFromWispLog(apiClient: apiClient, modelContext: modelContext) }
+        if let execId = execSessionId {
+            // Exec session may still be live — try to reattach.
+            status = .reconnecting
+            streamTask?.cancel()
+            streamTask = Task {
+                guard !Task.isCancelled else { return }
+                await reattachToExec(execSessionId: execId, apiClient: apiClient, modelContext: modelContext)
             }
-            return
-        }
-
-        // If the last session completed cleanly, content is already loaded from
-        // persistence — no need to hit the network at all.
-        if let chat = fetchChat(modelContext: modelContext), chat.lastSessionComplete {
-            // Edge case: app killed between persistMessages and saveSession(isComplete:false).
-            // The session was previously complete but a new user message was appended and
-            // persisted before the exec session was created. Restore it as a draft.
+        } else if messages.isEmpty {
+            // Session complete or never started — load history from the wisplog.
+            Task { await loadFromWispLog(apiClient: apiClient, modelContext: modelContext) }
+        } else {
+            // Messages already in memory. Surface any undelivered trailing user message as a draft.
             restoreUndeliveredDraft(modelContext: modelContext)
-            return
-        }
-
-        guard let execId = execSessionId else {
-            // No exec session ID: message was never sent, or legacy service-based chat.
-            // Restore any trailing user message as a draft rather than leaving a
-            // stale bubble with no response.
-            restoreUndeliveredDraft(modelContext: modelContext)
-            return
-        }
-
-        // Optimistically show reconnecting immediately — local state already tells us
-        // the session wasn't complete, so no need to wait for the task to start before
-        // the UI reflects that we're reconnecting. reattachToExec also sets this, but
-        // setting synchronously here avoids a brief idle flash while the Task warms up.
-        status = .reconnecting
-
-        // Cancel any orphaned task that may still be running (e.g., from a concurrent
-        // call to reconnectIfNeeded triggered by both DashboardView startup and
-        // resumeAllAfterBackground before the first task had a chance to set .reconnecting).
-        streamTask?.cancel()
-        streamTask = Task {
-            // If this task was pre-cancelled (e.g. superseded by a second reconnectIfNeeded
-            // call in the same run-loop turn), bail out before touching any state.
-            guard !Task.isCancelled else { return }
-            await reattachToExec(execSessionId: execId, apiClient: apiClient, modelContext: modelContext)
         }
     }
 
@@ -970,7 +940,6 @@ final class ChatViewModel {
         guard let last = messages.last, last.role == .user else { return }
         let text = last.textContent
         messages.removeLast()
-        persistMessages(modelContext: modelContext)
         guard !text.isEmpty, inputText.isEmpty else { return }
         inputText = text
         saveDraft(modelContext: modelContext)
@@ -995,7 +964,7 @@ final class ChatViewModel {
         }
 
         // Persist the new session immediately; clear any prior completion flag
-        saveSession(modelContext: modelContext, isComplete: false)
+        saveSession(modelContext: modelContext)
 
         guard let claudeToken = apiClient.claudeToken else {
             status = .error("No Claude token configured")
@@ -1118,7 +1087,6 @@ final class ChatViewModel {
         if case .disconnected = streamResult {
             logger.info("[Chat] Disconnected mid-stream, will reattach after delay")
             status = .idle
-            persistMessages(modelContext: modelContext)
             let capturedApiClient = apiClient
             let capturedModelContext = modelContext
             streamTask = Task {
@@ -1164,15 +1132,12 @@ final class ChatViewModel {
             status = .idle
         }
 
-        persistMessages(modelContext: modelContext)
-
         if let queued = queuedPrompt {
             let prompt = buildPrompt(text: queued, attachments: queuedAttachments)
             queuedPrompt = nil
             queuedAttachments = []
             let userMessage = ChatMessage(role: .user, content: [.text(prompt)])
             messages.append(userMessage)
-            persistMessages(modelContext: modelContext)
             await executeClaudeCommand(prompt: prompt, apiClient: apiClient, modelContext: modelContext)
         }
     }
@@ -1203,7 +1168,6 @@ final class ChatViewModel {
         modelContext: ModelContext
     ) async -> StreamResult {
         var receivedData = false
-        var lastPersistTime = Date.distantPast
 
         let timeoutTask = Task {
             try await Task.sleep(for: .seconds(30))
@@ -1245,7 +1209,7 @@ final class ChatViewModel {
                 switch event {
                 case .sessionInfo(let id):
                     execSessionId = id
-                    saveSession(modelContext: modelContext, isComplete: false)
+                    saveSession(modelContext: modelContext)
                     if case .connecting = status { status = .streaming }
                     else if case .reconnecting = status { status = .streaming }
 
@@ -1261,12 +1225,6 @@ final class ChatViewModel {
                     }
 
                     if receivedResultEvent { break streamLoop }
-
-                    let now = Date()
-                    if now.timeIntervalSince(lastPersistTime) > 1 {
-                        lastPersistTime = now
-                        persistMessages(modelContext: modelContext)
-                    }
 
                 case .stderr:
                     // Heartbeat noise — count as activity to avoid timeout but discard
@@ -1308,14 +1266,27 @@ final class ChatViewModel {
     }
 
     /// Reattach to a running exec session after disconnect (e.g. app backgrounded).
-    /// Replays scrollback from the exec session, then streams live events.
-    /// If the exec session is gone (sprite slept), falls back to restoreFromSessionFile.
+    /// Pre-loads the wisplog for instant history display, then replays the exec scrollback
+    /// seeded with the wisplog's event UUIDs to avoid duplicating content.
     private func reattachToExec(
         execSessionId: String,
         apiClient: SpritesAPIClient,
         modelContext: ModelContext
     ) async {
         status = .reconnecting
+
+        // Pre-load the wisplog so the user sees history immediately while we wait for
+        // the exec WebSocket. Also seeds processedEventUUIDs so the exec replay doesn't
+        // duplicate content that's already been displayed from the wisplog.
+        await loadFromWispLog(apiClient: apiClient, modelContext: modelContext)
+
+        // If the wisplog showed a complete session (execSessionId cleared by loadFromWispLog),
+        // the exec is already done — no need to attach.
+        guard self.execSessionId != nil else {
+            if !Task.isCancelled { status = .idle }
+            return
+        }
+
         isReplaying = true
         isReplayingLiveService = true
         defer {
@@ -1326,38 +1297,19 @@ final class ChatViewModel {
 
         hasPlayedFirstTextHaptic = false
 
-        // Snapshot the current tail assistant message content before any clearing.
-        // Used below to restore if the replay produces less content (e.g. truncated logs).
-        let savedContent: [ChatContent]
-        if let existing = currentAssistantMessage {
-            savedContent = existing.content
-        } else if let last = messages.last, last.role == .assistant {
-            savedContent = last.content
-        } else {
-            savedContent = []
+        // Strip any trailing incomplete assistant from the wisplog load; the exec replay
+        // will rebuild it. A complete turn ends with a result event, so if the last message
+        // is assistant it may be partial.
+        if let last = messages.last, last.role == .assistant {
+            messages.removeLast()
         }
-
-        // Ensure we have an assistant message to append into.
-        let assistantMessage: ChatMessage
-        let hasPriorEvents = !processedEventUUIDs.isEmpty
-        if let existing = currentAssistantMessage {
-            assistantMessage = existing
-            if !hasPriorEvents { assistantMessage.content = [] }
-        } else if let last = messages.last, last.role == .assistant {
-            assistantMessage = last
-            if !hasPriorEvents { assistantMessage.content = [] }
-            currentAssistantMessage = last
-        } else {
-            assistantMessage = ChatMessage(role: .assistant)
-            messages.append(assistantMessage)
-            currentAssistantMessage = assistantMessage
-        }
+        let assistantMessage = ChatMessage(role: .assistant)
+        messages.append(assistantMessage)
+        currentAssistantMessage = assistantMessage
 
         await parser.reset()
-        if !hasPriorEvents {
-            toolUseIndex = [:]
-            rebuildToolUseIndex()
-        }
+        toolUseIndex = [:]
+        rebuildToolUseIndex()
         receivedSystemEvent = false
         receivedResultEvent = false
 
@@ -1371,20 +1323,17 @@ final class ChatViewModel {
             currentAssistantMessage = nil
         }
 
-        // .timedOut means no data was received at all — exec session is gone (sprite slept,
-        // session expired). Restore from Claude's session file so the user sees the result.
-        // .disconnected means data was received but no result event — the connection dropped
-        // while Claude was still running. Schedule a proactive reconnect (same as the initial
-        // stream) so we re-attach and pick up the rest rather than showing partial content.
-        if case .timedOut = streamResult, sessionId != nil {
+        if case .timedOut = streamResult {
+            // Exec is gone — reload the wisplog for the final state.
+            logger.info("[Chat] Exec gone on reattach — reloading wisplog")
             if case .error = status { status = .reconnecting }
-            logger.info("[Chat] Exec session gone on reattach — restoring from session file")
-            await restoreFromSessionFile(apiClient: apiClient, modelContext: modelContext)
+            await loadFromWispLog(apiClient: apiClient, modelContext: modelContext)
+            if !Task.isCancelled { status = .idle }
+            return
         } else if case .disconnected = streamResult {
             logger.info("[Chat] Dropped mid-reattach — will reconnect after delay")
             saveSession(modelContext: modelContext)
             if !Task.isCancelled { status = .idle }
-            persistMessages(modelContext: modelContext)
             let capturedApiClient = apiClient
             let capturedModelContext = modelContext
             streamTask = Task {
@@ -1396,10 +1345,7 @@ final class ChatViewModel {
         }
 
         saveSession(modelContext: modelContext)
-        if !Task.isCancelled {
-            status = .idle
-        }
-        persistMessages(modelContext: modelContext)
+        if !Task.isCancelled { status = .idle }
 
         if let queued = queuedPrompt, !Task.isCancelled {
             let prompt = buildPrompt(text: queued, attachments: queuedAttachments)
@@ -1407,80 +1353,7 @@ final class ChatViewModel {
             queuedAttachments = []
             let userMessage = ChatMessage(role: .user, content: [.text(prompt)])
             messages.append(userMessage)
-            persistMessages(modelContext: modelContext)
             await executeClaudeCommand(prompt: prompt, apiClient: apiClient, modelContext: modelContext)
-        }
-    }
-
-    /// Restore chat history from Claude's .jsonl session file on the sprite.
-    /// Used when the exec session is gone (sprite slept, exec expired).
-    private func restoreFromSessionFile(apiClient: SpritesAPIClient, modelContext: ModelContext) async {
-        // Try wisp log file first — it captures the full stream including sub-agent calls.
-        let logPath = Self.wispLogPath(for: chatId)
-        let (wispOutput, wispSuccess) = await apiClient.runExec(
-            spriteName: spriteName,
-            command: "cat \(shellEscape(logPath)) 2>/dev/null",
-            timeout: 30
-        )
-
-        if wispSuccess, !wispOutput.isEmpty {
-            let (parsed, parsedSessionId) = Self.parseWispLog(wispOutput)
-            if !parsed.isEmpty {
-                messages = parsed
-                if let parsedSessionId { sessionId = parsedSessionId }
-                rebuildToolUseIndex()
-
-                if let last = messages.last, last.role == .user {
-                    restoreUndeliveredDraft(modelContext: modelContext)
-                } else {
-                    self.execSessionId = nil
-                    saveSession(modelContext: modelContext, isComplete: true)
-                }
-                return
-            }
-        }
-
-        // Fallback: read Claude's internal JSONL for chats that predate wisp log files.
-        guard let sessionId = sessionId else { return }
-
-        let encodedPath = Self.claudeProjectPathEncoding(workingDirectory)
-        let path = "~/.claude/projects/\(encodedPath)/\(sessionId).jsonl"
-
-        var (output, success) = await apiClient.runExec(
-            spriteName: spriteName,
-            command: "cat \(path)",
-            timeout: 30
-        )
-
-        if !success || output.isEmpty {
-            let (findOutput, _) = await apiClient.runExec(
-                spriteName: spriteName,
-                command: "find ~/.claude -name '\(sessionId).jsonl' -print -quit 2>/dev/null",
-                timeout: 15
-            )
-            let foundPath = findOutput.trimmingCharacters(in: .whitespacesAndNewlines)
-            if !foundPath.isEmpty {
-                (output, success) = await apiClient.runExec(
-                    spriteName: spriteName,
-                    command: "cat '\(foundPath)'",
-                    timeout: 30
-                )
-            }
-        }
-
-        guard !output.isEmpty else { return }
-
-        let parsed = Self.parseSessionJSONL(output)
-        guard !parsed.isEmpty else { return }
-
-        messages = parsed
-        rebuildToolUseIndex()
-
-        if let last = messages.last, last.role == .user {
-            restoreUndeliveredDraft(modelContext: modelContext)
-        } else {
-            self.execSessionId = nil
-            saveSession(modelContext: modelContext, isComplete: true)
         }
     }
 
@@ -1589,9 +1462,9 @@ final class ChatViewModel {
             }
             receivedResultEvent = true
             sessionId = resultEvent.sessionId
-            let alreadyComplete = fetchChat(modelContext: modelContext)?.lastSessionComplete ?? false
-            saveSession(modelContext: modelContext, isComplete: true)
-            if !alreadyComplete { markChatUnread(modelContext: modelContext) }
+            execSessionId = nil
+            saveSession(modelContext: modelContext)
+            markChatUnread(modelContext: modelContext)
 
             let autoCheckpointEnabled = UserDefaults.standard.bool(forKey: "autoCheckpoint")
             if !isReplaying, turnHasMutations, autoCheckpointEnabled, let apiClient {
@@ -1634,7 +1507,6 @@ final class ChatViewModel {
             if let cp = newest {
                 assistantMessage?.checkpointId = cp.id
                 assistantMessage?.checkpointComment = comment
-                persistMessages(modelContext: modelContext)
             }
         } catch {
             logger.error("Auto-checkpoint failed: \(error.localizedDescription)")
@@ -1944,12 +1816,11 @@ final class ChatViewModel {
         try? modelContext.save()
     }
 
-    private func saveSession(modelContext: ModelContext, isComplete: Bool? = nil) {
+    private func saveSession(modelContext: ModelContext) {
         guard let chat = fetchChat(modelContext: modelContext) else { return }
         chat.claudeSessionId = sessionId
         chat.execSessionId = execSessionId
         chat.lastUsed = Date()
-        if let isComplete { chat.lastSessionComplete = isComplete }
         try? modelContext.save()
     }
 
@@ -1961,25 +1832,6 @@ final class ChatViewModel {
     ///
     /// Wisp previously only replaced `/`, producing `-home-sprite-.wisp-...`
     /// which didn't match the on-disk directory name.
-    /// Re-link ToolResultCards to their ToolUseCards after a SwiftData round-trip.
-    /// Persistence serialises tool use and tool result as separate flat items and does
-    /// not store the ToolUseCard.result reference, so it must be rebuilt on load.
-    private func linkToolResults(in messages: [ChatMessage]) {
-        var toolUseCards: [String: ToolUseCard] = [:]
-        for message in messages {
-            for item in message.content {
-                switch item {
-                case .toolUse(let card):
-                    toolUseCards[card.toolUseId] = card
-                case .toolResult(let result):
-                    toolUseCards[result.toolUseId]?.result = result
-                default:
-                    break
-                }
-            }
-        }
-    }
-
     /// Encode a filesystem path the same way Claude Code does when creating its
     /// per-project JSONL directories: replace every `/` and `.` with `-`.
     ///

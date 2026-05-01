@@ -13,8 +13,6 @@ final class SpriteChat {
     var workingDirectory: String
     var createdAt: Date
     var lastUsed: Date
-    var messagesData: Data?
-    var streamEventUUIDsData: Data?
     var draftInputText: String?
     var draftAttachmentPaths: [String]?
     var isClosed: Bool
@@ -23,7 +21,6 @@ final class SpriteChat {
     var forkContext: String?
     var worktreePath: String?
     var worktreeBranch: String?
-    var lastSessionComplete: Bool = false
     var isUnread: Bool = false
 
     var displayName: String {
@@ -46,31 +43,5 @@ final class SpriteChat {
         self.lastUsed = Date()
         self.isClosed = false
         self.spriteCreatedAt = spriteCreatedAt
-    }
-
-    func loadMessages() -> [PersistedChatMessage] {
-        guard let data = messagesData else { return [] }
-        return (try? JSONDecoder().decode([PersistedChatMessage].self, from: data)) ?? []
-    }
-
-    func loadStreamEventUUIDs() -> Set<String> {
-        guard let data = streamEventUUIDsData else { return [] }
-        return (try? JSONDecoder().decode(Set<String>.self, from: data)) ?? []
-    }
-
-    func saveStreamEventUUIDs(_ uuids: Set<String>) {
-        streamEventUUIDsData = try? JSONEncoder().encode(uuids)
-    }
-
-    func saveMessages(_ messages: [PersistedChatMessage]) {
-        messagesData = try? JSONEncoder().encode(messages)
-
-        if firstMessagePreview == nil, let first = messages.first(where: { $0.role == .user }) {
-            let text = first.content.compactMap { if case .text(let t) = $0 { t } else { nil } }.joined()
-            if !text.isEmpty {
-                let collapsed = text.replacingOccurrences(of: "\n", with: " ")
-                firstMessagePreview = String(collapsed.prefix(100))
-            }
-        }
     }
 }

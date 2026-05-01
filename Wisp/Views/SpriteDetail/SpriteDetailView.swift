@@ -399,37 +399,36 @@ struct SpriteDetailView: View {
             }
 
             let context = buildForkContext(upTo: messageId)
-            let priorMessages = buildPriorMessages(upTo: messageId)
 
             let chat = chatListViewModel.createChat(modelContext: modelContext)
             chat.forkContext = context
-            if !priorMessages.isEmpty {
-                chat.saveMessages(priorMessages)
-            }
             try? modelContext.save()
+
+            // Copy the parent chat's wisplog up to the fork point into the new chat's
+            // wisplog so the fork shows the prior conversation immediately.
+            if let vm = chatViewModel,
+               let idx = vm.messages.firstIndex(where: { $0.id == messageId }) {
+                let turnCount = vm.messages[...idx].filter { $0.role == .assistant }.count
+                if turnCount > 0 {
+                    let oldLog = ChatViewModel.wispLogPath(for: vm.chatId)
+                    let newLog = ChatViewModel.wispLogPath(for: chat.id)
+                    _ = await apiClient.runExec(
+                        spriteName: sprite.name,
+                        command: """
+                            mkdir -p /home/sprite/.wisp/chats && \
+                            awk '{print} /"type":"result"/{n++; if(n>=\(turnCount))exit}' \
+                            \(shellEscape(oldLog)) > \(shellEscape(newLog))
+                            """,
+                        timeout: 15
+                    )
+                }
+            }
 
             switchToChat(chat)
             if sizeClass != .regular {
                 showingChat = true
             }
         }
-    }
-
-    private func buildPriorMessages(upTo messageId: UUID) -> [PersistedChatMessage] {
-        guard let vm = chatViewModel else { return [] }
-        guard let idx = vm.messages.firstIndex(where: { $0.id == messageId }) else { return [] }
-
-        var persisted = vm.messages.prefix(through: idx).map { $0.toPersisted() }
-
-        // Add a system notice marking the fork point
-        let notice = PersistedChatMessage(
-            id: UUID(),
-            timestamp: Date(),
-            role: .system,
-            content: [.text("Forked from checkpoint — filesystem restored to this point")]
-        )
-        persisted.append(notice)
-        return persisted
     }
 
     private func buildForkContext(upTo messageId: UUID) -> String? {

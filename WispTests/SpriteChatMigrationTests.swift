@@ -16,30 +16,19 @@ struct SpriteChatMigrationTests {
     @Test func migratesSpriteSessionToSpriteChat() throws {
         let ctx = try makeModelContext()
 
-        // Create a SpriteSession with data
         let session = SpriteSession(spriteName: "my-sprite", workingDirectory: "/home/sprite/myproject")
         session.claudeSessionId = "sess-123"
         session.draftInputText = "hello"
         session.lastUsed = Date(timeIntervalSinceNow: -60)
-        let messages = [PersistedChatMessage(
-            id: UUID(),
-            timestamp: Date(),
-            role: .user,
-            content: [.text("test message")]
-        )]
-        session.saveMessages(messages)
         ctx.insert(session)
         try ctx.save()
 
-        // Run migration
         migrateSpriteSessionsIfNeeded(modelContext: ctx)
 
-        // Verify SpriteSession is deleted
         let sessionDescriptor = FetchDescriptor<SpriteSession>()
         let remainingSessions = try ctx.fetch(sessionDescriptor)
         #expect(remainingSessions.isEmpty)
 
-        // Verify SpriteChat was created
         let chatDescriptor = FetchDescriptor<SpriteChat>()
         let chats = try ctx.fetch(chatDescriptor)
         #expect(chats.count == 1)
@@ -51,45 +40,16 @@ struct SpriteChatMigrationTests {
         #expect(chat.workingDirectory == "/home/sprite/myproject")
         #expect(chat.draftInputText == "hello")
         #expect(chat.isClosed == false)
-
-        // Verify messages were copied
-        let loadedMessages = chat.loadMessages()
-        #expect(loadedMessages.count == 1)
     }
 
     @Test func migrationIsIdempotent() throws {
         let ctx = try makeModelContext()
 
-        // No sessions to migrate
         migrateSpriteSessionsIfNeeded(modelContext: ctx)
 
         let chatDescriptor = FetchDescriptor<SpriteChat>()
         let chats = try ctx.fetch(chatDescriptor)
         #expect(chats.isEmpty)
-    }
-
-    // MARK: - streamEventUUIDs round-trip
-
-    @Test func saveAndLoadStreamEventUUIDs_roundTrips() throws {
-        let ctx = try makeModelContext()
-        let chat = SpriteChat(spriteName: "test", chatNumber: 1)
-        ctx.insert(chat)
-        try ctx.save()
-
-        let uuids: Set<String> = ["uuid-1", "uuid-2", "uuid-3"]
-        chat.saveStreamEventUUIDs(uuids)
-
-        #expect(chat.loadStreamEventUUIDs() == uuids)
-    }
-
-    @Test func loadStreamEventUUIDs_returnsEmptySetWhenNil() throws {
-        let ctx = try makeModelContext()
-        let chat = SpriteChat(spriteName: "test", chatNumber: 1)
-        ctx.insert(chat)
-        try ctx.save()
-
-        #expect(chat.streamEventUUIDsData == nil)
-        #expect(chat.loadStreamEventUUIDs().isEmpty)
     }
 
     @Test func migratedChatsHaveNilSpriteCreatedAt() throws {

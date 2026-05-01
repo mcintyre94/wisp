@@ -13,77 +13,6 @@ struct AutoCheckpointTests {
         return ModelContext(container)
     }
 
-    // MARK: - Persistence round-trip
-
-    @Test("Checkpoint fields survive persistence round-trip")
-    func persistedCheckpointFields() {
-        let msg = ChatMessage(
-            role: .assistant,
-            content: [.text("I updated the file")],
-            checkpointId: "cp-abc123",
-            checkpointComment: "Updated the config"
-        )
-
-        let persisted = msg.toPersisted()
-        #expect(persisted.checkpointId == "cp-abc123")
-        #expect(persisted.checkpointComment == "Updated the config")
-
-        let restored = ChatMessage(from: persisted)
-        #expect(restored.checkpointId == "cp-abc123")
-        #expect(restored.checkpointComment == "Updated the config")
-    }
-
-    @Test("Nil checkpoint fields persist as nil")
-    func persistedNilCheckpointFields() {
-        let msg = ChatMessage(role: .assistant, content: [.text("Hello")])
-
-        let persisted = msg.toPersisted()
-        #expect(persisted.checkpointId == nil)
-        #expect(persisted.checkpointComment == nil)
-
-        let restored = ChatMessage(from: persisted)
-        #expect(restored.checkpointId == nil)
-        #expect(restored.checkpointComment == nil)
-    }
-
-    @Test("Checkpoint fields survive JSON encode/decode")
-    func checkpointFieldsJsonRoundTrip() throws {
-        let persisted = PersistedChatMessage(
-            id: UUID(),
-            timestamp: Date(),
-            role: .assistant,
-            content: [.text("Done")],
-            checkpointId: "cp-xyz",
-            checkpointComment: "Fixed the bug"
-        )
-
-        let data = try JSONEncoder().encode(persisted)
-        let decoded = try JSONDecoder().decode(PersistedChatMessage.self, from: data)
-        #expect(decoded.checkpointId == "cp-xyz")
-        #expect(decoded.checkpointComment == "Fixed the bug")
-    }
-
-    @Test("Old persisted messages without checkpoint fields decode with nil")
-    func backwardsCompatibility() throws {
-        // Simulate old format without checkpoint fields
-        let json = """
-        {
-            "id": "12345678-1234-1234-1234-123456789012",
-            "timestamp": 0,
-            "role": "assistant",
-            "content": [{"text": {"_0": "Hello"}}]
-        }
-        """
-        // This tests that decodeIfPresent handles missing keys
-        let data = Data(json.utf8)
-        // The actual encoding format may differ, but the key point is
-        // that PersistedChatMessage with optional checkpoint fields
-        // should handle missing keys gracefully via Codable synthesis
-        let msg = ChatMessage(role: .assistant, content: [.text("Test")])
-        #expect(msg.checkpointId == nil)
-        #expect(msg.checkpointComment == nil)
-    }
-
     // MARK: - Checkpoint comment generation
 
     @Test("Comment is non-nil and non-empty for text content")
@@ -126,6 +55,27 @@ struct AutoCheckpointTests {
         let comment = await ChatViewModel.generateCheckpointComment(from: msg)
         #expect(comment != nil)
         #expect(comment!.isEmpty == false)
+    }
+
+    // MARK: - Checkpoint fields on ChatMessage
+
+    @Test("Checkpoint fields default to nil")
+    func checkpointFieldsDefaultNil() {
+        let msg = ChatMessage(role: .assistant, content: [.text("Hello")])
+        #expect(msg.checkpointId == nil)
+        #expect(msg.checkpointComment == nil)
+    }
+
+    @Test("Checkpoint fields can be set in-memory")
+    func checkpointFieldsSetInMemory() {
+        let msg = ChatMessage(
+            role: .assistant,
+            content: [.text("I updated the file")],
+            checkpointId: "cp-abc123",
+            checkpointComment: "Updated the config"
+        )
+        #expect(msg.checkpointId == "cp-abc123")
+        #expect(msg.checkpointComment == "Updated the config")
     }
 
     // MARK: - SpriteChat forkContext
