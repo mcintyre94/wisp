@@ -46,7 +46,13 @@ final class ChatViewModel {
     let chatId: UUID
     var messages: [ChatMessage] = []
     var inputText = ""
-    var status: ChatStatus = .idle
+    var status: ChatStatus = .idle {
+        didSet {
+            if isActive, case .streaming = status {
+                hasSeenCurrentTurnResponse = true
+            }
+        }
+    }
     var modelName: String?
     var modelOverride: ClaudeModel?
     var remoteSessions: [ClaudeSessionEntry] = []
@@ -78,7 +84,18 @@ final class ChatViewModel {
     private var apiClient: SpritesAPIClient?
     /// Set by SpriteDetailView to indicate this chat is currently being viewed.
     /// When true, result events do not trigger the unread indicator.
-    var isActive: Bool = false
+    var isActive: Bool = false {
+        didSet {
+            if isActive, case .streaming = status {
+                hasSeenCurrentTurnResponse = true
+            }
+        }
+    }
+    /// True if the user was viewing this chat while the current turn was streaming.
+    /// Prevents a false-unread when isActive briefly drops to false at the exact
+    /// moment the result event fires (e.g. due to view lifecycle timing).
+    /// Reset to false each time a new user message is sent or a reconnect begins.
+    private var hasSeenCurrentTurnResponse: Bool = false
 
     /// UUIDs of Claude NDJSON events already processed.
     /// Used by reconnect to skip already-handled events instead of clearing content.
@@ -820,6 +837,7 @@ final class ChatViewModel {
 
         let worktreeEnabled = UserDefaults.standard.bool(forKey: "worktreePerChat")
         let needsWorktreeSetup = isFirstMessage && worktreePath == nil && worktreeEnabled
+        hasSeenCurrentTurnResponse = false
         status = .connecting
         // Cancel any orphaned reconnect task (e.g., reconnectIfNeeded fired in the same
         // run-loop turn before the task body had a chance to set .reconnecting).
@@ -950,6 +968,7 @@ final class ChatViewModel {
         // the session wasn't complete, so no need to wait for the task to start before
         // the UI reflects that we're reconnecting. reattachToExec also sets this, but
         // setting synchronously here avoids a brief idle flash while the Task warms up.
+        hasSeenCurrentTurnResponse = false
         status = .reconnecting
 
         // Cancel any orphaned task that may still be running (e.g., from a concurrent
@@ -1938,7 +1957,7 @@ final class ChatViewModel {
     }
 
     private func markChatUnread(modelContext: ModelContext) {
-        guard !isActive else { return }
+        guard !isActive && !hasSeenCurrentTurnResponse else { return }
         guard let chat = fetchChat(modelContext: modelContext) else { return }
         chat.isUnread = true
         try? modelContext.save()

@@ -1574,4 +1574,75 @@ struct ChatViewModelTests {
 
         #expect(lines.count == 3) // system + assistant + result only
     }
+
+    // MARK: - Unread logic
+
+    private func makeResultEvent(sessionId: String = "sess-1") -> ClaudeStreamEvent {
+        .result(ClaudeResultEvent(
+            type: "result", subtype: nil, sessionId: sessionId,
+            isError: false, durationMs: nil, numTurns: nil, result: nil, uuid: nil
+        ))
+    }
+
+    @Test func unread_markedWhenNotActiveAndNotSeen() throws {
+        let ctx = try makeModelContext()
+        let (vm, chat) = makeChatViewModel(modelContext: ctx)
+        // isActive = false (default), hasSeenCurrentTurnResponse = false (default)
+        vm.handleEvent(makeResultEvent(), modelContext: ctx)
+        #expect(chat.isUnread == true)
+    }
+
+    @Test func unread_notMarkedWhenActive() throws {
+        let ctx = try makeModelContext()
+        let (vm, chat) = makeChatViewModel(modelContext: ctx)
+        vm.isActive = true
+        vm.handleEvent(makeResultEvent(), modelContext: ctx)
+        #expect(chat.isUnread == false)
+    }
+
+    @Test func unread_notMarkedWhenSeenDuringStreaming() throws {
+        let ctx = try makeModelContext()
+        let (vm, chat) = makeChatViewModel(modelContext: ctx)
+        // Simulate: user was watching while status was .streaming
+        vm.isActive = true
+        vm.status = .streaming  // triggers status.didSet → hasSeenCurrentTurnResponse = true
+        vm.isActive = false     // user navigates away right at result time
+        vm.handleEvent(makeResultEvent(), modelContext: ctx)
+        #expect(chat.isUnread == false)
+    }
+
+    @Test func unread_notMarkedWhenActivatedMidStream() throws {
+        let ctx = try makeModelContext()
+        let (vm, chat) = makeChatViewModel(modelContext: ctx)
+        // Simulate: streaming started while inactive, then user opened the chat
+        vm.status = .streaming
+        vm.isActive = true  // triggers isActive.didSet → hasSeenCurrentTurnResponse = true
+        vm.isActive = false // user navigates away
+        vm.handleEvent(makeResultEvent(), modelContext: ctx)
+        #expect(chat.isUnread == false)
+    }
+
+    @Test func unread_seenFlagNotSetDuringConnecting() throws {
+        let ctx = try makeModelContext()
+        let (vm, chat) = makeChatViewModel(modelContext: ctx)
+        // .connecting is not .streaming — should not set hasSeenCurrentTurnResponse
+        vm.isActive = true
+        vm.status = .connecting
+        vm.isActive = false
+        vm.handleEvent(makeResultEvent(), modelContext: ctx)
+        #expect(chat.isUnread == true)
+    }
+
+    @Test func unread_seenFlagIgnoredWhenConnectingNotStreaming() throws {
+        let ctx = try makeModelContext()
+        let (vm, chat) = makeChatViewModel(modelContext: ctx)
+        // .connecting → .streaming transitions should only set the flag once streaming begins
+        vm.isActive = true
+        vm.status = .connecting  // not .streaming — flag not set
+        vm.status = .streaming   // now .streaming — flag IS set
+        vm.isActive = false
+        vm.handleEvent(makeResultEvent(), modelContext: ctx)
+        // User watched during .streaming → should NOT be marked unread
+        #expect(chat.isUnread == false)
+    }
 }
