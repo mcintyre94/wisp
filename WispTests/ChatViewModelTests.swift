@@ -1499,6 +1499,26 @@ struct ChatViewModelTests {
         #expect(messages[1].textContent == "I was saying...")
     }
 
+    @Test func parseWispLog_thinkingOnlyBlockFollowedByTextBlock() {
+        // Regression: extended thinking emits a thinking-only assistant event before the
+        // text event. Both events belong to the same turn and should produce a single
+        // assistant message containing only the text (thinking blocks are ignored).
+        let ndjson = """
+        {"type":"wisp_user_prompt","text":"Do we have similar tests?","timestamp":""}
+        {"type":"system","session_id":"sess-1"}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"thinking","thinking":"Let me check..."}]}}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Looking back — no, no similar tests exist."}]}}
+        {"type":"result","session_id":"sess-1","is_error":false}
+        """
+
+        let (messages, _) = ChatViewModel.parseWispLog(ndjson)
+
+        #expect(messages.count == 2)
+        #expect(messages[0].role == .user)
+        #expect(messages[1].role == .assistant)
+        #expect(messages[1].textContent == "Looking back — no, no similar tests exist.")
+    }
+
     // MARK: - convertJSONLToWisp
 
     @Test func convertJSONLToWisp_userPromptString() {

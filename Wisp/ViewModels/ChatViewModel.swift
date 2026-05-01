@@ -711,6 +711,10 @@ final class ChatViewModel {
         let (parsed, parsedSessionId) = Self.parseWispLog(output)
         guard !parsed.isEmpty else { return }
 
+        // Don't overwrite messages if a new streaming session started while the
+        // wisplog was being fetched (user sent another message in the window).
+        guard !isStreaming else { return }
+
         messages = parsed
         if let parsedSessionId { sessionId = parsedSessionId }
         rebuildToolUseIndex()
@@ -929,13 +933,20 @@ final class ChatViewModel {
             return
         }
 
-        // If the last session completed cleanly, content is already loaded from
-        // persistence — no need to hit the network at all.
+        // If the last session completed cleanly, no exec reconnect is needed.
         if let chat = fetchChat(modelContext: modelContext), chat.lastSessionComplete {
-            // Edge case: app killed between persistMessages and saveSession(isComplete:false).
-            // The session was previously complete but a new user message was appended and
-            // persisted before the exec session was created. Restore it as a draft.
-            restoreUndeliveredDraft(modelContext: modelContext)
+            if messages.last?.role == .user {
+                // Edge case: app killed between persistMessages and saveSession(isComplete:false).
+                // A new user message was appended and persisted before the exec session was
+                // created. Restore it as a draft — don't also reload the wisplog here since
+                // the wisplog would include this undelivered prompt and put it back in messages.
+                restoreUndeliveredDraft(modelContext: modelContext)
+            } else if !isLoadingHistory {
+                // Session ended cleanly with an assistant response. Verify against the
+                // wisplog in the background to catch any history truncation from earlier
+                // reconnects or backgrounding that our streaming reload may not have fixed.
+                Task { await loadFromWispLog(apiClient: apiClient, modelContext: modelContext) }
+            }
             return
         }
 
@@ -1130,7 +1141,40 @@ final class ChatViewModel {
             return
         }
 
-        // If timed out with no data, clear Claude lock files and retry once
+        // If timed out with no data, first check whether Claude actually finished and
+        // the output was written to the wisplog before our WebSocket could connect.
+        // This happens when a short response completes in under ~1s (faster than the
+        // WebSocket handshake), causing processExecStream to see no stdout at all.
+        // Loading from the wisplog avoids a redundant retry and a duplicate user prompt.
+        if case .timedOut = streamResult, !retriedAfterTimeout, sessionId != nil {
+            let logPath = Self.wispLogPath(for: chatId)
+            let (wispOutput, wispSuccess) = await apiClient.runExec(
+                spriteName: spriteName,
+                command: "cat \(shellEscape(logPath)) 2>/dev/null",
+                timeout: 15
+            )
+            if wispSuccess, !wispOutput.isEmpty {
+                let (parsed, parsedSessionId) = Self.parseWispLog(wispOutput)
+                // The wisplog has a completed response if it has at least as many messages
+                // as the current array and ends with a non-empty assistant message.
+                if parsed.count >= messages.count,
+                   parsed.last?.role == .assistant,
+                   !(parsed.last?.content.isEmpty ?? true) {
+                    logger.info("[Chat] Exec timed out but wisplog has completed response — loading it")
+                    messages = parsed
+                    if let parsedSessionId { sessionId = parsedSessionId }
+                    rebuildToolUseIndex()
+                    execSessionId = nil
+                    saveSession(modelContext: modelContext, isComplete: true)
+                    persistMessages(modelContext: modelContext)
+                    if !Task.isCancelled { status = .idle }
+                    return
+                }
+            }
+        }
+
+        // If timed out with no data and wisplog had nothing useful, clear Claude lock
+        // files and retry once.
         if case .timedOut = streamResult, !retriedAfterTimeout {
             logger.info("Timeout — clearing Claude lock files and retrying")
             retriedAfterTimeout = true
@@ -1175,6 +1219,13 @@ final class ChatViewModel {
             messages.append(userMessage)
             persistMessages(modelContext: modelContext)
             await executeClaudeCommand(prompt: prompt, apiClient: apiClient, modelContext: modelContext)
+        } else {
+            // Reload from the wisplog to correct any history truncation from reconnects
+            // or backgrounding. The guard in loadFromWispLog aborts if the user sends
+            // another message before the cat completes.
+            let capturedApiClient = apiClient
+            let capturedModelContext = modelContext
+            Task { await loadFromWispLog(apiClient: capturedApiClient, modelContext: capturedModelContext) }
         }
     }
 
@@ -1410,6 +1461,11 @@ final class ChatViewModel {
             messages.append(userMessage)
             persistMessages(modelContext: modelContext)
             await executeClaudeCommand(prompt: prompt, apiClient: apiClient, modelContext: modelContext)
+        } else if case .completed = streamResult, !Task.isCancelled {
+            // Same post-completion wisplog reload as executeClaudeCommand.
+            let capturedApiClient = apiClient
+            let capturedModelContext = modelContext
+            Task { await loadFromWispLog(apiClient: capturedApiClient, modelContext: capturedModelContext) }
         }
     }
 
