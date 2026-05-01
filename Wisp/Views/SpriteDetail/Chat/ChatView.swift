@@ -27,13 +27,13 @@ struct ChatView: View {
 
     // Quick Actions
     @State private var quickActionsViewModel: QuickActionsViewModel?
-    @State private var saveDraftTask: Task<Void, Never>?
+
     @State private var showChatSwitcher = false
 
     var body: some View {
         ScrollViewReader { proxy in
             ScrollView {
-                VStack(spacing: 12) {
+                LazyVStack(spacing: 12) {
                     if viewModel.messages.isEmpty && !isReadOnly && !viewModel.usesWorktree {
                         SessionSuggestionsView(
                             sessions: viewModel.remoteSessions,
@@ -150,14 +150,6 @@ struct ChatView: View {
                 viewModel.saveDraft(modelContext: modelContext)
             }
         }
-        .onChange(of: viewModel.inputText) {
-            saveDraftTask?.cancel()
-            saveDraftTask = Task {
-                try? await Task.sleep(for: .milliseconds(500))
-                guard !Task.isCancelled else { return }
-                viewModel.saveDraft(modelContext: modelContext)
-            }
-        }
         .onChange(of: viewModel.attachedFiles.count) {
             viewModel.saveDraft(modelContext: modelContext)
         }
@@ -190,6 +182,7 @@ struct ChatView: View {
                     },
                     lastUploadedFileName: viewModel.lastUploadedFileName,
                     onStash: { viewModel.stashDraft() },
+                    onTextChange: { viewModel.saveDraft(modelContext: modelContext) },
                     isFocused: $isInputFocused
                 )
             }
