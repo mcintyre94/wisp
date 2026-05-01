@@ -523,12 +523,13 @@ final class ChatViewModel {
     /// The file contains `wisp_user_prompt` events (user messages) interleaved with
     /// raw Claude stream-json events (system, assistant, user/tool_result, result).
     /// Resilient — skips any lines that fail to decode.
-    static func parseWispLog(_ ndjson: String) -> (messages: [ChatMessage], sessionId: String?, eventUUIDs: Set<String>) {
+    static func parseWispLog(_ ndjson: String) -> (messages: [ChatMessage], sessionId: String?, eventUUIDs: Set<String>, isComplete: Bool) {
         var messages: [ChatMessage] = []
         var currentAssistant: ChatMessage?
         var toolUseCards: [String: ToolUseCard] = [:]
         var sessionId: String?
         var eventUUIDs: Set<String> = []
+        var isComplete = false
         let decoder = JSONDecoder.apiDecoder()
 
         for line in ndjson.split(separator: "\n", omittingEmptySubsequences: true) {
@@ -599,6 +600,7 @@ final class ChatViewModel {
 
             case .result(let re):
                 sessionId = re.sessionId
+                isComplete = true
                 if let assistant = currentAssistant {
                     messages.append(assistant)
                     currentAssistant = nil
@@ -609,12 +611,12 @@ final class ChatViewModel {
             }
         }
 
-        // Finalize any trailing assistant message
+        // Finalize any trailing assistant message (only present for incomplete sessions)
         if let assistant = currentAssistant {
             messages.append(assistant)
         }
 
-        return (messages, sessionId, eventUUIDs)
+        return (messages, sessionId, eventUUIDs, isComplete)
     }
 
     /// Convert a Claude JSONL session string to wisp NDJSON format.
@@ -698,7 +700,7 @@ final class ChatViewModel {
 
         guard success, !output.isEmpty else { return }
 
-        let (parsed, parsedSessionId, seenUUIDs) = Self.parseWispLog(output)
+        let (parsed, parsedSessionId, seenUUIDs, sessionIsComplete) = Self.parseWispLog(output)
         guard !parsed.isEmpty else { return }
 
         // Don't overwrite messages if a new streaming session started while fetching.
@@ -720,7 +722,10 @@ final class ChatViewModel {
 
         if let last = messages.last, last.role == .user {
             restoreUndeliveredDraft(modelContext: modelContext)
-        } else {
+        } else if sessionIsComplete {
+            // Only clear execSessionId when a result event confirms the session finished.
+            // An in-progress session also ends with an assistant tail, so we must not
+            // clear execSessionId for live sessions or reattachToExec will bail immediately.
             execSessionId = nil
             saveSession(modelContext: modelContext)
         }
@@ -1297,14 +1302,17 @@ final class ChatViewModel {
 
         hasPlayedFirstTextHaptic = false
 
-        // Strip any trailing incomplete assistant from the wisplog load; the exec replay
-        // will rebuild it. A complete turn ends with a result event, so if the last message
-        // is assistant it may be partial.
+        // Use the trailing assistant from the wisplog as the streaming target (or create
+        // one if the wisplog had no partial turn yet). processedEventUUIDs was seeded from
+        // the wisplog, so the exec replay skips events already shown and only appends new
+        // content — keeping the partial response visible while extending it live.
+        let assistantMessage: ChatMessage
         if let last = messages.last, last.role == .assistant {
-            messages.removeLast()
+            assistantMessage = last
+        } else {
+            assistantMessage = ChatMessage(role: .assistant)
+            messages.append(assistantMessage)
         }
-        let assistantMessage = ChatMessage(role: .assistant)
-        messages.append(assistantMessage)
         currentAssistantMessage = assistantMessage
 
         await parser.reset()

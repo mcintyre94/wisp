@@ -547,7 +547,7 @@ struct ChatViewModelTests {
         """
 
         let wispContent = ChatViewModel.convertJSONLToWisp(jsonl)
-        let (wispMessages, _, _) = ChatViewModel.parseWispLog(wispContent)
+        let (wispMessages, _, _, _) = ChatViewModel.parseWispLog(wispContent)
 
         // Should produce same 4 messages as parseSessionJSONL
         #expect(wispMessages.count == 4, "Round-trip produced \(wispMessages.count) messages, expected 4")
@@ -1260,7 +1260,7 @@ struct ChatViewModelTests {
         {"type":"result","session_id":"sess-1","is_error":false}
         """
 
-        let (messages, sessionId, _) = ChatViewModel.parseWispLog(ndjson)
+        let (messages, sessionId, _, _) = ChatViewModel.parseWispLog(ndjson)
 
         #expect(messages.count == 2)
         #expect(messages[0].role == .user)
@@ -1282,7 +1282,7 @@ struct ChatViewModelTests {
         {"type":"result","session_id":"sess-1","is_error":false}
         """
 
-        let (messages, sessionId, _) = ChatViewModel.parseWispLog(ndjson)
+        let (messages, sessionId, _, _) = ChatViewModel.parseWispLog(ndjson)
 
         #expect(messages.count == 4)
         #expect(messages[0].role == .user)
@@ -1306,7 +1306,7 @@ struct ChatViewModelTests {
         {"type":"result","session_id":"sess-1","is_error":false}
         """
 
-        let (messages, _, _) = ChatViewModel.parseWispLog(ndjson)
+        let (messages, _, _, _) = ChatViewModel.parseWispLog(ndjson)
 
         #expect(messages.count == 2) // user + assistant
         let assistant = messages[1]
@@ -1349,7 +1349,7 @@ struct ChatViewModelTests {
         {"type":"result","session_id":"sess-1","is_error":false}
         """
 
-        let (messages, _, _) = ChatViewModel.parseWispLog(ndjson)
+        let (messages, _, _, _) = ChatViewModel.parseWispLog(ndjson)
 
         #expect(messages.count == 2)
         #expect(messages[1].textContent == "Part 1 Part 2")
@@ -1364,14 +1364,14 @@ struct ChatViewModelTests {
         {"type":"result","session_id":"sess-1","is_error":false}
         """
 
-        let (messages, _, _) = ChatViewModel.parseWispLog(ndjson)
+        let (messages, _, _, _) = ChatViewModel.parseWispLog(ndjson)
 
         #expect(messages.count == 2)
         #expect(messages[1].textContent == "Works fine")
     }
 
     @Test func parseWispLog_emptyInput() {
-        let (messages, sessionId, _) = ChatViewModel.parseWispLog("")
+        let (messages, sessionId, _, _) = ChatViewModel.parseWispLog("")
         #expect(messages.isEmpty)
         #expect(sessionId == nil)
     }
@@ -1383,11 +1383,35 @@ struct ChatViewModelTests {
         {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"I was saying..."}]}}
         """
 
-        let (messages, _, _) = ChatViewModel.parseWispLog(ndjson)
+        let (messages, _, _, _) = ChatViewModel.parseWispLog(ndjson)
 
         #expect(messages.count == 2)
         #expect(messages[1].role == .assistant)
         #expect(messages[1].textContent == "I was saying...")
+    }
+
+    @Test func parseWispLog_isCompleteAndEventUUIDs() {
+        // Completed session: isComplete true, eventUUIDs populated
+        let completedNdjson = """
+        {"type":"wisp_user_prompt","text":"Hi","timestamp":""}
+        {"type":"system","session_id":"sess-1","uuid":"uuid-sys-1"}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Hello"}]},"uuid":"uuid-ast-1"}
+        {"type":"result","session_id":"sess-1","is_error":false,"uuid":"uuid-res-1"}
+        """
+        let (_, _, uuids, isComplete) = ChatViewModel.parseWispLog(completedNdjson)
+        #expect(isComplete == true)
+        #expect(uuids.contains("uuid-sys-1"))
+        #expect(uuids.contains("uuid-ast-1"))
+        #expect(uuids.contains("uuid-res-1"))
+
+        // In-progress session (no result event): isComplete false
+        let inProgressNdjson = """
+        {"type":"wisp_user_prompt","text":"Hi","timestamp":""}
+        {"type":"system","session_id":"sess-1","uuid":"uuid-sys-2"}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Still thinking..."}]},"uuid":"uuid-ast-2"}
+        """
+        let (_, _, _, isIncomplete) = ChatViewModel.parseWispLog(inProgressNdjson)
+        #expect(isIncomplete == false)
     }
 
     // MARK: - convertJSONLToWisp
