@@ -1,3 +1,4 @@
+import SwiftData
 import SwiftUI
 
 struct SpriteRowView: View {
@@ -6,7 +7,21 @@ struct SpriteRowView: View {
     var isSelected: Bool = false
     var hasUnreadChats: Bool = false
 
+    @Query private var recentChats: [SpriteChat]
     @State private var isPulsing = false
+
+    init(sprite: Sprite, isPlain: Bool = false, isSelected: Bool = false, hasUnreadChats: Bool = false) {
+        self.sprite = sprite
+        self.isPlain = isPlain
+        self.isSelected = isSelected
+        self.hasUnreadChats = hasUnreadChats
+        let name = sprite.name
+        _recentChats = Query(
+            filter: #Predicate<SpriteChat> { $0.spriteName == name && !$0.isClosed },
+            sort: \.lastUsed,
+            order: .reverse
+        )
+    }
 
     var body: some View {
         if isPlain {
@@ -43,7 +58,11 @@ struct SpriteRowView: View {
                     .fontWeight(.medium)
                     .foregroundStyle(isPlain ? AnyShapeStyle(.primary) : AnyShapeStyle(Color.primary))
 
-                if let createdAt = sprite.createdAt {
+                if let chat = recentChats.first {
+                    Text("\(chat.displayName) · \(chat.lastUsed.relativeFormatted)")
+                        .font(.caption)
+                        .foregroundStyle(isPlain ? AnyShapeStyle(.secondary) : AnyShapeStyle(Color.secondary))
+                } else if let createdAt = sprite.createdAt {
                     Text(createdAt.relativeFormatted)
                         .font(.caption)
                         .foregroundStyle(isPlain ? AnyShapeStyle(.secondary) : AnyShapeStyle(Color.secondary))
@@ -100,6 +119,7 @@ private func mockSprite(id: String = "s1", name: String, status: String) -> Spri
         SpriteRowView(sprite: mockSprite(id: "s4", name: "busy-sprite", status: "running"), hasUnreadChats: true)
     }
     .padding()
+    .modelContainer(for: [SpriteChat.self, SpriteSession.self], inMemory: true)
 }
 
 #Preview("Plain style (iPad sidebar)") {
@@ -109,4 +129,5 @@ private func mockSprite(id: String = "s1", name: String, status: String) -> Spri
         SpriteRowView(sprite: mockSprite(id: "s3", name: "old-project", status: "cold"), isPlain: true)
         SpriteRowView(sprite: mockSprite(id: "s4", name: "busy-sprite", status: "running"), isPlain: true, hasUnreadChats: true)
     }
+    .modelContainer(for: [SpriteChat.self, SpriteSession.self], inMemory: true)
 }

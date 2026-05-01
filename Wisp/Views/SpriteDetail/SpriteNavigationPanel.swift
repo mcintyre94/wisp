@@ -92,6 +92,11 @@ struct SpriteNavigationPanel: View {
                 Image(systemName: "archivebox")
                     .font(.caption2)
                     .foregroundStyle(.tertiary)
+            } else if chat.id == openChats.first?.id {
+                Image(systemName: "clock")
+                    .font(.caption2)
+                    .foregroundStyle(.tertiary)
+                    .accessibilityLabel("Most recently used")
             }
         }
         .contextMenu {

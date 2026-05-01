@@ -6,6 +6,19 @@ enum SpriteSortOrder: String, CaseIterable {
     case newest = "Newest"
 }
 
+/// Navigation target for the iPhone NavigationStack.
+/// Carries an optional resumeChatId so "Resume Chat" swipe actions can jump
+/// directly into a specific chat instead of landing on the overview.
+struct SpriteNavTarget: Hashable {
+    let spriteId: String
+    let resumeChatId: UUID?
+
+    init(_ spriteId: String, resumeChatId: UUID? = nil) {
+        self.spriteId = spriteId
+        self.resumeChatId = resumeChatId
+    }
+}
+
 struct DashboardView: View {
     @Environment(SpritesAPIClient.self) private var apiClient
     @Environment(ChatSessionManager.self) private var chatSessionManager
@@ -17,6 +30,10 @@ struct DashboardView: View {
     @State private var selectedTab: SpriteTab = .chat
     @State private var sortOrder: SpriteSortOrder = .newest
     @State private var showSettings = false
+    // iPhone: programmatic navigation path (lets swipe actions push directly to chat)
+    @State private var navPath = NavigationPath()
+    // iPad: flag set by "Resume Chat" action so onChange skips defaulting to overview
+    @State private var pendingChatOpen = false
 
     private var sortedSprites: [Sprite] {
         switch sortOrder {
@@ -77,6 +94,19 @@ struct DashboardView: View {
                 .tint(.red)
             }
             .swipeActions(edge: .leading) {
+                Button {
+                    if selectedSpriteID == sprite.id {
+                        // Already selected in the split view — just switch to the chat tab directly.
+                        selectedTab = .chat
+                    } else {
+                        pendingChatOpen = true
+                        selectedSpriteID = sprite.id
+                    }
+                } label: {
+                    Label("Resume Chat", systemImage: "arrow.uturn.right")
+                }
+                .tint(.indigo)
+
                 if (sprite.status == .warm || sprite.status == .cold) && !viewModel.wakingSprites.contains(sprite.name) {
                     Button {
                         Task { await viewModel.wakeSprite(sprite, apiClient: apiClient) }
@@ -87,6 +117,17 @@ struct DashboardView: View {
                 }
             }
             .contextMenu {
+                Button {
+                    if selectedSpriteID == sprite.id {
+                        selectedTab = .chat
+                    } else {
+                        pendingChatOpen = true
+                        selectedSpriteID = sprite.id
+                    }
+                } label: {
+                    Label("Resume Last Chat", systemImage: "arrow.uturn.right")
+                }
+
                 if (sprite.status == .warm || sprite.status == .cold) && !viewModel.wakingSprites.contains(sprite.name) {
                     Button {
                         Task { await viewModel.wakeSprite(sprite, apiClient: apiClient) }
@@ -100,16 +141,6 @@ struct DashboardView: View {
                     Label("Delete", systemImage: "trash")
                 }
             }
-            .confirmationDialog("Delete Sprite?", isPresented: .init(
-                get: { viewModel.spriteToDelete?.id == sprite.id },
-                set: { if !$0 { viewModel.spriteToDelete = nil } }
-            )) {
-                Button("Delete", role: .destructive) {
-                    Task { await viewModel.deleteSprite(sprite, apiClient: apiClient) }
-                }
-            } message: {
-                Text("This will permanently delete \"\(sprite.name)\". This action cannot be undone.")
-            }
             .id(sprite.id)
         }
     }
@@ -118,7 +149,7 @@ struct DashboardView: View {
     @ViewBuilder
     private var iPhoneSpriteListRows: some View {
         ForEach(sortedSprites) { sprite in
-            NavigationLink(value: sprite.id) {
+            NavigationLink(value: SpriteNavTarget(sprite.id)) {
                 SpriteRowView(
                     sprite: sprite,
                     isPlain: false,
@@ -133,6 +164,19 @@ struct DashboardView: View {
                 .tint(.red)
             }
             .swipeActions(edge: .leading) {
+                Button {
+                    let name = sprite.name
+                    let descriptor = FetchDescriptor<SpriteChat>(
+                        predicate: #Predicate { $0.spriteName == name && !$0.isClosed },
+                        sortBy: [SortDescriptor(\.lastUsed, order: .reverse)]
+                    )
+                    let resumeChatId = (try? modelContext.fetch(descriptor))?.first?.id
+                    navPath.append(SpriteNavTarget(sprite.id, resumeChatId: resumeChatId))
+                } label: {
+                    Label("Resume Chat", systemImage: "arrow.uturn.right")
+                }
+                .tint(.indigo)
+
                 if (sprite.status == .warm || sprite.status == .cold) && !viewModel.wakingSprites.contains(sprite.name) {
                     Button {
                         Task { await viewModel.wakeSprite(sprite, apiClient: apiClient) }
@@ -143,6 +187,18 @@ struct DashboardView: View {
                 }
             }
             .contextMenu {
+                Button {
+                    let name = sprite.name
+                    let descriptor = FetchDescriptor<SpriteChat>(
+                        predicate: #Predicate { $0.spriteName == name && !$0.isClosed },
+                        sortBy: [SortDescriptor(\.lastUsed, order: .reverse)]
+                    )
+                    let resumeChatId = (try? modelContext.fetch(descriptor))?.first?.id
+                    navPath.append(SpriteNavTarget(sprite.id, resumeChatId: resumeChatId))
+                } label: {
+                    Label("Resume Last Chat", systemImage: "arrow.uturn.right")
+                }
+
                 if (sprite.status == .warm || sprite.status == .cold) && !viewModel.wakingSprites.contains(sprite.name) {
                     Button {
                         Task { await viewModel.wakeSprite(sprite, apiClient: apiClient) }
@@ -156,16 +212,6 @@ struct DashboardView: View {
                     Label("Delete", systemImage: "trash")
                 }
             }
-            .confirmationDialog("Delete Sprite?", isPresented: .init(
-                get: { viewModel.spriteToDelete?.id == sprite.id },
-                set: { if !$0 { viewModel.spriteToDelete = nil } }
-            )) {
-                Button("Delete", role: .destructive) {
-                    Task { await viewModel.deleteSprite(sprite, apiClient: apiClient) }
-                }
-            } message: {
-                Text("This will permanently delete \"\(sprite.name)\". This action cannot be undone.")
-            }
             .listRowSeparator(.hidden)
             .listRowBackground(Color.clear)
             .listRowInsets(EdgeInsets(top: 6, leading: 16, bottom: 6, trailing: 16))
@@ -175,7 +221,7 @@ struct DashboardView: View {
 
     // iPhone: explicit NavigationStack so SpriteDetailView can push further views
     private var iPhoneContent: some View {
-        NavigationStack {
+        NavigationStack(path: $navPath) {
             Group {
                 if viewModel.sprites.isEmpty && !viewModel.isLoading {
                     ContentUnavailableView(
@@ -196,10 +242,24 @@ struct DashboardView: View {
             }
             .navigationTitle("Sprites")
             .toolbar { dashboardToolbar }
-            .navigationDestination(for: String.self) { id in
-                if let sprite = sortedSprites.first(where: { $0.id == id }) {
-                    SpriteDetailView(sprite: sprite, selectedTab: $selectedTab)
-                        .id(id)
+            .confirmationDialog("Delete Sprite?", isPresented: .init(
+                get: { viewModel.spriteToDelete != nil },
+                set: { if !$0 { viewModel.spriteToDelete = nil } }
+            )) {
+                Button("Delete", role: .destructive) {
+                    if let sprite = viewModel.spriteToDelete {
+                        Task { await viewModel.deleteSprite(sprite, apiClient: apiClient) }
+                    }
+                }
+            } message: {
+                if let sprite = viewModel.spriteToDelete {
+                    Text("This will permanently delete \"\(sprite.name)\". This action cannot be undone.")
+                }
+            }
+            .navigationDestination(for: SpriteNavTarget.self) { target in
+                if let sprite = sortedSprites.first(where: { $0.id == target.spriteId }) {
+                    SpriteDetailView(sprite: sprite, selectedTab: $selectedTab, initialChatId: target.resumeChatId)
+                        .id(target.spriteId)
                 }
             }
         }
@@ -228,6 +288,23 @@ struct DashboardView: View {
                     }
                     .navigationTitle("Sprites")
                     .toolbar { dashboardToolbar }
+                    // .alert (not .confirmationDialog) — regular size class becomes a popover
+                    // when anchored, but .alert is a centred modal regardless of attachment point.
+                    .alert("Delete Sprite?", isPresented: .init(
+                        get: { viewModel.spriteToDelete != nil },
+                        set: { if !$0 { viewModel.spriteToDelete = nil } }
+                    )) {
+                        Button("Delete", role: .destructive) {
+                            if let sprite = viewModel.spriteToDelete {
+                                Task { await viewModel.deleteSprite(sprite, apiClient: apiClient) }
+                            }
+                        }
+                        Button("Cancel", role: .cancel) {}
+                    } message: {
+                        if let sprite = viewModel.spriteToDelete {
+                            Text("This will permanently delete \"\(sprite.name)\". This action cannot be undone.")
+                        }
+                    }
                 } detail: {
                     if let id = selectedSpriteID, let selectedSprite = sortedSprites.first(where: { $0.id == id }) {
                         SpriteDetailView(sprite: selectedSprite, selectedTab: $selectedTab)
@@ -250,7 +327,12 @@ struct DashboardView: View {
             }
         }
         .onChange(of: selectedSpriteID) { _, _ in
-            selectedTab = .overview
+            if pendingChatOpen {
+                selectedTab = .chat
+                pendingChatOpen = false
+            } else {
+                selectedTab = .overview
+            }
         }
         .task {
             await viewModel.loadSprites(apiClient: apiClient)
