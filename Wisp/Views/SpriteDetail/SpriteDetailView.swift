@@ -3,6 +3,7 @@ import SwiftData
 
 struct SpriteDetailView: View {
     let sprite: Sprite
+    let initialChatId: UUID?
     @Binding var selectedTab: SpriteTab
     @State private var chatListViewModel: SpriteChatListViewModel
     @State private var chatViewModel: ChatViewModel?
@@ -20,8 +21,9 @@ struct SpriteDetailView: View {
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.horizontalSizeClass) private var sizeClass
 
-    init(sprite: Sprite, selectedTab: Binding<SpriteTab>) {
+    init(sprite: Sprite, selectedTab: Binding<SpriteTab>, initialChatId: UUID? = nil) {
         self.sprite = sprite
+        self.initialChatId = initialChatId
         _selectedTab = selectedTab
         _chatListViewModel = State(initialValue: SpriteChatListViewModel(spriteName: sprite.name))
         _checkpointsViewModel = State(initialValue: CheckpointsViewModel(spriteName: sprite.name))
@@ -268,8 +270,16 @@ struct SpriteDetailView: View {
                 chatListViewModel.createChat(modelContext: modelContext)
             }
 
-            // Initialize chat VM for active chat
-            if let active = chatListViewModel.activeChat {
+            // If a specific chat was requested (e.g. via "Resume Chat" swipe action),
+            // switch to it and — on iPhone — push straight to ChatView, bypassing overview.
+            if let chatId = initialChatId,
+               let chat = chatListViewModel.chats.first(where: { $0.id == chatId }) {
+                markChatRead(chat)
+                switchToChat(chat)
+                if sizeClass != .regular {
+                    showingChat = true
+                }
+            } else if let active = chatListViewModel.activeChat {
                 switchToChat(active)
             }
         }
