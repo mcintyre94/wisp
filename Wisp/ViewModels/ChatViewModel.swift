@@ -718,7 +718,17 @@ final class ChatViewModel {
         messages = parsed
         if let parsedSessionId { sessionId = parsedSessionId }
         rebuildToolUseIndex()
-        persistMessages(modelContext: modelContext)
+
+        // Mirror restoreFromSessionFile: surface a trailing user message as a draft,
+        // or mark the session complete and clear the exec ID so reconnectIfNeeded
+        // doesn't attempt a pointless reattach on the next open.
+        if let last = messages.last, last.role == .user {
+            restoreUndeliveredDraft(modelContext: modelContext)
+        } else {
+            execSessionId = nil
+            saveSession(modelContext: modelContext, isComplete: true)
+            persistMessages(modelContext: modelContext)
+        }
     }
 
     func persistMessages(modelContext: ModelContext) {
