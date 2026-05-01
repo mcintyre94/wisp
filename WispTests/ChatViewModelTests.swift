@@ -821,6 +821,32 @@ struct ChatViewModelTests {
         #expect(vm.streamTask != nil)
     }
 
+    @Test func reconnectIfNeeded_corruptedMessages_firstIsAssistant_triggersWispLogLoad() throws {
+        // Regression: after a reconnect following phone-sleep during streaming,
+        // SwiftData can end up with a partial history that starts with an assistant
+        // message (e.g. the first user+assistant exchange was lost). The wisplog
+        // on the sprite still has the full history. Verify that reconnectIfNeeded
+        // detects this corruption and does NOT try to reattach to a (nonexistent)
+        // exec session — it should take the wisplog-reload path instead.
+        let ctx = try makeModelContext()
+        let (vm, _) = makeChatViewModel(modelContext: ctx)
+
+        // Simulate truncated SwiftData: first message is an assistant (wrong — should be user)
+        vm.messages = [
+            ChatMessage(role: .assistant, content: [.text("Here's the deep dive...")]),
+            ChatMessage(role: .user, content: [.text("Follow-up question")]),
+        ]
+        vm.setExecSessionId("exec-abc") // would normally trigger reattach
+
+        vm.reconnectIfNeeded(apiClient: SpritesAPIClient(), modelContext: ctx)
+
+        // Should NOT have started a reattach task (the exec-session path).
+        // An async wisplog load is scheduled instead — but it's async so we verify
+        // the exec-reattach task was NOT created and messages were not synchronously changed.
+        #expect(vm.streamTask == nil)
+        #expect(vm.messages.count == 2)
+    }
+
     // MARK: - UUID persistence
 
     @Test func persistMessages_savesUUIDsToChat() throws {
@@ -1471,6 +1497,26 @@ struct ChatViewModelTests {
         #expect(messages.count == 2)
         #expect(messages[1].role == .assistant)
         #expect(messages[1].textContent == "I was saying...")
+    }
+
+    @Test func parseWispLog_thinkingOnlyBlockFollowedByTextBlock() {
+        // Regression: extended thinking emits a thinking-only assistant event before the
+        // text event. Both events belong to the same turn and should produce a single
+        // assistant message containing only the text (thinking blocks are ignored).
+        let ndjson = """
+        {"type":"wisp_user_prompt","text":"Do we have similar tests?","timestamp":""}
+        {"type":"system","session_id":"sess-1"}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"thinking","thinking":"Let me check..."}]}}
+        {"type":"assistant","message":{"role":"assistant","content":[{"type":"text","text":"Looking back — no, no similar tests exist."}]}}
+        {"type":"result","session_id":"sess-1","is_error":false}
+        """
+
+        let (messages, _) = ChatViewModel.parseWispLog(ndjson)
+
+        #expect(messages.count == 2)
+        #expect(messages[0].role == .user)
+        #expect(messages[1].role == .assistant)
+        #expect(messages[1].textContent == "Looking back — no, no similar tests exist.")
     }
 
     // MARK: - convertJSONLToWisp
