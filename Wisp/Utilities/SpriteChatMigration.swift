@@ -23,7 +23,6 @@ func migrateSpriteSessionsIfNeeded(modelContext: ModelContext) {
         )
         chat.claudeSessionId = session.claudeSessionId
         chat.lastUsed = session.lastUsed
-        chat.messagesData = session.messagesData
         chat.draftInputText = session.draftInputText
         chat.isClosed = false
 

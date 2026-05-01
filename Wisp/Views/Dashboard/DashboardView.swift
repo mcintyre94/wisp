@@ -260,10 +260,10 @@ struct DashboardView: View {
             // Reconnect any chats that were in-progress when the app was last closed.
             // isActive stays false on these VMs so result events mark them unread.
             let descriptor = FetchDescriptor<SpriteChat>(
-                predicate: #Predicate { !$0.lastSessionComplete }
+                predicate: #Predicate { $0.execSessionId != nil }
             )
             let incomplete = (try? modelContext.fetch(descriptor)) ?? []
-            for chat in incomplete where chat.claudeSessionId != nil {
+            for chat in incomplete {
                 let vm = chatSessionManager.viewModel(
                     for: chat,
                     spriteName: chat.spriteName,
