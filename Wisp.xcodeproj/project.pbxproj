@@ -36,6 +36,7 @@
 		A1A2A3A4B5B6C7C800000005 /* ToolDetailSheet.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1A2A3A4B5B6C7C800000006 /* ToolDetailSheet.swift */; };
 
 		A1B2C3D4E5F60718293A4B5E /* SpriteChat.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F60718293A4B5D /* SpriteChat.swift */; };
+		AA11BB22CC33DD44EE55FF01 /* WispSchema.swift in Sources */ = {isa = PBXBuildFile; fileRef = AA11BB22CC33DD44EE55FF02 /* WispSchema.swift */; };
 		A1B2C3D4E5F6071829CAFE02 /* ClaudeSessionEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = A1B2C3D4E5F6071829CAFE01 /* ClaudeSessionEntry.swift */; };
 		A21BF0D8D910819DD5591E88 /* ExecSession.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2554BB4DE8EC315CA48767BF /* ExecSession.swift */; };
 		A610B5413A578D4AA424595D /* ToolUseCardView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8A278B4716095105A7024CF8 /* ToolUseCardView.swift */; };
@@ -176,6 +177,7 @@
 		A1A2A3A4B5B6C7C800000004 /* ToolStepRow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolStepRow.swift; sourceTree = "<group>"; };
 		A1A2A3A4B5B6C7C800000006 /* ToolDetailSheet.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ToolDetailSheet.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F60718293A4B5D /* SpriteChat.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpriteChat.swift; sourceTree = "<group>"; };
+		AA11BB22CC33DD44EE55FF02 /* WispSchema.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WispSchema.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F6071829CAFE01 /* ClaudeSessionEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ClaudeSessionEntry.swift; sourceTree = "<group>"; };
 		A1B2C3D4E5F6A7B8C9D0E1F2 /* InAppBrowserCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = InAppBrowserCoordinator.swift; sourceTree = "<group>"; };
 		A1E74C3B8D2F0C9547B6A891 /* SpriteNavigationPanel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SpriteNavigationPanel.swift; sourceTree = "<group>"; };
@@ -341,6 +343,7 @@
 
 				A1B2C3D4E5F60718293A4B5D /* SpriteChat.swift */,
 				D6BE6E0D68BBB35DE56600E1 /* SpriteSession.swift */,
+				AA11BB22CC33DD44EE55FF02 /* WispSchema.swift */,
 			);
 			path = Local;
 			sourceTree = "<group>";
@@ -767,6 +770,7 @@
 				974996B0FB4D30828E89DD21 /* SpriteOverviewViewModel.swift in Sources */,
 				0418F9D619251B7E6DB0276F /* SpriteRowView.swift in Sources */,
 				A1B2C3D4E5F60718293A4B5E /* SpriteChat.swift in Sources */,
+				AA11BB22CC33DD44EE55FF01 /* WispSchema.swift in Sources */,
 				A1B2C3D4E5F60001DEADBEEF /* ShellEscaping.swift in Sources */,
 				B2C3D4E5F6A70819304B5C6E /* SpriteChatMigration.swift in Sources */,
 				C3D4E5F6A7B80920415C6D7F /* SpriteChatListViewModel.swift in Sources */,
