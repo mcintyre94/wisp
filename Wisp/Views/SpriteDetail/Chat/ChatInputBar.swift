@@ -16,9 +16,11 @@ struct ChatInputBar: View {
     var onRemoveAttachment: ((AttachedFile) -> Void)? = nil
     var lastUploadedFileName: String? = nil
     var onStash: (() -> Void)? = nil
+    var onTextChange: (() -> Void)? = nil
     var isFocused: FocusState<Bool>.Binding
 
     @State private var showStopConfirmation = false
+    @State private var saveDraftTask: Task<Void, Never>?
 
     private var isEmpty: Bool {
         text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty && attachedFiles.isEmpty
@@ -113,6 +115,15 @@ struct ChatInputBar: View {
         .padding(.horizontal)
         .padding(.vertical, 4)
         .padding(.bottom, isRunningOnMac ? 12 : 0)
+        .onChange(of: text) {
+            guard let onTextChange else { return }
+            saveDraftTask?.cancel()
+            saveDraftTask = Task {
+                try? await Task.sleep(for: .milliseconds(500))
+                guard !Task.isCancelled else { return }
+                onTextChange()
+            }
+        }
     }
 
 }
