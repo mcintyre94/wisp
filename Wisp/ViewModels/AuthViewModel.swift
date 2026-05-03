@@ -11,6 +11,10 @@ final class AuthViewModel {
     var step: AuthStep = .spritesToken
     var isComplete = false
 
+    var isClaudeTokenValid: Bool {
+        claudeToken.trimmingCharacters(in: .whitespacesAndNewlines).hasPrefix("sk-ant-oat01-")
+    }
+
     // GitHub device flow state
     var githubUserCode = ""
     var githubVerificationURL = ""
@@ -55,6 +59,10 @@ final class AuthViewModel {
         let trimmed = claudeToken.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !trimmed.isEmpty else {
             errorMessage = "Please enter a Claude Code OAuth token."
+            return
+        }
+        guard trimmed.hasPrefix("sk-ant-oat01-") else {
+            errorMessage = "Invalid token format. Claude Code OAuth tokens start with sk-ant-oat01-"
             return
         }
 
