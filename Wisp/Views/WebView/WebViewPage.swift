@@ -77,6 +77,7 @@ final class WebViewState {
 
     func goBack() { webView?.goBack() }
     func goForward() { webView?.goForward() }
+    func reload() { webView?.reload() }
 }
 
 struct WebViewPage: UIViewRepresentable {
@@ -111,6 +112,11 @@ struct WebViewPage: UIViewRepresentable {
         let webView = WKWebView(frame: .zero, configuration: config)
         webView.navigationDelegate = context.coordinator
         webView.allowsBackForwardNavigationGestures = true
+
+        let refreshControl = UIRefreshControl()
+        refreshControl.addTarget(context.coordinator, action: #selector(Coordinator.handleRefresh(_:)), for: .valueChanged)
+        webView.scrollView.refreshControl = refreshControl
+
         context.coordinator.observe(webView)
         state.webView = webView
         webView.load(context.coordinator.authorizedRequest(for: initialURL))
@@ -274,6 +280,10 @@ struct WebViewPage: UIViewRepresentable {
             self.authToken = authToken
         }
 
+        @objc func handleRefresh(_ sender: UIRefreshControl) {
+            state.reload()
+        }
+
         func authorizedRequest(for url: URL) -> URLRequest {
             var request = URLRequest(url: url)
             if let token = authToken, url.host()?.hasSuffix(".sprites.app") == true {
@@ -291,7 +301,12 @@ struct WebViewPage: UIViewRepresentable {
                     Task { @MainActor in self?.state.canGoForward = webView.canGoForward }
                 },
                 webView.observe(\.isLoading) { [weak self] webView, _ in
-                    Task { @MainActor in self?.state.isLoading = webView.isLoading }
+                    Task { @MainActor in
+                        self?.state.isLoading = webView.isLoading
+                        if !webView.isLoading {
+                            webView.scrollView.refreshControl?.endRefreshing()
+                        }
+                    }
                 },
                 webView.observe(\.url) { [weak self] webView, _ in
                     Task { @MainActor in self?.state.currentURL = webView.url }
