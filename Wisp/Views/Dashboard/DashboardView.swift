@@ -4,6 +4,7 @@ import SwiftUI
 enum SpriteSortOrder: String, CaseIterable {
     case name = "Name"
     case newest = "Newest"
+    case recentlyUpdated = "Recently Updated"
 }
 
 struct DashboardView: View {
@@ -15,7 +16,7 @@ struct DashboardView: View {
     @Query(filter: #Predicate<SpriteChat> { $0.isUnread }) private var unreadChats: [SpriteChat]
     @State private var selectedSpriteID: String?
     @State private var selectedTab: SpriteTab = .chat
-    @State private var sortOrder: SpriteSortOrder = .newest
+    @State private var sortOrder: SpriteSortOrder = .recentlyUpdated
     @State private var showSettings = false
 
     private var sortedSprites: [Sprite] {
@@ -23,7 +24,9 @@ struct DashboardView: View {
         case .name:
             viewModel.sprites.sorted { $0.name.localizedCaseInsensitiveCompare($1.name) == .orderedAscending }
         case .newest:
-            viewModel.sprites.sorted { ($0.createdAt ?? .distantPast) > ($1.createdAt ?? .distantPast) }
+            viewModel.sprites.sortedByDate(\.createdAt)
+        case .recentlyUpdated:
+            viewModel.sprites.sortedByDate(\.updatedAt)
         }
     }
 

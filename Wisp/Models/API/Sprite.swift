@@ -6,6 +6,7 @@ struct Sprite: Codable, Identifiable, Sendable, Hashable {
     let status: SpriteStatus
     let url: String?
     let createdAt: Date?
+    let updatedAt: Date?
     let urlSettings: UrlSettings?
 
     struct UrlSettings: Codable, Sendable, Hashable {
@@ -15,6 +16,7 @@ struct Sprite: Codable, Identifiable, Sendable, Hashable {
     enum CodingKeys: String, CodingKey {
         case id, name, status, url
         case createdAt = "created_at"
+        case updatedAt = "updated_at"
         case urlSettings = "url_settings"
     }
 
@@ -25,6 +27,7 @@ struct Sprite: Codable, Identifiable, Sendable, Hashable {
         status = try container.decode(SpriteStatus.self, forKey: .status)
         url = try container.decodeIfPresent(String.self, forKey: .url)
         createdAt = try container.decodeIfPresent(Date.self, forKey: .createdAt)
+        updatedAt = try container.decodeIfPresent(Date.self, forKey: .updatedAt)
         urlSettings = try container.decodeIfPresent(UrlSettings.self, forKey: .urlSettings)
     }
 
@@ -35,6 +38,7 @@ struct Sprite: Codable, Identifiable, Sendable, Hashable {
         try container.encode(status, forKey: .status)
         try container.encodeIfPresent(url, forKey: .url)
         try container.encodeIfPresent(createdAt, forKey: .createdAt)
+        try container.encodeIfPresent(updatedAt, forKey: .updatedAt)
         try container.encodeIfPresent(urlSettings, forKey: .urlSettings)
     }
 }
